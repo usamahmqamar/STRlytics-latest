@@ -11,12 +11,14 @@ export default defineConfig(({mode}) => {
       'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),
     },
     build: {
-      chunkSizeWarningLimit: 1000,
+      chunkSizeWarningLimit: 2000,
       rollupOptions: {
         output: {
           manualChunks: {
             'vendor-react': ['react', 'react-dom'],
-            'vendor-firebase': ['firebase/app', 'firebase/auth', 'firebase/firestore'],
+            'vendor-firebase-auth': ['firebase/auth'],
+            'vendor-firebase-firestore': ['firebase/firestore'],
+            'vendor-firebase-app': ['firebase/app'],
             'vendor-ui': ['lucide-react', 'framer-motion', 'clsx', 'tailwind-merge'],
             'vendor-utils': ['date-fns'],
           },
