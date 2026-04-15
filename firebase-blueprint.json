@@ -1,0 +1,60 @@
+{
+  "entities": {
+    "user_data": {
+      "title": "User Data",
+      "description": "Comprehensive application state for a user, including apartments, reservations, and financial records.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "The unique ID of the user."
+        },
+        "data": {
+          "type": "object",
+          "description": "The full application state object."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last update timestamp."
+        }
+      },
+      "required": ["uid", "data"]
+    },
+    "users": {
+      "title": "User Profile",
+      "description": "Basic user profile information.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string"
+        },
+        "email": {
+          "type": "string",
+          "format": "email"
+        },
+        "displayName": {
+          "type": "string"
+        },
+        "photoURL": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["uid", "email"]
+    }
+  },
+  "firestore": {
+    "/user_data/{userId}": {
+      "schema": "user_data",
+      "description": "User-specific application data."
+    },
+    "/users/{userId}": {
+      "schema": "users",
+      "description": "User profile documents."
+    }
+  }
+}
