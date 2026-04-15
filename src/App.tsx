@@ -70,6 +70,11 @@ export default function App() {
 
   // Auth Listener
   useEffect(() => {
+    if (!auth) {
+      console.error("Firebase Auth not initialized");
+      setLoading(false);
+      return;
+    }
     const unsubscribe = onAuthStateChanged(auth, (u) => {
       setUser(u);
       setLoading(false);
@@ -84,7 +89,14 @@ export default function App() {
     const userDocRef = doc(db, 'user_data', user.uid);
     const unsubscribe = onSnapshot(userDocRef, (snapshot) => {
       if (snapshot.exists()) {
-        const data = snapshot.data().data as UserData;
+        const rawData = snapshot.data();
+        if (!rawData || !rawData.data) {
+          console.warn("User document exists but 'data' field is missing. Initializing with defaults.");
+          setUserData(DEFAULT_USER_DATA);
+          setLoading(false);
+          return;
+        }
+        const data = rawData.data as UserData;
         const dataStr = JSON.stringify(data);
         
         if (dataStr !== lastSavedDataRef.current) {
