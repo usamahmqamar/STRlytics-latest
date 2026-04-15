@@ -5,9 +5,21 @@
 
 import { GoogleGenAI, Type } from "@google/genai";
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
+let aiInstance: GoogleGenAI | null = null;
+
+function getAi() {
+  if (!aiInstance) {
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      throw new Error("GEMINI_API_KEY is not defined. Please set it in your environment variables.");
+    }
+    aiInstance = new GoogleGenAI({ apiKey });
+  }
+  return aiInstance;
+}
 
 export const extractReceiptData = async (base64Image: string) => {
+  const ai = getAi();
   const response = await ai.models.generateContent({
     model: "gemini-3-flash-preview",
     contents: [{
@@ -43,6 +55,7 @@ export const extractReceiptData = async (base64Image: string) => {
 };
 
 export const getMarketIntelligence = async (location: string, bedrooms: number) => {
+  const ai = getAi();
   const response = await ai.models.generateContent({
     model: "gemini-3-flash-preview",
     contents: `Analyze the short-term rental market for a ${bedrooms === 0 ? 'studio' : bedrooms + ' bedroom'} property in ${location}. 

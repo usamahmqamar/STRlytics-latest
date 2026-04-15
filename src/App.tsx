@@ -49,6 +49,7 @@ import { cn } from './lib/utils';
 import { format, startOfMonth, endOfMonth, differenceInDays, parseISO, addDays, startOfDay } from 'date-fns';
 
 export default function App() {
+  console.log("App component rendering...");
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [userData, setUserData] = useState<UserData>(DEFAULT_USER_DATA);
@@ -84,7 +85,10 @@ export default function App() {
 
   // Data Listener
   useEffect(() => {
-    if (!user) return;
+    if (!user || !db) {
+      if (!db) console.error("Firestore DB not initialized");
+      return;
+    }
 
     const userDocRef = doc(db, 'user_data', user.uid);
     const unsubscribe = onSnapshot(userDocRef, (snapshot) => {
