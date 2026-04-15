@@ -166,11 +166,35 @@ export default function App() {
     return () => clearTimeout(timer);
   }, [userData, user]);
 
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+
   const handleLogin = async () => {
+    if (!auth) {
+      alert("Firebase Auth is not initialized. Please check your configuration.");
+      return;
+    }
+    
+    setIsLoggingIn(true);
+    console.log("Attempting Google Sign-In...");
     try {
-      await signInWithPopup(auth, googleProvider);
-    } catch (error) {
+      const result = await signInWithPopup(auth, googleProvider);
+      console.log("Login successful:", result.user.email);
+    } catch (error: any) {
       console.error("Login Error:", error);
+      
+      let errorMessage = "An unexpected error occurred during login.";
+      if (error.code === 'auth/popup-blocked') {
+        errorMessage = "The login popup was blocked by your browser. Please allow popups for this site.";
+      } else if (error.code === 'auth/unauthorized-domain') {
+        errorMessage = `This domain (${window.location.hostname}) is not authorized in the Firebase Console. Please add it to Authentication > Settings > Authorized domains.`;
+      } else if (error.code === 'auth/operation-not-allowed') {
+        errorMessage = "Google Sign-In is not enabled in your Firebase project. Please enable it in the Firebase Console.";
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      alert(`Login Failed: ${errorMessage}`);
+    } finally {
+      setIsLoggingIn(false);
     }
   };
 
@@ -227,10 +251,18 @@ export default function App() {
           
           <button 
             onClick={handleLogin}
-            className="w-full group relative flex items-center justify-center gap-4 px-8 py-5 bg-zinc-900 text-white rounded-2xl font-bold text-lg hover:bg-zinc-800 transition-all duration-300 shadow-xl shadow-zinc-200 active:scale-[0.98]"
+            disabled={isLoggingIn}
+            className={cn(
+              "w-full group relative flex items-center justify-center gap-4 px-8 py-5 bg-zinc-900 text-white rounded-2xl font-bold text-lg hover:bg-zinc-800 transition-all duration-300 shadow-xl shadow-zinc-200 active:scale-[0.98]",
+              isLoggingIn && "opacity-70 cursor-not-allowed"
+            )}
           >
-            <Globe size={24} className="group-hover:rotate-12 transition-transform" />
-            Sign in with Google
+            {isLoggingIn ? (
+              <Loader2 size={24} className="animate-spin" />
+            ) : (
+              <Globe size={24} className="group-hover:rotate-12 transition-transform" />
+            )}
+            {isLoggingIn ? "Signing in..." : "Sign in with Google"}
           </button>
           
           <p className="mt-10 text-[10px] font-bold text-zinc-400 uppercase tracking-[0.2em] leading-relaxed">

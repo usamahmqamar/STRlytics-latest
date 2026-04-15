@@ -23,6 +23,8 @@ const firebaseConfig = {
   measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || config.measurementId || '',
 };
 
+console.log("Firebase Auth Domain:", firebaseConfig.authDomain);
+
 const firestoreDatabaseId = import.meta.env.VITE_FIRESTORE_DATABASE_ID || config.firestoreDatabaseId || '(default)';
 
 let app;
