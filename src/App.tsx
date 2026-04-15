@@ -73,11 +73,18 @@ export default function App() {
   useEffect(() => {
     if (!auth) {
       console.error("Firebase Auth not initialized");
+      // Use a guest user for bypass
+      setUser({ uid: 'guest_user', email: 'guest@example.com' } as any);
       setLoading(false);
       return;
     }
     const unsubscribe = onAuthStateChanged(auth, (u) => {
-      setUser(u);
+      if (u) {
+        setUser(u);
+      } else {
+        // BYPASS: Set a guest user if not logged in
+        setUser({ uid: 'guest_user', email: 'guest@example.com' } as any);
+      }
       setLoading(false);
     });
     return () => unsubscribe();
@@ -224,7 +231,7 @@ export default function App() {
     }).length;
   }, [userData]);
 
-  if (loading) {
+  if (!user && loading) {
     return (
       <div className="min-h-screen bg-zinc-50 flex items-center justify-center">
         <div className="w-10 h-10 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
@@ -232,47 +239,7 @@ export default function App() {
     );
   }
 
-  if (!user) {
-    return (
-      <div className="min-h-screen bg-zinc-50 flex items-center justify-center p-4 overflow-hidden relative">
-        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-emerald-500/5 blur-[120px] rounded-full" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-amber-500/5 blur-[120px] rounded-full" />
-        
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="max-w-md w-full bg-white rounded-[2.5rem] p-12 text-center relative z-10 shadow-[0_32px_64px_rgba(0,0,0,0.05)] border border-zinc-100"
-        >
-          <div className="w-20 h-20 bg-emerald-500/10 rounded-3xl flex items-center justify-center mx-auto mb-10 border border-emerald-500/20">
-            <TrendingUp size={40} className="text-emerald-600" />
-          </div>
-          <h1 className="text-4xl font-black text-zinc-900 mb-3 tracking-tight">STR Copilot</h1>
-          <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-[0.2em] mb-12">Advanced Analytics Engine</p>
-          
-          <button 
-            onClick={handleLogin}
-            disabled={isLoggingIn}
-            className={cn(
-              "w-full group relative flex items-center justify-center gap-4 px-8 py-5 bg-zinc-900 text-white rounded-2xl font-bold text-lg hover:bg-zinc-800 transition-all duration-300 shadow-xl shadow-zinc-200 active:scale-[0.98]",
-              isLoggingIn && "opacity-70 cursor-not-allowed"
-            )}
-          >
-            {isLoggingIn ? (
-              <Loader2 size={24} className="animate-spin" />
-            ) : (
-              <Globe size={24} className="group-hover:rotate-12 transition-transform" />
-            )}
-            {isLoggingIn ? "Signing in..." : "Sign in with Google"}
-          </button>
-          
-          <p className="mt-10 text-[10px] font-bold text-zinc-400 uppercase tracking-[0.2em] leading-relaxed">
-            Secure Enterprise Access<br/>
-            Powered by Gemini 3 Flash
-          </p>
-        </motion.div>
-      </div>
-    );
-  }
+  // Sign-in is bypassed
 
   return (
     <div className={cn(

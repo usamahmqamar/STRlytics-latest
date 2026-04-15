@@ -160,20 +160,22 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </motion.div>
         )}
 
-        {/* Logout */}
-        <div className="mt-auto pt-8 border-t border-zinc-100">
-          <button 
-            onClick={() => signOut(auth)}
-            className={cn(
-              "w-full flex items-center text-zinc-500 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all",
-              isCollapsed ? "justify-center p-3.5" : "gap-3.5 px-4 py-3.5"
-            )}
-            title={isCollapsed ? "Log Out" : undefined}
-          >
-            <LogOut size={20} />
-            {!isCollapsed && <span className="font-bold">Log Out</span>}
-          </button>
-        </div>
+        {/* Logout hidden during bypass */}
+        {false && (
+          <div className="mt-auto pt-8 border-t border-zinc-100">
+            <button 
+              onClick={() => signOut(auth)}
+              className={cn(
+                "w-full flex items-center text-zinc-500 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all",
+                isCollapsed ? "justify-center p-3.5" : "gap-3.5 px-4 py-3.5"
+              )}
+              title={isCollapsed ? "Log Out" : undefined}
+            >
+              <LogOut size={20} />
+              {!isCollapsed && <span className="font-bold">Log Out</span>}
+            </button>
+          </div>
+        )}
       </div>
     </aside>
   );
