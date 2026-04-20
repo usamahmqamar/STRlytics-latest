@@ -45,7 +45,7 @@ export const Cashflow: React.FC<CashflowProps> = ({ data, filters }) => {
 
   return (
     <div className="space-y-8">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card className="bg-emerald-50 border-emerald-100">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 bg-emerald-500/10 rounded-2xl flex items-center justify-center text-emerald-600">
@@ -89,7 +89,7 @@ export const Cashflow: React.FC<CashflowProps> = ({ data, filters }) => {
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
                 key={idx}
-                className="flex items-center gap-6 p-4 rounded-2xl border border-zinc-100 hover:bg-zinc-50 transition-colors group"
+                className="flex items-center gap-4 p-4 rounded-2xl border border-zinc-100 hover:bg-zinc-50 transition-colors group"
               >
                 <div className="w-24 text-xs font-mono text-zinc-400">
                   {item.date}

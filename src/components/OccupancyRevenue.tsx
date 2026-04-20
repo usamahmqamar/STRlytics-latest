@@ -133,12 +133,12 @@ const ApartmentPerformanceCard: React.FC<{
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.5, ease: [0.23, 1, 0.32, 1] }}
           >
-            <div className="p-8 border-t border-zinc-50 bg-zinc-50/30 space-y-8">
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            <div className="p-4 border-t border-zinc-50 bg-zinc-50/30 space-y-4">
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
                 {/* Main Breakdown */}
-                <div className="lg:col-span-8 space-y-8">
+                <div className="lg:col-span-8 space-y-4">
                   <Card className="p-0 overflow-hidden bg-white">
-                    <div className="p-8 border-b border-zinc-50 flex items-center justify-between">
+                    <div className="p-4 border-b border-zinc-50 flex items-center justify-between">
                       <h3 className="text-xs font-black text-zinc-900 uppercase tracking-[0.3em]">Monthly Performance Breakdown</h3>
                       <Activity size={18} className="text-zinc-300" />
                     </div>
@@ -146,28 +146,28 @@ const ApartmentPerformanceCard: React.FC<{
                       <table className="w-full text-left">
                         <thead>
                           <tr className="bg-zinc-50/50">
-                            <th className="p-6 text-[9px] font-black text-zinc-400 uppercase tracking-widest">Month</th>
-                            <th className="p-6 text-[9px] font-black text-zinc-400 uppercase tracking-widest">Revenue</th>
-                            <th className="p-6 text-[9px] font-black text-zinc-400 uppercase tracking-widest">Exp. Ratio</th>
-                            <th className="p-6 text-[9px] font-black text-zinc-400 uppercase tracking-widest">Occupancy</th>
-                            <th className="p-6 text-[9px] font-black text-zinc-400 uppercase tracking-widest">ADR</th>
-                            <th className="p-6 text-[9px] font-black text-zinc-400 uppercase tracking-widest">RevPAR</th>
+                            <th className="p-3 text-[9px] font-black text-zinc-400 uppercase tracking-widest">Month</th>
+                            <th className="p-3 text-[9px] font-black text-zinc-400 uppercase tracking-widest">Revenue</th>
+                            <th className="p-3 text-[9px] font-black text-zinc-400 uppercase tracking-widest">Exp. Ratio</th>
+                            <th className="p-3 text-[9px] font-black text-zinc-400 uppercase tracking-widest">Occupancy</th>
+                            <th className="p-3 text-[9px] font-black text-zinc-400 uppercase tracking-widest">ADR</th>
+                            <th className="p-3 text-[9px] font-black text-zinc-400 uppercase tracking-widest">RevPAR</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-zinc-50">
                           {performance.monthlyBreakdown.map((m: any, i: number) => (
                             <tr key={i} className="group hover:bg-zinc-50/50 transition-colors">
-                              <td className="p-6">
+                              <td className="p-3">
                                 <p className="text-sm font-black text-zinc-900">{m.month}</p>
                                 {m.isHighSeason && (
                                   <span className="text-[8px] font-black text-emerald-600 uppercase tracking-widest">High Season</span>
                                 )}
                               </td>
-                              <td className="p-6">
+                              <td className="p-3">
                                 <p className="text-sm font-black text-emerald-600">{formatValue(m.revenue)}</p>
                                 <p className="text-[9px] font-bold text-rose-400 mt-0.5">-{formatValue(m.costs)} costs</p>
                               </td>
-                              <td className="p-6">
+                              <td className="p-3">
                                 <div className="flex items-center gap-3">
                                   <span className="text-xs font-bold text-zinc-900">{Math.round(m.expRatio)}%</span>
                                   <div className="w-12 h-1 bg-zinc-100 rounded-full overflow-hidden">
@@ -175,7 +175,7 @@ const ApartmentPerformanceCard: React.FC<{
                                   </div>
                                 </div>
                               </td>
-                              <td className="p-6">
+                              <td className="p-3">
                                 <div className="flex items-center gap-3">
                                   <span className="text-xs font-bold text-zinc-900">{Math.round(m.occupancy)}%</span>
                                   <div className="w-12 h-1 bg-zinc-100 rounded-full overflow-hidden">
@@ -184,10 +184,10 @@ const ApartmentPerformanceCard: React.FC<{
                                 </div>
                                 <p className="text-[9px] font-bold text-zinc-400 mt-0.5">{m.occupiedNights} / {m.availableNights} nights</p>
                               </td>
-                              <td className="p-6">
+                              <td className="p-3">
                                 <p className="text-sm font-black text-zinc-900">{formatValue(m.adr)}</p>
                               </td>
-                              <td className="p-6">
+                              <td className="p-3">
                                 <p className="text-sm font-black text-zinc-900">{formatValue(m.revpar)}</p>
                               </td>
                             </tr>
@@ -199,27 +199,27 @@ const ApartmentPerformanceCard: React.FC<{
                 </div>
 
                 {/* Sidebar Widgets */}
-                <div className="lg:col-span-4 space-y-8">
-                  <Card className="p-8 bg-white">
-                    <div className="flex items-center justify-between mb-8">
+                <div className="lg:col-span-4 space-y-4">
+                  <Card className="p-4 bg-white">
+                    <div className="flex items-center justify-between mb-4">
                       <h3 className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em]">Portfolio Benchmark</h3>
                       <HelpCircle size={14} className="text-zinc-300" />
                     </div>
-                    <div className="space-y-8">
+                    <div className="space-y-4">
                       <div>
-                        <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest mb-2">RevPAR vs Portfolio</p>
+                        <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest mb-1">RevPAR vs Portfolio</p>
                         <div className="flex items-baseline justify-between">
-                          <p className="text-2xl font-black text-zinc-900">{formatValue(performance.monthlyBreakdown[0]?.revpar || 0)}</p>
+                          <p className="text-lg font-black text-zinc-900">{formatValue(performance.monthlyBreakdown[0]?.revpar || 0)}</p>
                           <div className="flex items-center gap-1 text-emerald-500">
                             <ArrowUpRight size={14} />
                             <span className="text-xs font-black">+{performance.benchmarks.revparVsPortfolio}%</span>
                           </div>
                         </div>
                       </div>
-                      <div className="pt-8 border-t border-zinc-50">
-                        <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest mb-2">Occ. vs Portfolio</p>
+                      <div className="pt-4 border-t border-zinc-50">
+                        <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Occ. vs Portfolio</p>
                         <div className="flex items-baseline justify-between">
-                          <p className="text-2xl font-black text-zinc-900">{Math.round(performance.monthlyBreakdown[0]?.occupancy || 0)}%</p>
+                          <p className="text-lg font-black text-zinc-900">{Math.round(performance.monthlyBreakdown[0]?.occupancy || 0)}%</p>
                           <div className="flex items-center gap-1 text-rose-500">
                             <ArrowDownLeft size={14} />
                             <span className="text-xs font-black">{performance.benchmarks.occVsPortfolio}%</span>
@@ -229,14 +229,14 @@ const ApartmentPerformanceCard: React.FC<{
                     </div>
                   </Card>
 
-                  <Card className="p-8 bg-white">
-                    <div className="flex items-center justify-between mb-8">
+                  <Card className="p-4 bg-white">
+                    <div className="flex items-center justify-between mb-4">
                       <h3 className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em]">Financial Health</h3>
                       <Target size={14} className="text-zinc-300" />
                     </div>
-                    <div className="p-6 bg-zinc-50 rounded-[2rem] border border-zinc-100 text-center mb-8">
-                      <p className="text-[9px] font-black text-zinc-400 uppercase tracking-[0.2em] mb-2">Total Target</p>
-                      <p className="text-3xl font-black text-zinc-900">{formatValue(performance.financialHealth.totalTarget)}</p>
+                    <div className="p-4 bg-zinc-50 rounded-2xl border border-zinc-100 text-center mb-4">
+                      <p className="text-[9px] font-black text-zinc-400 uppercase tracking-[0.2em] mb-1">Total Target</p>
+                      <p className="text-xl font-black text-zinc-900">{formatValue(performance.financialHealth.totalTarget)}</p>
                     </div>
                     <div className="space-y-4">
                       <div className="flex justify-between items-center">

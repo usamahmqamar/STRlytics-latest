@@ -68,8 +68,8 @@ const StatCard: React.FC<{
     <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest group-hover:text-emerald-500 transition-colors duration-500">
       {label}
     </span>
-    <div className="flex items-baseline gap-2 mt-2">
-      <span className="text-3xl font-black text-zinc-900 dark:text-zinc-100 font-mono tracking-tighter">
+    <div className="flex items-baseline gap-2 mt-1">
+      <span className="text-xl font-black text-zinc-900 dark:text-zinc-100 font-mono tracking-tighter">
         {value}
       </span>
       {trend && (
@@ -173,7 +173,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, setData, filters, on
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           {/* Profit & Loss Summary */}
           <Card className="lg:col-span-2">
             <div className="h-[300px] mt-4">
@@ -412,7 +412,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, setData, filters, on
       </Card>
     ),
     'kpi-stats': (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         <Card className="col-span-1">
           <StatCard 
             label="Total Revenue" 
@@ -455,13 +455,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, setData, filters, on
     ),
     'cancellation-policy': (
       <Card title="Cancellation Policy Exposure">
-        <div className="grid grid-cols-1 gap-6 mt-6">
+        <div className="grid grid-cols-1 gap-4 mt-6">
           <div className="p-6 bg-zinc-50 rounded-[2rem] border border-zinc-100">
             <div className="flex justify-between items-center mb-4">
               <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Non-Refundable</span>
               <span className="text-xs font-black text-zinc-900">{exposure.nonRefundable.count}</span>
             </div>
-            <h3 className="text-3xl font-black text-zinc-900"><StyledValue value={exposure.nonRefundable.amount} /></h3>
+            <h3 className="text-xl font-black text-zinc-900"><StyledValue value={exposure.nonRefundable.amount} /></h3>
             <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mt-1">Confirmed Revenue</p>
           </div>
           <div className="p-6 bg-zinc-50 rounded-[2rem] border border-zinc-100">
@@ -469,7 +469,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, setData, filters, on
               <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Refundable</span>
               <span className="text-xs font-black text-zinc-900">{exposure.refundable.count}</span>
             </div>
-            <h3 className="text-3xl font-black text-zinc-900"><StyledValue value={exposure.refundable.amount} /></h3>
+            <h3 className="text-xl font-black text-zinc-900"><StyledValue value={exposure.refundable.amount} /></h3>
             <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mt-1">At Risk (Flexible)</p>
           </div>
         </div>
@@ -511,11 +511,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, setData, filters, on
     ),
     'cheque-management': (
       <Card title="Cheque Management & Coverage">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mt-6">
           <div className="space-y-6">
             <div className="p-6 bg-zinc-50 rounded-[2rem] border border-zinc-100">
               <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Total Committed Rent</p>
-              <h3 className="text-3xl font-black text-zinc-900">{formatValue(72000)}</h3>
+              <h3 className="text-xl font-black text-zinc-900">{formatValue(72000)}</h3>
               <div className="mt-4 space-y-2">
                 <div className="h-2 w-full bg-zinc-200 rounded-full overflow-hidden">
                   <div className="h-full bg-emerald-500" style={{ width: '50%' }} />
@@ -934,7 +934,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, setData, filters, on
               Reset to Default
             </Button>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {categories.map(cat => (
               <div key={cat.id} className="space-y-4">
                 <div className="flex items-center gap-2 text-zinc-500">

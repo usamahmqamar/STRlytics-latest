@@ -279,40 +279,40 @@ export const Reservations: React.FC<ReservationsProps> = ({ data, setData, filte
           <table className="w-full text-left text-sm">
             <thead>
               <tr className="border-b border-zinc-100">
-                <th className="pb-4 font-semibold text-zinc-400 uppercase text-[10px] tracking-widest">Booking Date</th>
-                <th className="pb-4 font-semibold text-zinc-400 uppercase text-[10px] tracking-widest">Property</th>
-                <th className="pb-4 font-semibold text-zinc-400 uppercase text-[10px] tracking-widest">Guest</th>
-                <th className="pb-4 font-semibold text-zinc-400 uppercase text-[10px] tracking-widest">Platform</th>
-                <th className="pb-4 font-semibold text-zinc-400 uppercase text-[10px] tracking-widest">Dates</th>
-                <th className="pb-4 font-semibold text-zinc-400 uppercase text-[10px] tracking-widest text-right">Revenue</th>
-                <th className="pb-4 font-semibold text-zinc-400 uppercase text-[10px] tracking-widest text-right">Net Payout</th>
-                <th className="pb-4 font-semibold text-zinc-400 uppercase text-[10px] tracking-widest text-center">Status</th>
-                <th className="pb-4 font-semibold text-zinc-400 uppercase text-[10px] tracking-widest text-right">Action</th>
+                <th className="pb-2 font-semibold text-zinc-400 uppercase text-[10px] tracking-widest">Booking Date</th>
+                <th className="pb-2 font-semibold text-zinc-400 uppercase text-[10px] tracking-widest">Property</th>
+                <th className="pb-2 font-semibold text-zinc-400 uppercase text-[10px] tracking-widest">Guest</th>
+                <th className="pb-2 font-semibold text-zinc-400 uppercase text-[10px] tracking-widest">Platform</th>
+                <th className="pb-2 font-semibold text-zinc-400 uppercase text-[10px] tracking-widest">Dates</th>
+                <th className="pb-2 font-semibold text-zinc-400 uppercase text-[10px] tracking-widest text-right">Revenue</th>
+                <th className="pb-2 font-semibold text-zinc-400 uppercase text-[10px] tracking-widest text-right">Net Payout</th>
+                <th className="pb-2 font-semibold text-zinc-400 uppercase text-[10px] tracking-widest text-center">Status</th>
+                <th className="pb-2 font-semibold text-zinc-400 uppercase text-[10px] tracking-widest text-right">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-50">
               {filteredReservations.map((res) => (
                 <tr key={res.reservation_code} className="hover:bg-zinc-50/50 transition-colors group">
-                  <td className="py-4 font-mono text-xs text-zinc-400">{res.booking_date}</td>
-                  <td className="py-4 text-zinc-900 font-medium">
+                  <td className="py-2 font-mono text-xs text-zinc-400">{res.booking_date}</td>
+                  <td className="py-2 text-zinc-900 font-medium">
                     {data.apartments.find(a => a.apartment_id === res.apartment_id)?.name || res.apartment_id}
                   </td>
-                  <td className="py-4">
+                  <td className="py-2">
                     <p className="font-bold text-zinc-900">{res.guest_name || "Guest"}</p>
                     <p className="text-[10px] text-zinc-400 uppercase font-bold">{res.reservation_code}</p>
                   </td>
-                  <td className="py-4">
+                  <td className="py-2">
                     <span className="px-2 py-1 bg-zinc-100 rounded-lg text-[10px] font-bold uppercase tracking-wider text-zinc-600 border border-zinc-200">
                       {res.channel}
                     </span>
                   </td>
-                  <td className="py-4">
+                  <td className="py-2">
                     <p className="text-xs font-medium text-zinc-900">{res.check_in} to {res.check_out}</p>
                     <p className="text-[10px] text-zinc-400">{res.nights} nights</p>
                   </td>
-                  <td className="py-4 text-right font-medium text-zinc-900">{formatValue(res.total_booking_revenue_aed)}</td>
-                  <td className="py-4 text-right font-bold text-emerald-600">{formatValue(res.net_payout_aed)}</td>
-                  <td className="py-4 text-center">
+                  <td className="py-2 text-right font-medium text-zinc-900">{formatValue(res.total_booking_revenue_aed)}</td>
+                  <td className="py-2 text-right font-bold text-emerald-600">{formatValue(res.net_payout_aed)}</td>
+                  <td className="py-2 text-center">
                     <span className={cn(
                       "px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider",
                       res.status === 'confirmed' ? "bg-emerald-50 text-emerald-600 border border-emerald-100" : "bg-rose-50 text-rose-600 border border-rose-100"
@@ -320,7 +320,7 @@ export const Reservations: React.FC<ReservationsProps> = ({ data, setData, filte
                       {res.status}
                     </span>
                   </td>
-                  <td className="py-4 text-right">
+                  <td className="py-2 text-right">
                     <div className="flex justify-end gap-1">
                       <button 
                         onClick={() => {

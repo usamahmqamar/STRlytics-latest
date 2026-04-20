@@ -116,7 +116,7 @@ export const Analytics: React.FC<AnalyticsProps> = ({ data, filters }) => {
           <h2 className="text-2xl font-black tracking-tighter text-zinc-900 dark:text-zinc-100 uppercase italic">ROI Tracking</h2>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {roiData.map((roi, i) => (
             <Card key={i} className="relative overflow-hidden group">
               <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
@@ -130,7 +130,7 @@ export const Analytics: React.FC<AnalyticsProps> = ({ data, filters }) => {
                 <div>
                   <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Return on Investment</p>
                   <h3 className={cn(
-                    "text-3xl font-black font-mono tracking-tighter mt-1",
+                    "text-xl font-black font-mono tracking-tighter mt-1",
                     roi.roi >= 0 ? "text-emerald-500" : "text-rose-500"
                   )}>
                     {roi.roi.toFixed(1)}%
@@ -158,7 +158,7 @@ export const Analytics: React.FC<AnalyticsProps> = ({ data, filters }) => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <Card title="Revenue & Profit Trend (6 Months)">
           <div className="h-[300px] w-full mt-4">
             <ResponsiveContainer width="100%" height="100%">
@@ -229,7 +229,7 @@ export const Analytics: React.FC<AnalyticsProps> = ({ data, filters }) => {
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <Card title="Revenue by Channel" className="lg:col-span-1">
           <div className="h-[250px] w-full mt-4">
             <ResponsiveContainer width="100%" height="100%">

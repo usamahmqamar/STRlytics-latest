@@ -171,7 +171,7 @@ export const Projections: React.FC = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
         {/* Left: Input Panel */}
         <div className="lg:col-span-3 space-y-6">
           <Card className="p-6 border-none shadow-xl shadow-zinc-200/50">
@@ -293,7 +293,7 @@ export const Projections: React.FC = () => {
               </div>
 
               {/* Top Row Metrics */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <Card className="p-6 bg-zinc-900 text-white border-none relative overflow-hidden">
                   <div className="relative z-10">
                     <p className="text-[10px] font-black text-white/40 uppercase tracking-widest mb-4">Investment Score</p>
@@ -324,7 +324,7 @@ export const Projections: React.FC = () => {
               </div>
 
               {/* Middle Row */}
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
                 <div className="lg:col-span-4 space-y-6">
                   <Card className="p-6">
                     <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-4">Payback Period</p>
@@ -409,7 +409,7 @@ export const Projections: React.FC = () => {
                         </ComposedChart>
                       </ResponsiveContainer>
                     </div>
-                    <div className="flex items-center justify-center gap-6 mt-6">
+                    <div className="flex items-center justify-center gap-4 mt-6">
                       <div className="flex items-center gap-2">
                         <div className="w-3 h-3 rounded bg-emerald-500" />
                         <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Revenue</span>
@@ -535,7 +535,7 @@ export const Projections: React.FC = () => {
               </Card>
 
               {/* Bottom Row */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                 <Card className="p-6">
                   <h3 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-6">Rate Strategy & Feasibility</h3>
                   <div className="grid grid-cols-2 gap-4 mb-8">
@@ -572,7 +572,7 @@ export const Projections: React.FC = () => {
                         <Sparkles size={16} className="text-amber-400" />
                         <span className="text-[10px] font-black uppercase tracking-widest text-amber-400">Target Profit Blueprint</span>
                       </div>
-                      <div className="grid grid-cols-2 gap-6">
+                      <div className="grid grid-cols-2 gap-4">
                         <div>
                           <p className="text-[9px] font-bold text-white/40 uppercase tracking-widest mb-1">Recommended ADR</p>
                           <p className="text-2xl font-black">{formatCurrency(result.targetADR)}</p>

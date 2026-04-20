@@ -19,10 +19,11 @@ import {
 import { auth, db, googleProvider } from './services/firebase';
 import { UserData } from './types';
 import { DEFAULT_USER_DATA } from './constants';
+import { Toaster, toast } from 'react-hot-toast';
 import { Sidebar } from './components/Sidebar';
 import { FilterBar } from './components/FilterBar';
 import { Dashboard } from './components/Dashboard';
-// import { Calendar } from './components/Calendar';
+import { Calendar } from './components/Calendar';
 import { Reservations } from './components/Reservations';
 import { Operations } from './components/Operations';
 import { Setup } from './components/Setup';
@@ -81,6 +82,7 @@ export default function App() {
     const unsubscribe = onAuthStateChanged(auth, (u) => {
       if (u) {
         setUser(u);
+        toast.success(`Welcome back, ${u.displayName || u.email}`, { id: 'auth-success' });
       } else {
         // BYPASS: Set a guest user if not logged in
         setUser({ uid: 'guest_user', email: 'guest@example.com' } as any);
@@ -164,8 +166,10 @@ export default function App() {
         setSyncStatus('error');
         if (err.code === 'resource-exhausted') {
           setSyncError("Daily storage quota reached. Changes will be saved locally but might not sync until tomorrow.");
+          toast.error("Database quota reached", { id: 'quota-error' });
         } else {
           setSyncError("Failed to sync data. Please check your connection.");
+          toast.error("Sync failed. Check connection.", { id: 'sync-error' });
         }
       });
     }, 2000); // Reduced to 2 seconds to ensure changes reflect quickly
@@ -243,13 +247,15 @@ export default function App() {
 
   return (
     <div className={cn(
-      "min-h-screen bg-zinc-50 text-zinc-900 selection:bg-emerald-500/20 selection:text-emerald-900",
+      "min-h-screen transition-colors duration-300",
+      userData.displaySettings?.theme === 'dark' ? "bg-zinc-950 text-zinc-100 dark" : "bg-zinc-50 text-zinc-900",
       userData.displaySettings?.fontSize === 'sm' && "text-xs",
       userData.displaySettings?.fontSize === 'md' && "text-sm",
       userData.displaySettings?.fontSize === 'lg' && "text-base",
       userData.displaySettings?.fontSize === 'xl' && "text-lg",
       "font-sans"
     )}>
+      <Toaster position="top-right" />
       <GlobalSearch 
         data={userData} 
         isOpen={isSearchOpen} 
@@ -267,17 +273,17 @@ export default function App() {
       />
 
       <main className={cn(
-        "transition-all duration-500 p-8 max-w-7xl mx-auto min-h-screen relative z-10",
+        "transition-all duration-500 p-4 max-w-7xl mx-auto min-h-screen relative z-10",
         isSidebarCollapsed ? "ml-20" : "ml-64"
       )}>
-        <header className="flex items-center justify-between mb-16 relative">
+        <header className="flex items-center justify-between mb-8 relative">
           <div>
             <div className="flex items-center gap-3 mb-2">
               <div className="w-2 h-2 rounded-full bg-emerald-500" />
               <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest">System Live</span>
               <span className="text-[10px] font-mono text-zinc-400 dark:text-zinc-600">v3.0.4</span>
             </div>
-            <h2 className="text-4xl font-black tracking-tighter text-zinc-900 dark:text-zinc-100 uppercase leading-none">
+            <h2 className="text-2xl font-black tracking-tighter text-zinc-900 dark:text-zinc-100 uppercase leading-none">
               {activeTab.replace('-', ' ')}
             </h2>
           </div>
@@ -359,6 +365,7 @@ export default function App() {
             transition={{ duration: 0.2 }}
           >
             {activeTab === 'dashboard' && <Dashboard data={userData} setData={setUserData} filters={filters} onTabChange={setActiveTab} />}
+            {activeTab === 'calendar' && <Calendar data={userData} filters={filters} />}
             {activeTab === 'reservations' && <Reservations data={userData} setData={setUserData} filters={filters} />}
             {activeTab === 'operations' && (
               <Operations 

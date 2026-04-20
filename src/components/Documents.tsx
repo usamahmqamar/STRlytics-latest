@@ -122,7 +122,7 @@ export const Documents: React.FC<DocumentsProps> = ({ data, setData }) => {
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card className="bg-emerald-50/50 border-emerald-100">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-emerald-100 rounded-xl text-emerald-600">

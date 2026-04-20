@@ -46,10 +46,13 @@ export { db, auth, googleProvider };
 // Test connection
 async function testConnection() {
   try {
-    await getDocFromServer(doc(db, 'test', 'connection'));
+    // Try to get a doc that at least exists in the match patterns to avoid instant rule rejection during dev
+    // but the error 'client is offline' specifically indicates connectivity issues.
+    await getDocFromServer(doc(db, '_connection_test_', 'ping'));
   } catch (error) {
-    if (error instanceof Error && error.message.includes('the client is offline')) {
-      console.error("Please check your Firebase configuration.");
+    console.error("Firebase Connection Test Error:", error);
+    if (error instanceof Error && (error.message.includes('the client is offline') || error.message.includes('Failed to get document because the client is offline'))) {
+      console.error("Please check your Firebase configuration. Connectivity to the server failed.");
     }
   }
 }

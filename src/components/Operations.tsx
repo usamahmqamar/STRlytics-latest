@@ -56,14 +56,14 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             className="bg-white rounded-[32px] shadow-2xl w-full max-w-lg overflow-hidden"
           >
-            <div className="p-8 border-b border-zinc-100 flex justify-between items-center bg-zinc-50/50">
+            <div className="p-4 border-b border-zinc-100 flex justify-between items-center bg-zinc-50/50">
               <h3 className="text-xl font-black text-zinc-900 tracking-tight italic uppercase">Raise Maintenance Ticket</h3>
               <button onClick={onClose} className="p-2 hover:bg-zinc-100 rounded-full transition-colors">
                 <X size={24} />
               </button>
             </div>
 
-            <div className="p-8 space-y-6">
+            <div className="p-4 space-y-4">
               <div className="space-y-1.5">
                 <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Task Title</label>
                 <input 
@@ -136,7 +136,7 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({
               </div>
             </div>
 
-            <div className="p-8 border-t border-zinc-100 bg-zinc-50/50 flex justify-end gap-3">
+            <div className="p-4 border-t border-zinc-100 bg-zinc-50/50 flex justify-end gap-3">
               <Button variant="outline" onClick={onClose}>Cancel</Button>
               <Button onClick={onAdd} disabled={!newTask.title || !newTask.apartment_id}>Create Ticket</Button>
             </div>
@@ -485,7 +485,7 @@ export const Operations: React.FC<OperationsProps> = ({
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <Card title="Recent Service Records">
           <div className="space-y-4">
             {data.serviceRecords.slice(0, 5).sort((a, b) => b.date.localeCompare(a.date)).map(record => {
@@ -541,7 +541,7 @@ export const Operations: React.FC<OperationsProps> = ({
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-6 border-b border-zinc-200">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-4 border-b border-zinc-200">
         <div className="flex bg-zinc-100 border border-zinc-200 p-1 rounded-2xl">
           {[
             { id: 'dashboard', label: 'Overview', icon: LayoutDashboard },

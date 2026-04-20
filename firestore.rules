@@ -1,40 +1,85 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // ===============================================================
-    // Helper Functions
-    // ===============================================================
-    function isAuthenticated() {
+    // 0. Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Phase 3: Primitive Definition
+    function isSignedIn() {
       return request.auth != null;
     }
-    
+
     function isOwner(userId) {
-      return isAuthenticated() && request.auth.uid == userId;
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // Pillar 2: Validation Blueprints
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'email'])
+        && data.uid == request.auth.uid
+        && data.email is string && data.email.size() <= 256
+        && (data.get('displayName', '') is string && data.get('displayName', '').size() <= 128)
+        && (data.get('photoURL', '') is string && data.get('photoURL', '').size() <= 512);
     }
 
     function isValidUserData(data) {
-      return data.keys().hasAll(['uid', 'data']) &&
-             data.uid is string &&
-             data.uid == request.auth.uid;
+      return data.keys().hasAll(['uid', 'data'])
+        && data.uid == request.auth.uid
+        && data.data is map
+        && (data.get('updatedAt', request.time) == request.time);
     }
 
-    function isValidUser(data) {
-      return data.keys().hasAll(['uid', 'email']) &&
-             data.uid is string &&
-             data.uid == request.auth.uid &&
-             data.email is string;
-    }
-
-    // ===============================================================
-    // Rules
-    // ===============================================================
-
-    match /user_data/{userId} {
-      allow read, write: if isOwner(userId);
-    }
-
+    // Users Collection
     match /users/{userId} {
-      allow read, write: if isOwner(userId);
+      allow get: if isOwner(userId);
+      allow list: if false; // Prevention of user scraping
+      
+      allow create: if isOwner(userId) 
+        && isValidId(userId)
+        && isValidUser(incoming())
+        && incoming().createdAt == request.time;
+        
+      allow update: if isOwner(userId)
+        && isValidUser(incoming())
+        && incoming().diff(existing()).affectedKeys().hasOnly(['email', 'displayName', 'photoURL', 'updatedAt'])
+        && (incoming().get('updatedAt', request.time) == request.time);
+        
+      allow delete: if isOwner(userId);
+    }
+
+    // User Data Collection
+    match /user_data/{userId} {
+      allow get: if isOwner(userId);
+      allow list: if false; // Prevention of bulk data theft
+
+      allow create: if isOwner(userId)
+        && isValidId(userId)
+        && isValidUserData(incoming());
+
+      allow update: if isOwner(userId)
+        && isValidUserData(incoming())
+        && incoming().diff(existing()).affectedKeys().hasOnly(['data', 'updatedAt']);
+
+      allow delete: if isOwner(userId);
+    }
+
+    // Connection Test Collection
+    match /_connection_test_/{docId} {
+      allow get: if true;
     }
   }
 }

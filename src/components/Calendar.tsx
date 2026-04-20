@@ -63,13 +63,13 @@ export const Calendar: React.FC<CalendarProps> = ({ data, filters }) => {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col md:flex-row justify-between items-center gap-6 bg-white p-6 rounded-[2.5rem] border border-zinc-100 shadow-sm">
+      <div className="flex flex-col md:flex-row justify-between items-center gap-4 bg-white p-4 rounded-2xl border border-zinc-100 shadow-sm">
         <div className="flex items-center gap-4">
           <div className="w-12 h-12 bg-zinc-900 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-zinc-200">
             <CalendarIcon size={24} />
           </div>
           <div>
-            <h2 className="text-3xl font-black text-zinc-900 tracking-tight uppercase italic">Booking Calendar</h2>
+            <h2 className="text-xl font-black text-zinc-900 tracking-tight uppercase italic">Booking Calendar</h2>
             <p className="text-zinc-400 text-[10px] font-bold uppercase tracking-widest mt-1">Real-time portfolio occupancy & availability</p>
           </div>
         </div>
@@ -207,8 +207,8 @@ export const Calendar: React.FC<CalendarProps> = ({ data, filters }) => {
         </div>
 
         {/* Legend */}
-        <div className="p-6 bg-zinc-50/50 border-t border-zinc-100 flex flex-wrap items-center justify-between gap-6">
-          <div className="flex items-center gap-8">
+        <div className="p-4 bg-zinc-50/50 border-t border-zinc-100 flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
             <div className="flex items-center gap-3">
               <div className="w-4 h-4 bg-zinc-900 rounded-full" />
               <span className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em]">Confirmed Booking</span>
@@ -271,7 +271,7 @@ export const Calendar: React.FC<CalendarProps> = ({ data, filters }) => {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-6">
+                <div className="grid grid-cols-2 gap-4">
                   <div className="p-4 bg-zinc-50 rounded-2xl border border-zinc-100">
                     <p className="text-[9px] font-bold text-zinc-400 uppercase mb-1">Stay Duration</p>
                     <p className="text-sm font-black text-zinc-900">{selectedReservation.nights} Nights</p>
@@ -288,7 +288,7 @@ export const Calendar: React.FC<CalendarProps> = ({ data, filters }) => {
                     <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Final Net Payout</p>
                     <span className="px-2 py-0.5 bg-emerald-500 text-white text-[8px] font-black rounded uppercase tracking-widest">Confirmed</span>
                   </div>
-                  <p className="text-3xl font-black text-emerald-700">{formatValue(selectedReservation.net_payout_aed)}</p>
+                  <p className="text-xl font-black text-emerald-700">{formatValue(selectedReservation.net_payout_aed)}</p>
                   <p className="text-[10px] text-emerald-600/70 font-medium mt-1">Platform: {selectedReservation.channel}</p>
                 </div>
               </div>

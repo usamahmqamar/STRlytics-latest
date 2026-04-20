@@ -15,13 +15,13 @@ export const Card: React.FC<CardProps> = ({ children, className, title, action, 
   return (
     <div 
       className={cn(
-        "bg-white rounded-3xl border border-zinc-200 p-6 shadow-sm",
+        "bg-white rounded-2xl border border-zinc-200 p-4 shadow-sm",
         className
       )} 
       {...props}
     >
       {title && (
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between mb-4">
           <div className="text-sm font-bold text-zinc-900">
             {title}
           </div>

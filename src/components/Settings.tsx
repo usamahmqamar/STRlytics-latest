@@ -10,7 +10,7 @@ import {
   CreditCard, CheckCircle2,
   Building2, Mail, Phone, Globe, MapPin,
   Zap, Download, FileText, Share2,
-  X, Edit2
+  X, Edit2, LayoutDashboard
 } from 'lucide-react';
 import { Card } from './ui/Card';
 import { Button } from './ui/Button';
@@ -58,8 +58,18 @@ export const Settings: React.FC<SettingsProps> = ({ data, setData }) => {
     { id: 'profile', label: 'Company Profile', icon: Building2 },
     { id: 'subscription', label: 'Subscription', icon: ShieldCheck },
     { id: 'payments', label: 'Payment History', icon: History },
-    { id: 'display', label: 'Display Settings', icon: Monitor }
+    { id: 'display', label: 'Display Settings', icon: Monitor },
+    { id: 'dashboard', label: 'Dashboard Setup', icon: LayoutDashboard }
   ];
+
+  const toggleWidget = (widgetId: string) => {
+    setData(prev => ({
+      ...prev,
+      dashboardWidgets: prev.dashboardWidgets.map(w => 
+        w.id === widgetId ? { ...w, visible: !w.visible } : w
+      )
+    }));
+  };
 
   return (
     <div className="space-y-8">
@@ -91,11 +101,11 @@ export const Settings: React.FC<SettingsProps> = ({ data, setData }) => {
           transition={{ duration: 0.2 }}
         >
           {activeTab === 'profile' && (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
               <div className="lg:col-span-2">
                 <Card title="COMPANY INFORMATION">
                   <div className="mt-8 space-y-12">
-                    <div className="flex items-center gap-8">
+                    <div className="flex items-center gap-4">
                       <div className="w-32 h-32 bg-zinc-100 dark:bg-zinc-800 rounded-[2.5rem] overflow-hidden border border-zinc-200 dark:border-zinc-800 flex items-center justify-center shrink-0 shadow-inner">
                         {data.companyProfile?.logo_url ? (
                           <img 
@@ -206,10 +216,10 @@ export const Settings: React.FC<SettingsProps> = ({ data, setData }) => {
           )}
 
           {activeTab === 'subscription' && (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
               <div className="lg:col-span-2 space-y-8">
                 <Card title="ACTIVE SUBSCRIPTION">
-                  <div className="mt-8 p-8 bg-white border border-zinc-100 rounded-[2.5rem] flex items-center gap-8 relative overflow-hidden group">
+                  <div className="mt-4 p-4 bg-white border border-zinc-100 rounded-2xl flex items-center gap-4 relative overflow-hidden group">
                     <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/5 blur-[80px] rounded-full -mr-32 -mt-32" />
                     <div className="w-20 h-20 bg-emerald-50 rounded-3xl flex items-center justify-center shrink-0 border border-emerald-100 shadow-sm">
                       <Zap size={32} className="text-emerald-600" />
@@ -224,7 +234,7 @@ export const Settings: React.FC<SettingsProps> = ({ data, setData }) => {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-8 mt-12">
+                  <div className="grid grid-cols-2 gap-4 mt-6">
                     <div className="space-y-4">
                       <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em]">PAYMENT METHOD</p>
                       <div className="p-6 bg-white border border-zinc-100 rounded-[2rem] flex items-center justify-between group hover:border-emerald-500/30 transition-all">
@@ -297,11 +307,11 @@ export const Settings: React.FC<SettingsProps> = ({ data, setData }) => {
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="border-b border-zinc-100">
-                      <th className="pb-6 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">DATE</th>
-                      <th className="pb-6 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">PLAN</th>
-                      <th className="pb-6 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">AMOUNT</th>
-                      <th className="pb-6 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">STATUS</th>
-                      <th className="pb-6 text-[10px] font-bold text-zinc-400 uppercase tracking-widest text-right">INVOICE</th>
+                      <th className="pb-3 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">DATE</th>
+                      <th className="pb-3 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">PLAN</th>
+                      <th className="pb-3 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">AMOUNT</th>
+                      <th className="pb-3 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">STATUS</th>
+                      <th className="pb-3 text-[10px] font-bold text-zinc-400 uppercase tracking-widest text-right">INVOICE</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-zinc-50">
@@ -310,25 +320,25 @@ export const Settings: React.FC<SettingsProps> = ({ data, setData }) => {
                       { payment_id: 'pay-002', date: '2024-02-01', plan: 'PRO', amount_aed: 499, status: 'Success' }
                     ]).map((pay) => (
                       <tr key={pay.payment_id} className="group hover:bg-zinc-50/50 transition-colors">
-                        <td className="py-8">
+                        <td className="py-4">
                           <p className="text-sm font-bold text-zinc-900">{format(parseISO(pay.date), 'MMM d, yyyy')}</p>
                           <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mt-1">ID: {pay.payment_id}</p>
                         </td>
-                        <td className="py-8">
+                        <td className="py-4">
                           <span className="px-3 py-1 bg-zinc-100 text-zinc-500 text-[10px] font-black uppercase rounded-lg border border-zinc-200">
                             {pay.plan}
                           </span>
                         </td>
-                        <td className="py-8">
+                        <td className="py-4">
                           <p className="text-sm font-black text-zinc-900">{formatCurrency(pay.amount_aed)}</p>
                         </td>
-                        <td className="py-8">
+                        <td className="py-4">
                           <div className="flex items-center gap-2">
                             <div className="w-2 h-2 bg-emerald-500 rounded-full shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
                             <span className="text-sm font-bold text-zinc-900">{pay.status}</span>
                           </div>
                         </td>
-                        <td className="py-8 text-right">
+                        <td className="py-4 text-right">
                           <button className="p-3 bg-white border border-zinc-200 rounded-2xl text-zinc-400 hover:text-emerald-600 hover:border-emerald-600 transition-all shadow-sm">
                             <Download size={18} />
                           </button>
@@ -341,9 +351,57 @@ export const Settings: React.FC<SettingsProps> = ({ data, setData }) => {
             </Card>
           )}
 
+          {activeTab === 'dashboard' && (
+            <Card title="DASHBOARD WIDGETS">
+              <div className="mt-6 space-y-4">
+                <p className="text-sm font-medium text-zinc-500 leading-relaxed max-w-lg mb-8">
+                  Toggle the visibility of specific dashboard components. Changes are saved automatically.
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {data.dashboardWidgets.map((widget) => (
+                    <button
+                      key={widget.id}
+                      onClick={() => toggleWidget(widget.id)}
+                      className={cn(
+                        "p-6 rounded-[2rem] border transition-all duration-300 flex items-center justify-between group",
+                        widget.visible 
+                          ? "bg-zinc-900 border-zinc-800 text-white shadow-xl shadow-zinc-200" 
+                          : "bg-white border-zinc-100 text-zinc-400 grayscale opacity-60 hover:opacity-100 hover:grayscale-0"
+                      )}
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className={cn(
+                          "w-10 h-10 rounded-xl flex items-center justify-center border",
+                          widget.visible ? "bg-zinc-800 border-zinc-700" : "bg-zinc-50 border-zinc-100"
+                        )}>
+                          <LayoutDashboard size={18} />
+                        </div>
+                        <div className="text-left">
+                          <p className="text-xs font-black uppercase tracking-widest">{widget.title || widget.id.replace(/-/g, ' ')}</p>
+                          <p className={cn(
+                            "text-[10px] mt-0.5",
+                            widget.visible ? "text-zinc-400" : "text-zinc-300"
+                          )}>
+                            {widget.visible ? 'Visible' : 'Hidden'}
+                          </p>
+                        </div>
+                      </div>
+                      <div className={cn(
+                        "w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors",
+                        widget.visible ? "border-emerald-500 bg-emerald-500 text-white" : "border-zinc-200 text-transparent"
+                      )}>
+                        <CheckCircle2 size={12} />
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </Card>
+          )}
+
           {activeTab === 'display' && (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-              <div className="lg:col-span-2 space-y-8">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+              <div className="lg:col-span-2 space-y-4">
                 <Card title="FONT SIZE SETTINGS">
                   <div className="mt-6 space-y-8">
                     <p className="text-sm font-medium text-zinc-500 leading-relaxed max-w-lg">
@@ -378,7 +436,7 @@ export const Settings: React.FC<SettingsProps> = ({ data, setData }) => {
                       ))}
                     </div>
 
-                    <div className="p-8 bg-zinc-50/50 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-800 rounded-[2.5rem] space-y-4">
+                    <div className="p-4 bg-zinc-50/50 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-800 rounded-2xl space-y-2">
                       <h4 className="text-sm font-black text-zinc-900 dark:text-zinc-100 uppercase tracking-widest">Preview</h4>
                       <p className={cn(
                         "text-zinc-500 dark:text-zinc-400 leading-relaxed transition-all duration-300",

@@ -34,17 +34,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   const navItems = [
     { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-    { id: 'reservations', icon: Calendar, label: 'Reservations' },
+    { id: 'calendar', icon: Calendar, label: 'Calendar' },
+    { id: 'reservations', icon: ClipboardList, label: 'Reservations' },
     { id: 'occupancy', icon: TrendingUp, label: 'Occupancy & Revenue' },
     { id: 'projections', icon: BarChart3, label: 'Feasibility & Projections' },
-    { id: 'reports', icon: ClipboardList, label: 'Investor Reports' },
+    { id: 'reports', icon: Package, label: 'Investor Reports' },
     { id: 'setup', icon: Building2, label: 'Property Setup' },
     { id: 'assets', icon: Package, label: 'Inventory & Assets' },
     { id: 'documents', icon: ShieldCheck, label: 'Document Vault' },
     { id: 'ocr', icon: ScanLine, label: 'Receipt OCR' },
     { id: 'daily-pl', icon: TrendingUp, label: 'Daily P&L' },
     { id: 'analytics', icon: Table, label: 'Analytics' },
-    { id: 'cashflow', icon: Calendar, label: 'Cashflow' },
+    { id: 'cashflow', icon: Wallet, label: 'Cashflow' },
     { id: 'operations', icon: Users, label: 'Operations' },
     { id: 'data', icon: Database, label: 'Data Manager' },
     { id: 'settings', icon: Settings, label: 'Settings' },
@@ -57,7 +58,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         isCollapsed ? "w-24" : "w-72"
       )}
     >
-      <div className={cn("p-8 flex flex-col gap-10 h-full overflow-y-auto custom-scrollbar", isCollapsed && "items-center px-0")}>
+      <div className={cn("p-4 flex flex-col gap-6 h-full overflow-y-auto custom-scrollbar", isCollapsed && "items-center px-0")}>
         {/* Logo */}
         <div className={cn("flex items-center gap-4 px-2 relative w-full", isCollapsed && "justify-center px-0")}>
           <div className="w-12 h-12 bg-zinc-900 rounded-2xl flex items-center justify-center text-white shrink-0 border border-zinc-800 shadow-lg">
@@ -110,7 +111,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               title={isCollapsed ? item.label : undefined}
               className={cn(
                 "flex items-center rounded-2xl text-[11px] font-black uppercase tracking-[0.2em] transition-all duration-300 w-full group relative overflow-hidden",
-                isCollapsed ? "justify-center p-4" : "gap-4 px-5 py-4",
+                isCollapsed ? "justify-center p-3" : "gap-3 px-4 py-2",
                 activeTab === item.id 
                   ? "bg-zinc-900 text-white shadow-xl" 
                   : "text-zinc-400 hover:text-zinc-900 hover:bg-zinc-50"
@@ -160,22 +161,32 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </motion.div>
         )}
 
-        {/* Logout hidden during bypass */}
-        {false && (
-          <div className="mt-auto pt-8 border-t border-zinc-100">
+        {/* Auth Actions */}
+        <div className="mt-auto pt-4 border-t border-zinc-100 dark:border-zinc-800">
+          {auth?.currentUser?.uid !== 'guest_user' ? (
             <button 
               onClick={() => signOut(auth)}
               className={cn(
-                "w-full flex items-center text-zinc-500 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all",
-                isCollapsed ? "justify-center p-3.5" : "gap-3.5 px-4 py-3.5"
+                "w-full flex items-center text-zinc-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-xl transition-all",
+                isCollapsed ? "justify-center p-3" : "gap-3 px-4 py-2"
               )}
               title={isCollapsed ? "Log Out" : undefined}
             >
-              <LogOut size={20} />
-              {!isCollapsed && <span className="font-bold">Log Out</span>}
+              <LogOut size={18} />
+              {!isCollapsed && <span className="text-[11px] font-black uppercase tracking-widest">Log Out</span>}
             </button>
-          </div>
-        )}
+          ) : (
+            <div className="flex flex-col gap-2">
+              <div className={cn(
+                "flex items-center text-amber-500 bg-amber-50 dark:bg-amber-950/20 rounded-xl p-2",
+                isCollapsed ? "justify-center" : "gap-2"
+              )}>
+                <ShieldCheck size={16} />
+                {!isCollapsed && <span className="text-[9px] font-black uppercase tracking-widest">Guest Mode</span>}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </aside>
   );

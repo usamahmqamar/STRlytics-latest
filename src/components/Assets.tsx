@@ -128,7 +128,7 @@ export const Assets: React.FC<AssetsProps> = ({ data, setData }) => {
       </div>
 
       {/* Cost Evaluation Summary */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card className="p-6 bg-zinc-900 text-white border-none">
           <div className="flex items-center gap-3 mb-4">
             <div className="p-2 bg-white/10 rounded-xl">
@@ -136,7 +136,7 @@ export const Assets: React.FC<AssetsProps> = ({ data, setData }) => {
             </div>
             <p className="text-[10px] font-black uppercase tracking-widest text-white/40">Total Acquisition Cost</p>
           </div>
-          <p className="text-3xl font-black tracking-tight">{formatCurrency(stats.totalValue)}</p>
+          <p className="text-xl font-black tracking-tight">{formatCurrency(stats.totalValue)}</p>
           <div className="mt-4 flex items-center gap-2 text-[10px] font-bold text-white/40">
             <Package size={12} />
             {assets.length} Total Assets
@@ -150,7 +150,7 @@ export const Assets: React.FC<AssetsProps> = ({ data, setData }) => {
             </div>
             <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Estimated Current Value</p>
           </div>
-          <p className="text-3xl font-black tracking-tight text-zinc-900">{formatCurrency(stats.totalCurrentValue)}</p>
+          <p className="text-xl font-black tracking-tight text-zinc-900">{formatCurrency(stats.totalCurrentValue)}</p>
           <p className="mt-2 text-[10px] font-bold text-amber-600 uppercase tracking-widest">
             {Math.round((stats.totalCurrentValue / stats.totalValue) * 100)}% of original value
           </p>
@@ -163,7 +163,7 @@ export const Assets: React.FC<AssetsProps> = ({ data, setData }) => {
             </div>
             <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Active Warranties</p>
           </div>
-          <p className="text-3xl font-black tracking-tight text-zinc-900">
+          <p className="text-xl font-black tracking-tight text-zinc-900">
             {assets.filter(a => a.warranty_expiry && !isBefore(parseISO(a.warranty_expiry), new Date())).length}
           </p>
           {stats.expiringSoon > 0 && (
@@ -224,7 +224,7 @@ export const Assets: React.FC<AssetsProps> = ({ data, setData }) => {
         </select>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {filteredAssets.map((asset) => {
           const apt = data.apartments.find(a => a.apartment_id === asset.apartment_id);
           const isWarrantyExpiring = asset.warranty_expiry && isBefore(parseISO(asset.warranty_expiry), addDays(new Date(), 90));

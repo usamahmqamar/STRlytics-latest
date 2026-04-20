@@ -67,7 +67,7 @@ export const InvestorReports: React.FC<InvestorReportsProps> = ({ data }) => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card className="bg-emerald-50 border-emerald-100">
           <div className="flex items-center justify-between mb-2">
             <span className="text-[10px] font-bold text-emerald-600/60 uppercase tracking-widest">Gross Revenue</span>
