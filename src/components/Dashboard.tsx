@@ -65,17 +65,17 @@ const StatCard: React.FC<{
   conversionInfo?: string;
 }> = ({ label, value, subValue, trend, conversionInfo }) => (
   <div className="flex flex-col group">
-    <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest group-hover:text-emerald-500 transition-colors duration-500">
+    <span className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 tracking-tight group-hover:text-zinc-900 dark:group-hover:text-zinc-100 transition-colors duration-300">
       {label}
     </span>
     <div className="flex items-baseline gap-2 mt-1">
-      <span className="text-xl font-black text-zinc-900 dark:text-zinc-100 font-mono tracking-tighter">
+      <span className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
         {value}
       </span>
       {trend && (
         <div className={cn(
-          "flex items-center gap-0.5 text-[10px] font-bold px-1.5 py-0.5 rounded-md",
-          trend === 'up' ? "bg-emerald-500/10 text-emerald-500" : "bg-rose-500/10 text-rose-500"
+          "flex items-center gap-0.5 text-[10px] font-semibold px-1.5 py-0.5 rounded-md",
+          trend === 'up' ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" : "bg-rose-500/10 text-rose-600 dark:text-rose-400"
         )}>
           {trend === 'up' ? <TrendingUp size={10} /> : <TrendingDown size={10} />}
         </div>
@@ -83,14 +83,13 @@ const StatCard: React.FC<{
     </div>
     {subValue && (
       <span className={cn(
-        "text-[10px] mt-2 font-black uppercase tracking-[0.2em]",
-        trend === 'up' ? "text-emerald-500/80" : trend === 'down' ? "text-rose-500/80" : "text-zinc-500"
+        "text-xs mt-1.5 font-normal tracking-normal text-zinc-500 dark:text-zinc-400"
       )}>
         {subValue}
       </span>
     )}
     {conversionInfo && (
-      <span className="text-[9px] text-zinc-500 mt-1 italic font-medium opacity-60">
+      <span className="text-[10px] text-zinc-400 dark:text-zinc-500 mt-1 italic font-medium opacity-70">
         {conversionInfo}
       </span>
     )}
@@ -157,18 +156,18 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, setData, filters, on
     'financial-health': (
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 text-zinc-900">
-            <TrendingUp size={18} className="text-emerald-500" />
-            <h3 className="text-sm font-black uppercase tracking-widest">Financial Health & P&L Analysis</h3>
+          <div className="flex items-center gap-2 text-zinc-800 dark:text-zinc-200">
+            <TrendingUp size={16} className="text-emerald-500" />
+            <h3 className="text-sm font-semibold tracking-tight">Financial Health & P&L Analysis</h3>
           </div>
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-emerald-500" />
-              <span className="text-[10px] font-bold text-zinc-500 uppercase">Profit</span>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1.5">
+              <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+              <span className="text-xs text-zinc-550 dark:text-zinc-400 font-medium">Profit</span>
             </div>
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-rose-500" />
-              <span className="text-[10px] font-bold text-zinc-500 uppercase">Opex</span>
+            <div className="flex items-center gap-1.5">
+              <div className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+              <span className="text-xs text-zinc-550 dark:text-zinc-400 font-medium">Opex</span>
             </div>
           </div>
         </div>
@@ -308,11 +307,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, setData, filters, on
     'task-reminders': (
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 text-zinc-900">
-            <Bell size={18} className="text-emerald-500" />
-            <h3 className="text-sm font-black uppercase tracking-widest">Urgent Reminders</h3>
+          <div className="flex items-center gap-2 text-zinc-800 dark:text-zinc-200">
+            <Bell size={16} className="text-amber-500" />
+            <h3 className="text-sm font-semibold tracking-tight">Urgent Reminders</h3>
           </div>
-          <span className="px-2 py-0.5 bg-emerald-50 text-emerald-600 text-[10px] font-bold rounded-full">
+          <span className="px-2 py-0.5 bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 text-[10px] font-medium rounded-full">
             {upcomingTasks.length} Tasks
           </span>
         </div>
@@ -972,7 +971,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, setData, filters, on
       )}
 
       {/* Dashboard Grid */}
-      <div className="space-y-24">
+      <div className="space-y-12">
         {categories.map((category, catIndex) => {
           const visibleWidgets = data.dashboardWidgets.filter(w => w.category === category.id && w.visible);
           if (visibleWidgets.length === 0) return null;
@@ -980,29 +979,28 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, setData, filters, on
           return (
             <motion.div 
               key={category.id} 
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: catIndex * 0.1 }}
-              className="space-y-10"
+              transition={{ delay: catIndex * 0.08 }}
+              className="space-y-6"
             >
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-2xl bg-zinc-900 flex items-center justify-center text-white shadow-xl">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-500 dark:text-zinc-400">
                   {category.icon}
                 </div>
                 <div>
-                  <h2 className="text-xl font-black text-zinc-900 uppercase tracking-[0.3em]">{category.name}</h2>
-                  <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mt-1">System Module {catIndex + 1}</p>
+                  <h2 className="text-sm font-semibold text-zinc-800 dark:text-zinc-200 uppercase tracking-widest">{category.name}</h2>
                 </div>
-                <div className="h-px flex-1 bg-gradient-to-r from-zinc-200 via-zinc-100 to-transparent ml-6" />
+                <div className="h-px flex-1 bg-gradient-to-r from-zinc-200 dark:from-zinc-800 via-zinc-100 dark:via-zinc-850 to-transparent ml-4" />
               </div>
 
-              <div className="grid grid-cols-12 gap-10">
+              <div className="grid grid-cols-12 gap-6">
                 {visibleWidgets.map((widget, widgetIndex) => (
                   <motion.div 
                     key={widget.id}
-                    initial={{ opacity: 0, scale: 0.95 }}
+                    initial={{ opacity: 0, scale: 0.98 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: (catIndex * 0.1) + (widgetIndex * 0.05) }}
+                    transition={{ delay: (catIndex * 0.08) + (widgetIndex * 0.04) }}
                     className={cn(
                       widget.colSpan === 12 ? "col-span-12" :
                       widget.colSpan === 8 ? "col-span-12 lg:col-span-8" :

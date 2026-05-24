@@ -5,13 +5,12 @@
 
 import { initializeApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider } from 'firebase/auth';
-import { getFirestore, doc, getDocFromServer } from 'firebase/firestore';
+import { initializeFirestore, doc, getDocFromServer } from 'firebase/firestore';
 import firebaseConfigJson from '../../firebase-applet-config.json';
 
 // Use environment variables if available, otherwise fallback to the applet config
 console.log("Firebase service initializing...");
 const config = (firebaseConfigJson && typeof firebaseConfigJson === 'object') ? firebaseConfigJson : {} as any;
-console.log("Firebase config loaded:", config.projectId ? "Yes" : "No");
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY || config.apiKey || '',
@@ -23,8 +22,6 @@ const firebaseConfig = {
   measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || config.measurementId || '',
 };
 
-console.log("Firebase Auth Domain:", firebaseConfig.authDomain);
-
 const firestoreDatabaseId = import.meta.env.VITE_FIRESTORE_DATABASE_ID || config.firestoreDatabaseId || '(default)';
 
 let app;
@@ -34,25 +31,30 @@ const googleProvider = new GoogleAuthProvider();
 
 try {
   app = initializeApp(firebaseConfig);
-  db = getFirestore(app, firestoreDatabaseId);
+  // Using initializeFirestore instead of getFirestore to enable long polling
+  // to avoid 'client is offline' issues in restricted network environments.
+  db = initializeFirestore(app, {
+    experimentalForceLongPolling: true,
+  }, firestoreDatabaseId);
   auth = getAuth(app);
 } catch (error) {
   console.error("Firebase initialization failed:", error);
-  // Fallback to empty objects or handle gracefully in components
 }
 
 export { db, auth, googleProvider };
 
 // Test connection
 async function testConnection() {
+  if (!db) return;
   try {
-    // Try to get a doc that at least exists in the match patterns to avoid instant rule rejection during dev
-    // but the error 'client is offline' specifically indicates connectivity issues.
+    // Try to get a doc to verify connection. Path match expected in rules.
     await getDocFromServer(doc(db, '_connection_test_', 'ping'));
+    console.log("Firebase connection test successful.");
   } catch (error) {
-    console.error("Firebase Connection Test Error:", error);
-    if (error instanceof Error && (error.message.includes('the client is offline') || error.message.includes('Failed to get document because the client is offline'))) {
-      console.error("Please check your Firebase configuration. Connectivity to the server failed.");
+    if (error instanceof Error && (error.message.includes('offline') || error.message.includes('Failed to get document'))) {
+      console.warn("Firestore connection check: Client may still be establishing connection or is offline.");
+    } else {
+      console.error("Firebase Connection Test Error:", error);
     }
   }
 }

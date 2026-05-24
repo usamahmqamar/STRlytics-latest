@@ -3,6 +3,22 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+export interface TenancyHistoryRecord {
+  tenancy_id: string;
+  start_date: string;
+  end_date: string;
+  status: 'expired' | 'terminated';
+  annual_rent_aed: number;
+  monthly_rent_aed: number;
+  num_cheques: number;
+  total_revenue_aed: number;
+  total_expenses_aed: number;
+  net_payout_aed: number;
+  net_profit_aed: number;
+  occupancy_rate: number;
+  num_reservations: number;
+}
+
 export interface Apartment {
   apartment_id: string;
   name: string;
@@ -25,6 +41,9 @@ export interface Apartment {
   setup_costs: SetupCost[];
   currency: string;
   platform_settings?: PropertyPlatformSetting[];
+  tenancy_end_date?: string;
+  status?: 'active' | 'expired' | 'terminated';
+  tenancy_history?: TenancyHistoryRecord[];
 }
 
 export interface RentCheque {

@@ -10,13 +10,15 @@ import {
   Settings2, Globe, CheckCircle2, AlertTriangle,
   ChevronRight, Info, DollarSign, Zap, X,
   Calendar, Ruler, Home, MapPin, Receipt,
-  ShieldCheck, Truck, Wrench, Package, Info as InfoIcon
+  ShieldCheck, Truck, Wrench, Package, Info as InfoIcon,
+  RefreshCw, History, Power, Eye, TrendingUp, TrendingDown,
+  ShieldAlert
 } from 'lucide-react';
 import { Card } from './ui/Card';
 import { Button } from './ui/Button';
-import { UserData, Apartment, SetupCost, RentCheque, Platform, Asset, CommunicationTemplate } from '../types';
+import { UserData, Apartment, SetupCost, RentCheque, Platform, Asset, CommunicationTemplate, TenancyHistoryRecord } from '../types';
 import { cn } from '../lib/utils';
-import { format, addMonths, parseISO } from 'date-fns';
+import { format, addMonths, parseISO, differenceInDays } from 'date-fns';
 
 interface SetupProps {
   data: UserData;
@@ -31,6 +33,21 @@ export const Setup: React.FC<SetupProps> = ({ data, setData }) => {
   const [isPlatformModalOpen, setIsPlatformModalOpen] = useState(false);
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
   const [editingTemplateId, setEditingTemplateId] = useState<string | null>(null);
+
+  // Tenancy Operations State
+  const [renewingApt, setRenewingApt] = useState<Apartment | null>(null);
+  const [terminatingApt, setTerminatingApt] = useState<Apartment | null>(null);
+  const [showHistoryAptId, setShowHistoryAptId] = useState<string | null>(null);
+
+  // Form states for renewal
+  const [renewStartDate, setRenewStartDate] = useState('');
+  const [renewEndDate, setRenewEndDate] = useState('');
+  const [renewAnnualRent, setRenewAnnualRent] = useState(0);
+  const [renewNumCheques, setRenewNumCheques] = useState(4);
+
+  // Form states for termination
+  const [terminateDate, setTerminateDate] = useState('');
+  const [terminateStatus, setTerminateStatus] = useState<'expired' | 'terminated'>('expired');
   
   // Form State for New Apartment
   const [newApt, setNewApt] = useState<Partial<Apartment>>({
@@ -44,6 +61,8 @@ export const Setup: React.FC<SetupProps> = ({ data, setData }) => {
     num_cheques: 4,
     currency: 'AED',
     start_operation_date: format(new Date(), 'yyyy-MM-dd'),
+    tenancy_end_date: format(addMonths(new Date(), 12), 'yyyy-MM-dd'),
+    status: 'active',
     utilities_monthly_defaults: {
       dewa_electricity_aed: 500,
       internet_aed: 350
@@ -117,6 +136,10 @@ export const Setup: React.FC<SetupProps> = ({ data, setData }) => {
   const handleAddApartment = () => {
     if (!newApt.nickname || !newApt.name) return;
 
+    // Auto calculate tenancy_end_date if not specified (e.g., 1 year from start_operation_date)
+    const startDateStr = newApt.start_operation_date || format(new Date(), 'yyyy-MM-dd');
+    const defaultEndStr = format(addMonths(parseISO(startDateStr), 12), 'yyyy-MM-dd');
+
     const apartment: Apartment = {
       ...newApt as Apartment,
       apartment_id: newApt.nickname, // Nickname serves as ID
@@ -124,6 +147,9 @@ export const Setup: React.FC<SetupProps> = ({ data, setData }) => {
       rent_cheques: editingAptId ? (newApt.rent_cheques || []) : generatedCheques,
       setup_costs: newApt.setup_costs || [],
       currency: 'AED',
+      tenancy_end_date: newApt.tenancy_end_date || defaultEndStr,
+      status: newApt.status || 'active',
+      tenancy_history: newApt.tenancy_history || [],
       platform_settings: newApt.platform_settings || data.platforms.map(p => ({
         platform_id: p.platform_id,
         commission_percent: p.commission_percent,
@@ -156,11 +182,177 @@ export const Setup: React.FC<SetupProps> = ({ data, setData }) => {
       annual_rent_aed: 0,
       num_cheques: 4,
       start_operation_date: format(new Date(), 'yyyy-MM-dd'),
+      tenancy_end_date: format(addMonths(new Date(), 12), 'yyyy-MM-dd'),
+      status: 'active',
       utilities_monthly_defaults: {
         dewa_electricity_aed: 500,
         internet_aed: 350
       }
     });
+  };
+
+  // Helper, dynamic tenancy performance calculator
+  const calculatePerformanceForPeriod = (
+    apartmentId: string,
+    startDate: string,
+    endDate: string,
+    annualRentAed: number
+  ) => {
+    // 1. Filter reservations
+    const matchedReservations = (data.reservations || []).filter(r => 
+      r.apartment_id === apartmentId && 
+      r.status === 'confirmed' &&
+      r.check_in >= startDate && 
+      r.check_in <= endDate
+    );
+
+    const totalRevenue = matchedReservations.reduce((sum, r) => sum + r.total_booking_revenue_aed, 0);
+    const netPayout = matchedReservations.reduce((sum, r) => sum + r.net_payout_aed, 0);
+    const num_reservations = matchedReservations.length;
+
+    // Occupancy percentage formula
+    const totalNights = matchedReservations.reduce((sum, r) => sum + r.nights, 0);
+    const date1 = parseISO(startDate);
+    const date2 = parseISO(endDate);
+    const totalDays = Math.max(1, differenceInDays(date2, date1));
+    const occupancyRate = Math.min(100, Math.round((totalNights / totalDays) * 100));
+
+    // Bills during the period
+    const startMonth = startDate.substring(0, 7);
+    const endMonth = endDate.substring(0, 7);
+    const matchedBills = (data.monthlyBills || []).filter(b => 
+      b.apartment_id === apartmentId && 
+      b.month >= startMonth && 
+      b.month <= endMonth
+    );
+    const totalBills = matchedBills.reduce((sum, b) => sum + b.amount_aed, 0);
+
+    // Daily expenses during the period
+    const matchedExpenses = (data.dailyExpenses || []).filter(e => 
+      e.apartment_id === apartmentId && 
+      e.date >= startDate && 
+      e.date <= endDate
+    );
+    const totalExpensesDaily = matchedExpenses.reduce((sum, e) => sum + e.amount_aed, 0);
+
+    // Proportional Rent Expense
+    const fractionOfYear = totalDays / 365;
+    const rentCost = Math.round(annualRentAed * fractionOfYear);
+
+    const totalExpenses = totalBills + totalExpensesDaily + rentCost;
+    const netProfit = netPayout - totalExpenses;
+
+    return {
+      total_revenue_aed: totalRevenue,
+      total_expenses_aed: totalExpenses,
+      net_payout_aed: netPayout,
+      net_profit_aed: netProfit,
+      occupancy_rate: occupancyRate,
+      num_reservations
+    };
+  };
+
+  const handleRenewTenancySubmit = () => {
+    if (!renewingApt || !renewStartDate || !renewEndDate) return;
+
+    // Calculate performance of the current tenancy (which is about to expire/renew)
+    const perf = calculatePerformanceForPeriod(
+      renewingApt.apartment_id,
+      renewingApt.start_operation_date,
+      renewingApt.tenancy_end_date || format(new Date(), 'yyyy-MM-dd'),
+      renewingApt.annual_rent_aed
+    );
+
+    // Create history record
+    const historyRecord: TenancyHistoryRecord = {
+      tenancy_id: `HIST-${renewingApt.apartment_id}-${Date.now()}`,
+      start_date: renewingApt.start_operation_date,
+      end_date: renewingApt.tenancy_end_date || format(new Date(), 'yyyy-MM-dd'),
+      status: 'expired',
+      annual_rent_aed: renewingApt.annual_rent_aed,
+      monthly_rent_aed: renewingApt.monthly_rent_aed,
+      num_cheques: renewingApt.num_cheques,
+      ...perf
+    };
+
+    // Generate new cheques for the renewed period
+    const newCheques: RentCheque[] = [];
+    const amountPerCheque = Math.round(renewAnnualRent / renewNumCheques);
+    const parsedStartDate = parseISO(renewStartDate);
+    const monthsInterval = 12 / renewNumCheques;
+
+    for (let i = 0; i < renewNumCheques; i++) {
+      const dueDate = addMonths(parsedStartDate, i * monthsInterval);
+      newCheques.push({
+        cheque_id: `CHQ-${Math.random().toString(36).substr(2, 9)}`,
+        due_date: format(dueDate, 'yyyy-MM-dd'),
+        amount_aed: amountPerCheque,
+        status: 'due'
+      });
+    }
+
+    // Update Apartment
+    setData(prev => ({
+      ...prev,
+      apartments: prev.apartments.map(apt => {
+        if (apt.apartment_id !== renewingApt.apartment_id) return apt;
+        const currentHistory = apt.tenancy_history || [];
+        return {
+          ...apt,
+          start_operation_date: renewStartDate,
+          tenancy_end_date: renewEndDate,
+          annual_rent_aed: renewAnnualRent,
+          monthly_rent_aed: Math.round(renewAnnualRent / 12),
+          num_cheques: renewNumCheques,
+          rent_cheques: newCheques,
+          status: 'active',
+          tenancy_history: [...currentHistory, historyRecord]
+        };
+      })
+    }));
+
+    setRenewingApt(null);
+  };
+
+  const handleTerminateTenancySubmit = () => {
+    if (!terminatingApt || !terminateDate) return;
+
+    // Calculate performance up to termination date
+    const perf = calculatePerformanceForPeriod(
+      terminatingApt.apartment_id,
+      terminatingApt.start_operation_date,
+      terminateDate,
+      terminatingApt.annual_rent_aed
+    );
+
+    // Create history record
+    const historyRecord: TenancyHistoryRecord = {
+      tenancy_id: `HIST-${terminatingApt.apartment_id}-${Date.now()}`,
+      start_date: terminatingApt.start_operation_date,
+      end_date: terminateDate,
+      status: terminateStatus,
+      annual_rent_aed: terminatingApt.annual_rent_aed,
+      monthly_rent_aed: terminatingApt.monthly_rent_aed,
+      num_cheques: terminatingApt.num_cheques,
+      ...perf
+    };
+
+    // Update Apartment status and archive history
+    setData(prev => ({
+      ...prev,
+      apartments: prev.apartments.map(apt => {
+        if (apt.apartment_id !== terminatingApt.apartment_id) return apt;
+        const currentHistory = apt.tenancy_history || [];
+        return {
+          ...apt,
+          status: terminateStatus,
+          tenancy_end_date: terminateDate,
+          tenancy_history: [...currentHistory, historyRecord]
+        };
+      })
+    }));
+
+    setTerminatingApt(null);
   };
 
   const handleDeleteApartment = (id: string) => {
@@ -408,33 +600,83 @@ export const Setup: React.FC<SetupProps> = ({ data, setData }) => {
                 {/* Property Info */}
                 <div className="space-y-6">
                   <div className="space-y-4">
-                    <h4 className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Property Details</h4>
+                    <h4 className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Property Details & Tenancy</h4>
                     <div className="space-y-3">
                       <div className="flex items-center gap-3 text-sm">
-                        <MapPin size={14} className="text-zinc-400" />
-                        <span className="text-zinc-600 font-medium">{apt.building}, {apt.address}</span>
+                        <MapPin size={14} className="text-zinc-400 shrink-0" />
+                        <span className="text-zinc-650 dark:text-zinc-350 font-medium leading-normal">{apt.building}, {apt.address}</span>
                       </div>
                       <div className="flex items-center gap-3 text-sm">
-                        <Ruler size={14} className="text-zinc-400" />
-                        <span className="text-zinc-600 font-medium">{apt.measurement_sqft} Sq. Ft.</span>
+                        <Ruler size={14} className="text-zinc-400 shrink-0" />
+                        <span className="text-zinc-650 dark:text-zinc-350 font-medium">{apt.measurement_sqft} Sq. Ft.</span>
                       </div>
                       <div className="flex items-center gap-3 text-sm">
-                        <Calendar size={14} className="text-zinc-400" />
-                        <span className="text-zinc-600 font-medium">Started: {format(parseISO(apt.start_operation_date), 'MMM dd, yyyy')}</span>
+                        <Calendar size={14} className="text-zinc-400 shrink-0" />
+                        <span className="text-zinc-650 dark:text-zinc-350 font-medium">
+                          Tenancy: {format(parseISO(apt.start_operation_date), 'MMM dd, yyyy')} to {apt.tenancy_end_date ? format(parseISO(apt.tenancy_end_date), 'MMM dd, yyyy') : 'No Scheduled End'}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 pt-1 border-t border-zinc-100/60 dark:border-zinc-800">
+                        <span className="text-[11px] font-medium text-zinc-500">Tenancy Lease Status:</span>
+                        <span className={cn(
+                          "text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider",
+                          apt.status === 'active' || !apt.status ? "bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-900/40" :
+                          apt.status === 'expired' ? "bg-rose-50 dark:bg-rose-950/20 text-rose-600 dark:text-rose-450 border border-rose-100 dark:border-rose-900/40" :
+                          "bg-amber-50 dark:bg-amber-950/20 text-amber-600 dark:text-amber-400 border border-amber-100 dark:border-amber-900/40"
+                        )}>
+                          {apt.status || 'active'}
+                        </span>
                       </div>
                     </div>
                   </div>
 
-                  <div className="space-y-4">
+                  {/* Tenancy Management Actions */}
+                  <div className="space-y-3 pt-4 border-t border-zinc-100/60 dark:border-zinc-800">
+                    <h4 className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Tenancy Contract Controls</h4>
+                    <div className="flex flex-wrap gap-2">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => {
+                          setRenewingApt(apt);
+                          setRenewStartDate(apt.tenancy_end_date || format(new Date(), 'yyyy-MM-dd'));
+                          setRenewEndDate(format(addMonths(parseISO(apt.tenancy_end_date || format(new Date(), 'yyyy-MM-dd')), 12), 'yyyy-MM-dd'));
+                          setRenewAnnualRent(apt.annual_rent_aed);
+                          setRenewNumCheques(apt.num_cheques);
+                        }}
+                        className="py-1 hover:border-emerald-500 hover:text-emerald-600 flex-1 min-w-[120px] h-9 text-xs"
+                      >
+                        <RefreshCw size={12} className="shrink-0 mr-1 animate-spin-hover" />
+                        Renew Tenancy
+                      </Button>
+                      {(apt.status === 'active' || !apt.status) && (
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => {
+                            setTerminatingApt(apt);
+                            setTerminateDate(format(new Date(), 'yyyy-MM-dd'));
+                            setTerminateStatus('terminated');
+                          }}
+                          className="py-1 hover:border-rose-500 hover:text-rose-600 hover:bg-rose-50/50 dark:hover:bg-rose-950/20 dark:hover:text-rose-400 flex-1 min-w-[120px] h-9 text-xs"
+                        >
+                          <Power size={12} className="shrink-0 mr-1" />
+                          End Tenancy
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="space-y-4 pt-4 border-t border-zinc-100/60 dark:border-zinc-800">
                     <h4 className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Rental Structure</h4>
                     <div className="grid grid-cols-2 gap-3">
-                      <div className="p-3 bg-zinc-50 rounded-xl border border-zinc-100">
+                      <div className="p-3 bg-zinc-50 dark:bg-zinc-850/40 rounded-xl border border-zinc-100/80 dark:border-zinc-800">
                         <p className="text-[9px] font-bold text-zinc-400 uppercase mb-1">Annual Rent</p>
-                        <p className="text-sm font-black text-zinc-900">{formatValue(apt.annual_rent_aed)}</p>
+                        <p className="text-sm font-black text-zinc-900 dark:text-zinc-150">{formatValue(apt.annual_rent_aed)}</p>
                       </div>
-                      <div className="p-3 bg-zinc-50 rounded-xl border border-zinc-100">
+                      <div className="p-3 bg-zinc-50 dark:bg-zinc-850/40 rounded-xl border border-zinc-100/80 dark:border-zinc-800">
                         <p className="text-[9px] font-bold text-zinc-400 uppercase mb-1">Cheques</p>
-                        <p className="text-sm font-black text-zinc-900">{apt.num_cheques} Payments</p>
+                        <p className="text-sm font-black text-zinc-900 dark:text-zinc-150">{apt.num_cheques} Payments</p>
                       </div>
                     </div>
                   </div>
@@ -517,14 +759,99 @@ export const Setup: React.FC<SetupProps> = ({ data, setData }) => {
                     )}
                   </div>
                   {apt.setup_costs.length > 0 && (
-                    <div className="pt-3 border-t border-zinc-100 flex justify-between items-center">
+                    <div className="pt-3 border-t border-zinc-100 dark:border-zinc-805 flex justify-between items-center">
                       <span className="text-[10px] font-bold text-zinc-400 uppercase">Total Setup Investment</span>
-                      <span className="text-sm font-black text-zinc-900">
+                      <span className="text-sm font-black text-zinc-900 dark:text-zinc-100">
                         {formatValue(apt.setup_costs.reduce((sum, c) => sum + c.amount_aed, 0))}
                       </span>
                     </div>
                   )}
                 </div>
+              </div>
+
+              {/* Full-width expander for Tenancy History & Performance */}
+              <div className="mt-8 pt-6 border-t border-zinc-150/60 dark:border-zinc-800">
+                <div className="flex items-center justify-between">
+                  <button 
+                    onClick={() => setShowHistoryAptId(showHistoryAptId === apt.apartment_id ? null : apt.apartment_id)}
+                    className="flex items-center gap-2 text-xs font-semibold text-zinc-650 dark:text-zinc-300 hover:text-zinc-950 dark:hover:text-zinc-100 transition-all cursor-pointer"
+                  >
+                    <History size={14} className="text-zinc-405 shrink-0" />
+                    <span>View Prior Tenancy History & Performance Records</span>
+                    <span className="px-2 py-0.5 text-[10px] bg-zinc-105 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-450 rounded-full font-bold">
+                      {apt.tenancy_history?.length || 0} Records
+                    </span>
+                  </button>
+                </div>
+
+                <AnimatePresence>
+                  {showHistoryAptId === apt.apartment_id && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="overflow-hidden mt-4"
+                    >
+                      {apt.tenancy_history && apt.tenancy_history.length > 0 ? (
+                        <div className="space-y-4 pt-2">
+                          <p className="text-[10px] text-zinc-400 dark:text-zinc-550 font-bold uppercase tracking-widest">Retained Portfolio Records</p>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {apt.tenancy_history.map((record) => (
+                              <div key={record.tenancy_id} className="p-4 bg-zinc-50 dark:bg-zinc-900/45 rounded-2xl border border-zinc-150/60 dark:border-zinc-800/80 space-y-4 shadow-2xs">
+                                <div className="flex justify-between items-start">
+                                  <div>
+                                    <p className="text-xs font-bold text-zinc-800 dark:text-zinc-200">
+                                      {format(parseISO(record.start_date), 'MMM dd, yyyy')} — {format(parseISO(record.end_date), 'MMM dd, yyyy')}
+                                    </p>
+                                    <p className="text-[10px] text-zinc-400 font-medium mt-0.5">Rent: {formatValue(record.annual_rent_aed)}/yr ({record.num_cheques} Cheques)</p>
+                                  </div>
+                                  <span className={cn(
+                                    "text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider",
+                                    record.status === 'expired' ? "bg-rose-50 dark:bg-rose-950/20 text-rose-600 dark:text-rose-400" : "bg-amber-50 dark:bg-amber-950/20 text-amber-600 dark:text-amber-400"
+                                  )}>
+                                    {record.status}
+                                  </span>
+                                </div>
+
+                                <div className="grid grid-cols-3 gap-2 text-center">
+                                  <div className="bg-white dark:bg-zinc-900 p-2 rounded-xl border border-zinc-150/40 dark:border-zinc-800">
+                                    <p className="text-[8px] font-bold text-zinc-405 uppercase tracking-wider">Revenue</p>
+                                    <p className="text-xs font-black text-zinc-850 dark:text-zinc-200">{formatValue(record.total_revenue_aed)}</p>
+                                  </div>
+                                  <div className="bg-white dark:bg-zinc-900 p-2 rounded-xl border border-zinc-150/40 dark:border-zinc-800">
+                                    <p className="text-[8px] font-bold text-zinc-405 uppercase tracking-wider">Payout</p>
+                                    <p className="text-xs font-black text-zinc-855 dark:text-zinc-250">{formatValue(record.net_payout_aed)}</p>
+                                  </div>
+                                  <div className="bg-white dark:bg-zinc-900 p-2 rounded-xl border border-zinc-150/40 dark:border-zinc-800">
+                                    <p className="text-[8px] font-bold text-zinc-405 uppercase tracking-wider">Net Profit</p>
+                                    <p className={cn(
+                                      "text-xs font-black",
+                                      record.net_profit_aed >= 0 ? "text-emerald-600 dark:text-emerald-450" : "text-rose-600 dark:text-rose-450"
+                                    )}>
+                                      {formatValue(record.net_profit_aed)}
+                                    </p>
+                                  </div>
+                                </div>
+
+                                <div className="flex items-center justify-between text-[10px] text-zinc-500 font-medium bg-zinc-100/50 dark:bg-zinc-800/40 p-2 rounded-xl">
+                                  <div className="flex items-center gap-1">
+                                    <TrendingUp size={10} className="text-emerald-500" />
+                                    <span>Occupancy: <strong className="text-zinc-700 dark:text-zinc-300">{record.occupancy_rate}%</strong></span>
+                                  </div>
+                                  <span>Bookings: <strong className="text-zinc-700 dark:text-zinc-300">{record.num_reservations}</strong></span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="py-6 text-center border border-dashed border-zinc-200 dark:border-zinc-800 rounded-2xl mt-2 bg-zinc-50/40 dark:bg-transparent">
+                          <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest">No Prior Tenancy History Retained</p>
+                        </div>
+                      )}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             </Card>
           ))}
@@ -642,14 +969,44 @@ export const Setup: React.FC<SetupProps> = ({ data, setData }) => {
                             <option value="QAR">QAR - Qatari Riyal</option>
                           </select>
                         </div>
-                        <div className="space-y-1.5">
-                          <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Start Date</label>
-                          <input 
-                            type="date" 
-                            className="w-full px-4 py-3 rounded-xl border border-zinc-200 focus:border-zinc-900 focus:ring-0 transition-all text-sm font-medium"
-                            value={newApt.start_operation_date}
-                            onChange={e => setNewApt({...newApt, start_operation_date: e.target.value})}
-                          />
+                        <div className="space-y-1.5 col-span-2">
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-1.5">
+                              <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-400 uppercase tracking-widest ml-1">Tenancy Start Date</label>
+                              <input 
+                                type="date" 
+                                className="w-full px-4 py-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-905 focus:border-zinc-900 focus:ring-0 transition-all text-sm font-medium"
+                                value={newApt.start_operation_date}
+                                onChange={e => {
+                                  const start = e.target.value;
+                                  const end = format(addMonths(parseISO(start), 12), 'yyyy-MM-dd');
+                                  setNewApt({...newApt, start_operation_date: start, tenancy_end_date: end});
+                                }}
+                              />
+                            </div>
+                            <div className="space-y-1.5">
+                              <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-400 uppercase tracking-widest ml-1">Tenancy Expiry Date</label>
+                              <input 
+                                type="date" 
+                                className="w-full px-4 py-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-905 focus:border-zinc-900 focus:ring-0 transition-all text-sm font-medium"
+                                value={newApt.tenancy_end_date}
+                                onChange={e => setNewApt({...newApt, tenancy_end_date: e.target.value})}
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="space-y-1.5 col-span-2">
+                          <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-400 uppercase tracking-widest ml-1">Lease Status</label>
+                          <select 
+                            className="w-full px-4 py-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-905 focus:border-zinc-900 focus:ring-0 transition-all text-sm font-medium appearance-none"
+                            value={newApt.status || 'active'}
+                            onChange={e => setNewApt({...newApt, status: e.target.value as any})}
+                          >
+                            <option value="active">Active</option>
+                            <option value="expired">Expired / Expiring</option>
+                            <option value="terminated">Early Tenancy Termination</option>
+                          </select>
                         </div>
                       </div>
                     </div>
@@ -1211,6 +1568,184 @@ export const Setup: React.FC<SetupProps> = ({ data, setData }) => {
               <div className="p-6 border-t border-zinc-100 bg-zinc-50/50 flex justify-end gap-3">
                 <Button variant="outline" size="sm" onClick={() => setIsTemplateModalOpen(false)}>Cancel</Button>
                 <Button size="sm" onClick={handleAddTemplate}>{editingTemplateId ? 'Save Changes' : 'Add Template'}</Button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Renew Tenancy Modal */}
+      <AnimatePresence>
+        {renewingApt && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-zinc-900/60 backdrop-blur-sm">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 rounded-[32px] shadow-2xl w-full max-w-lg overflow-hidden flex flex-col"
+            >
+              <div className="p-6 border-b border-zinc-100 dark:border-zinc-850 flex justify-between items-center bg-zinc-50/50 dark:bg-zinc-900/50">
+                <div className="flex items-center gap-2">
+                  <RefreshCw size={20} className="text-emerald-500" />
+                  <div>
+                    <h3 className="text-lg font-black tracking-tight text-zinc-900 dark:text-zinc-50">Renew Tenancy</h3>
+                    <p className="text-xs text-zinc-500 dark:text-zinc-400 font-medium">For {renewingApt.name}</p>
+                  </div>
+                </div>
+                <button onClick={() => setRenewingApt(null)} className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-full transition-colors text-zinc-400">
+                  <X size={20} />
+                </button>
+              </div>
+
+              <div className="p-6 space-y-4">
+                <div className="bg-amber-50/70 dark:bg-amber-950/20 border border-amber-200/50 dark:border-amber-900/40 rounded-xl p-3 flex gap-3">
+                  <ShieldAlert className="text-amber-500 shrink-0 mt-0.5" size={16} />
+                  <p className="text-xs text-amber-700 dark:text-amber-300 leading-normal font-medium">
+                    Archiving current active tenancy contract spanning <strong>{renewingApt.start_operation_date} to {renewingApt.tenancy_end_date || 'N/A'}</strong>. The system will dynamically save historical performance metrics (Revenue, Profit, Occupancy) as a retained record inside this property's history.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-400 uppercase tracking-widest ml-1">New Start Date</label>
+                    <input 
+                      type="date" 
+                      className="w-full px-4 py-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-zinc-900 dark:focus:border-zinc-50 focus:ring-0 transition-all text-sm font-medium"
+                      value={renewStartDate}
+                      onChange={e => {
+                        setRenewStartDate(e.target.value);
+                        setRenewEndDate(format(addMonths(parseISO(e.target.value), 12), 'yyyy-MM-dd'));
+                      }}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-400 uppercase tracking-widest ml-1">New End Date</label>
+                    <input 
+                      type="date" 
+                      className="w-full px-4 py-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-zinc-900 dark:focus:border-zinc-50 focus:ring-0 transition-all text-sm font-medium"
+                      value={renewEndDate}
+                      onChange={e => setRenewEndDate(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-400 uppercase tracking-widest ml-1">New Annual Rent (AED)</label>
+                  <div className="relative">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 font-bold text-sm">AED</span>
+                    <input 
+                      type="number" 
+                      className="w-full pl-12 pr-4 py-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-zinc-900 dark:focus:border-zinc-50 focus:ring-0 transition-all text-sm font-black"
+                      value={renewAnnualRent}
+                      onChange={e => setRenewAnnualRent(Number(e.target.value))}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-400 uppercase tracking-widest ml-1">Number of Cheques</label>
+                  <select
+                    className="w-full px-4 py-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-zinc-900 dark:focus:border-zinc-50 focus:ring-0 transition-all text-sm font-medium appearance-none"
+                    value={renewNumCheques}
+                    onChange={e => setRenewNumCheques(Number(e.target.value))}
+                  >
+                    <option value={1}>1 Cheque (Annual)</option>
+                    <option value={2}>2 Payments</option>
+                    <option value={4}>4 Cheques (Quarterly)</option>
+                    <option value={6}>6 Payments</option>
+                    <option value={12}>12 Payments (Monthly)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="p-6 border-t border-zinc-100 dark:border-zinc-850 bg-zinc-50/50 dark:bg-zinc-900/50 flex justify-end gap-3">
+                <Button variant="outline" size="sm" onClick={() => setRenewingApt(null)}>Cancel</Button>
+                <Button size="sm" onClick={handleRenewTenancySubmit} className="bg-emerald-600 dark:bg-emerald-500 hover:bg-emerald-700 hover:text-white dark:hover:bg-emerald-450 text-white font-bold px-4 py-2 rounded-xl">
+                  Archive & Deploy Renewal
+                </Button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Terminate/End Tenancy Modal */}
+      <AnimatePresence>
+        {terminatingApt && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-zinc-900/60 backdrop-blur-sm">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 rounded-[32px] shadow-2xl w-full max-w-lg overflow-hidden flex flex-col"
+            >
+              <div className="p-6 border-b border-zinc-100 dark:border-zinc-850 flex justify-between items-center bg-zinc-50/50 dark:bg-zinc-900/50">
+                <div className="flex items-center gap-2">
+                  <Power size={20} className="text-rose-500 animate-pulse" />
+                  <div>
+                    <h3 className="text-lg font-black tracking-tight text-zinc-900 dark:text-zinc-50">End / Terminate Tenancy</h3>
+                    <p className="text-xs text-zinc-500 dark:text-zinc-400 font-medium">For {terminatingApt.name}</p>
+                  </div>
+                </div>
+                <button onClick={() => setTerminatingApt(null)} className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-full transition-colors text-zinc-400">
+                  <X size={20} />
+                </button>
+              </div>
+
+              <div className="p-6 space-y-4">
+                <div className="bg-rose-50/70 dark:bg-rose-950/20 border border-rose-200/50 dark:border-rose-900/40 rounded-xl p-3 flex gap-3">
+                  <ShieldAlert className="text-rose-500 shrink-0 mt-0.5" size={16} />
+                  <p className="text-xs text-rose-700 dark:text-rose-300 leading-normal font-medium">
+                    This action terminates and archives the active tenancy contract. All remaining unpaid rent cheques will be cancelled, and its historical metrics up to the termination date will be stored inside the portfolio history logs.
+                  </p>
+                </div>
+
+                <div className="space-y-1.5 flex flex-col">
+                  <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-400 uppercase tracking-widest ml-1">Termination Effective Date</label>
+                  <input 
+                    type="date" 
+                    className="w-full px-4 py-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-zinc-900 dark:focus:border-zinc-50 focus:ring-0 transition-all text-sm font-medium"
+                    value={terminateDate}
+                    onChange={e => setTerminateDate(e.target.value)}
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-400 uppercase tracking-widest ml-1">Retirement Status / Reason</label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setTerminateStatus('expired')}
+                      className={cn(
+                        "p-3 rounded-xl border text-xs font-bold transition-all text-center",
+                        terminateStatus === 'expired'
+                          ? "border-zinc-900 dark:border-zinc-50 bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900"
+                          : "border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-400 bg-transparent"
+                      )}
+                    >
+                      Natural Expiration
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setTerminateStatus('terminated')}
+                      className={cn(
+                        "p-3 rounded-xl border text-xs font-bold transition-all text-center",
+                        terminateStatus === 'terminated'
+                          ? "border-rose-600 bg-rose-600 text-white"
+                          : "border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-400 bg-transparent"
+                      )}
+                    >
+                      Early Termination
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-6 border-t border-zinc-100 dark:border-zinc-850 bg-zinc-50/50 dark:bg-zinc-900/50 flex justify-end gap-3">
+                <Button variant="outline" size="sm" onClick={() => setTerminatingApt(null)}>Cancel</Button>
+                <Button size="sm" onClick={handleTerminateTenancySubmit} className="bg-rose-600 hover:bg-rose-700 text-white font-bold px-4 py-2 rounded-xl">
+                  Exterminate & Archive Records
+                </Button>
               </div>
             </motion.div>
           </div>

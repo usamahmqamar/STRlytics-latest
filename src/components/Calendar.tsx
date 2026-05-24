@@ -63,37 +63,37 @@ export const Calendar: React.FC<CalendarProps> = ({ data, filters }) => {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col md:flex-row justify-between items-center gap-4 bg-white p-4 rounded-2xl border border-zinc-100 shadow-sm">
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 bg-zinc-900 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-zinc-200">
-            <CalendarIcon size={24} />
+      <div className="flex flex-col md:flex-row justify-between items-center gap-4 bg-white dark:bg-zinc-900 p-4 rounded-2xl border border-zinc-200/80 dark:border-zinc-800 shadow-xs">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-zinc-950 dark:bg-zinc-800 rounded-xl flex items-center justify-center text-white shadow-sm">
+            <CalendarIcon size={20} className="text-emerald-400" />
           </div>
           <div>
-            <h2 className="text-xl font-black text-zinc-900 tracking-tight uppercase italic">Booking Calendar</h2>
-            <p className="text-zinc-400 text-[10px] font-bold uppercase tracking-widest mt-1">Real-time portfolio occupancy & availability</p>
+            <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight">Booking Calendar</h2>
+            <p className="text-zinc-500 dark:text-zinc-400 text-xs mt-0.5">Real-time occupancy and availability tracking</p>
           </div>
         </div>
 
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 bg-zinc-100 p-1.5 rounded-2xl border border-zinc-200">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1 bg-zinc-100 dark:bg-zinc-800/85 p-1 rounded-xl border border-zinc-200/60 dark:border-zinc-700/60 h-9">
             <button 
               onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}
-              className="p-2 hover:bg-white hover:shadow-sm rounded-xl transition-all text-zinc-500 hover:text-zinc-900"
+              className="p-1 hover:bg-white dark:hover:bg-zinc-700 hover:shadow-xs rounded-lg transition-all text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 cursor-pointer"
             >
-              <ChevronLeft size={20} />
+              <ChevronLeft size={16} />
             </button>
-            <span className="px-6 text-xs font-black uppercase tracking-[0.2em] text-zinc-900 min-w-[160px] text-center">
+            <span className="px-3 text-xs font-semibold text-zinc-800 dark:text-zinc-200 min-w-[130px] text-center">
               {format(currentMonth, 'MMMM yyyy')}
             </span>
             <button 
               onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}
-              className="p-2 hover:bg-white hover:shadow-sm rounded-xl transition-all text-zinc-500 hover:text-zinc-900"
+              className="p-1 hover:bg-white dark:hover:bg-zinc-700 hover:shadow-xs rounded-lg transition-all text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 cursor-pointer"
             >
-              <ChevronRight size={20} />
+              <ChevronRight size={16} />
             </button>
           </div>
-          <Button variant="outline" size="md" onClick={() => setCurrentMonth(new Date())} className="rounded-2xl font-black uppercase tracking-widest text-[10px]">
-            Jump to Today
+          <Button variant="outline" size="sm" onClick={() => setCurrentMonth(new Date())}>
+            Today
           </Button>
         </div>
       </div>

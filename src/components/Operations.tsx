@@ -541,8 +541,8 @@ export const Operations: React.FC<OperationsProps> = ({
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-4 border-b border-zinc-200">
-        <div className="flex bg-zinc-100 border border-zinc-200 p-1 rounded-2xl">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-4 border-b border-zinc-200/60 dark:border-zinc-800">
+        <div className="flex flex-wrap gap-1 bg-zinc-100/80 dark:bg-zinc-800/65 border border-zinc-200/50 dark:border-zinc-800 p-1 rounded-2xl">
           {[
             { id: 'dashboard', label: 'Overview', icon: LayoutDashboard },
             { id: 'vendors', label: 'Vendors', icon: Users },
@@ -556,14 +556,14 @@ export const Operations: React.FC<OperationsProps> = ({
               key={tab.id}
               onClick={() => setActiveTab(tab.id as any)}
               className={cn(
-                "flex items-center gap-2 px-5 py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all",
+                "flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium transition-all duration-200 cursor-pointer",
                 activeTab === tab.id 
-                  ? "bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 shadow-xl shadow-zinc-900/20 dark:shadow-none scale-[1.02]" 
-                  : "text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-white dark:hover:bg-zinc-800"
+                  ? "bg-zinc-950 dark:bg-zinc-100 text-white dark:text-zinc-950 font-semibold shadow-xs" 
+                  : "text-zinc-600 dark:text-zinc-350 hover:text-zinc-950 dark:hover:text-zinc-50 hover:bg-zinc-50/70 dark:hover:bg-zinc-800/80"
               )}
             >
-              <tab.icon size={14} />
-              <span className="hidden lg:inline">{tab.label}</span>
+              <tab.icon size={13} />
+              <span className="hidden sm:inline">{tab.label}</span>
             </button>
           ))}
         </div>

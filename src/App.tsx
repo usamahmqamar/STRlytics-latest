@@ -276,57 +276,45 @@ export default function App() {
         "transition-all duration-500 p-4 max-w-7xl mx-auto min-h-screen relative z-10",
         isSidebarCollapsed ? "ml-20" : "ml-64"
       )}>
-        <header className="flex items-center justify-between mb-8 relative">
+        <header className="flex items-center justify-between mb-6 relative">
           <div>
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-2 h-2 rounded-full bg-emerald-500" />
-              <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest">System Live</span>
-              <span className="text-[10px] font-mono text-zinc-400 dark:text-zinc-600">v3.0.4</span>
-            </div>
-            <h2 className="text-2xl font-black tracking-tighter text-zinc-900 dark:text-zinc-100 uppercase leading-none">
-              {activeTab.replace('-', ' ')}
+            <h2 className="text-xl md:text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100 capitalize">
+              {activeTab === 'ocr' ? 'Receipt AI OCR' : activeTab === 'daily-pl' ? 'Daily P&L' : activeTab.replace('-', ' ')}
             </h2>
           </div>
           
-          <div className="flex items-center gap-6">
-            <div className="hidden lg:flex flex-col items-end">
-              <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Database Sync</span>
-              <span className="text-[10px] font-mono text-zinc-500">
-                {syncStatus === 'synced' ? `Last: ${format(lastSyncTime, 'HH:mm:ss')}` : 'Syncing...'}
-              </span>
-            </div>
-
+          <div className="flex items-center gap-3">
             <div className={cn(
-              "flex items-center gap-2 px-4 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all",
-              syncStatus === 'synced' ? "text-emerald-500 bg-emerald-50 border border-emerald-100" :
-              syncStatus === 'syncing' ? "text-amber-500 bg-amber-50 border border-amber-100" :
-              "text-rose-500 bg-rose-50 border border-rose-100"
+              "flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl text-xs font-medium text-zinc-500 dark:text-zinc-400 transition-all shadow-sm",
+              syncStatus === 'error' && "border-rose-200 dark:border-rose-950 text-rose-600 dark:text-rose-400"
             )}>
               {syncStatus === 'synced' ? (
                 <>
                   <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                  Saved
+                  <span className="hidden sm:inline">Saved</span>
+                  <span className="text-[10px] text-zinc-400 dark:text-zinc-500 font-mono">
+                    {format(lastSyncTime, 'HH:mm')}
+                  </span>
                 </>
               ) : syncStatus === 'syncing' ? (
                 <>
-                  <Loader2 size={12} className="animate-spin" />
-                  Syncing
+                  <Loader2 size={12} className="animate-spin text-amber-500" />
+                  <span>Syncing</span>
                 </>
               ) : (
                 <>
-                  <AlertTriangle size={12} />
-                  Error
+                  <div className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+                  <span>Error</span>
                 </>
               )}
             </div>
 
             <button 
               onClick={() => setIsHelpOpen(true)}
-              className="p-4 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-[1.5rem] text-zinc-400 hover:text-emerald-500 hover:border-emerald-500 transition-all shadow-xl group relative overflow-hidden"
+              className="p-2.5 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:border-zinc-300 dark:hover:border-zinc-700 transition-all shadow-sm flex items-center justify-center group"
               title="Help & User Guide"
             >
-              <div className="absolute inset-0 bg-emerald-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
-              <HelpCircle size={24} className="group-hover:scale-110 transition-transform relative z-10" />
+              <HelpCircle size={16} className="group-hover:scale-105 transition-transform" />
             </button>
           </div>
         </header>

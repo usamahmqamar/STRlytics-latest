@@ -39,6 +39,25 @@ export const DEFAULT_USER_DATA: UserData = {
           payment_method: "bank",
           vendor: "IKEA"
         }
+      ],
+      tenancy_end_date: "2026-12-31",
+      status: "active",
+      tenancy_history: [
+        {
+          tenancy_id: "HIST-BC605-2025",
+          start_date: "2025-01-01",
+          end_date: "2025-12-31",
+          status: "expired",
+          annual_rent_aed: 135000,
+          monthly_rent_aed: 11250,
+          num_cheques: 4,
+          total_revenue_aed: 184500,
+          total_expenses_aed: 147250,
+          net_payout_aed: 178900,
+          net_profit_aed: 31650,
+          occupancy_rate: 82,
+          num_reservations: 46
+        }
       ]
     }
   ],

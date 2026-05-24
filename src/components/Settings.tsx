@@ -24,7 +24,7 @@ interface SettingsProps {
 }
 
 export const Settings: React.FC<SettingsProps> = ({ data, setData }) => {
-  const [activeTab, setActiveTab] = useState<'profile' | 'subscription' | 'payments' | 'display'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'subscription' | 'payments' | 'display' | 'dashboard'>('profile');
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [profileForm, setProfileForm] = useState<any>(data.companyProfile || {});
 
@@ -74,19 +74,19 @@ export const Settings: React.FC<SettingsProps> = ({ data, setData }) => {
   return (
     <div className="space-y-8">
       {/* Tabs */}
-      <div className="flex gap-1 p-1 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-full w-fit shadow-sm">
+      <div className="flex flex-wrap gap-1 p-1 bg-zinc-100/80 dark:bg-zinc-800/65 border border-zinc-200/50 dark:border-zinc-850 rounded-2xl w-fit shadow-xs">
         {tabs.map(tab => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id as any)}
             className={cn(
-              "flex items-center gap-2 px-6 py-2.5 rounded-full text-sm font-bold transition-all duration-300",
+              "flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold tracking-tight transition-all duration-200 cursor-pointer",
               activeTab === tab.id 
-                ? "bg-emerald-600 text-white shadow-lg shadow-emerald-600/20" 
-                : "text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-50 dark:hover:bg-zinc-800"
+                ? "bg-zinc-950 dark:bg-zinc-100 text-white dark:text-zinc-950 font-semibold shadow-xs" 
+                : "text-zinc-600 dark:text-zinc-350 hover:text-zinc-950 dark:hover:text-zinc-100 hover:bg-zinc-50/70 dark:hover:bg-zinc-800/80"
             )}
           >
-            <tab.icon size={16} />
+            <tab.icon size={14} />
             {tab.label}
           </button>
         ))}
