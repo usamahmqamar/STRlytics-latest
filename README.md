@@ -1,41 +1,39 @@
-# STR Copilot - Deployment Guide
+# STRlytics
 
-This application is configured for deployment on **Vercel**, **Google Cloud Run**, and **GitHub**.
+Short-term rental analytics for operators: daily P&L per listing, cash flow, rent cheques, operations.
+Working name; the final brand is decided later.
 
-## 🚀 Deployment Options
+This `saas` branch turns the single-user app into a multi-tenant SaaS billed per active listing.
+The build plan and status live in the "STRlytics Review" doc.
 
-### 1. Vercel (Recommended for Frontend)
-Vercel is the easiest way to deploy this React/Vite application.
-- Connect your GitHub repository to Vercel.
-- Vercel will automatically detect the Vite project.
-- Add the environment variables listed in `.env.example` to the Vercel project settings.
-- The `vercel.json` file ensures that SPA routing works correctly (all paths redirect to `index.html`).
+## Stack
 
-### 2. Google Cloud Run (Containerized)
-For a more robust, containerized deployment:
-- Build the Docker image: `docker build -t str-copilot .`
-- Push to Google Container Registry or Artifact Registry.
-- Deploy to Cloud Run:
-  ```bash
-  gcloud run deploy str-copilot --image gcr.io/[PROJECT_ID]/str-copilot --platform managed
-  ```
-- Ensure you set the environment variables in the Cloud Run service configuration.
-- The app listens on port `8080` inside the container.
+- React 19 + Vite + Tailwind, React Router (`/app/:tab`)
+- Supabase (Postgres, Auth, row-level security) — replacing Firebase during Phase 2
+- Vercel for hosting; server functions in `api/` (Gemini calls run there, never in the browser)
 
-### 3. GitHub Actions (CI/CD)
-You can automate deployments using GitHub Actions. Create a `.github/workflows/deploy.yml` file to trigger builds on every push.
+## Local development
 
-## 🔑 Configuration
+```bash
+npm install
+cp .env.example .env.local   # fill in values
+npm run dev                  # http://localhost:3000
+npm run lint                 # type-check
+```
 
-You must provide your Firebase and Gemini credentials via environment variables. See `.env.example` for the full list.
+## Database
 
-| Variable | Description |
-| --- | --- |
-| `GEMINI_API_KEY` | Your Google Gemini API Key |
-| `VITE_FIREBASE_*` | Your Firebase project configuration |
+Migrations live in `supabase/migrations/`, policy tests in `supabase/tests/`.
 
-## 🛠 Local Development
+```bash
+# Runs all migrations + tests against a disposable Postgres (CI does the same):
+DATABASE_URL=postgres://postgres:postgres@localhost:5432/postgres npm run test:db
+```
 
-1. Install dependencies: `npm install`
-2. Start dev server: `npm run dev`
-3. Build for production: `npm run build`
+`supabase/tests/_shim_supabase_auth.sql` imitates Supabase's `auth` schema and roles for plain Postgres.
+It is for tests only and must never be applied to a Supabase project.
+
+## Environment variables
+
+See `.env.example`. Anything prefixed `VITE_` is shipped to the browser, so secrets
+(`GEMINI_API_KEY`, `SUPABASE_SERVICE_ROLE_KEY`) must never use that prefix.

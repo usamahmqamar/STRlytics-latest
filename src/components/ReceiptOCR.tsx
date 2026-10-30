@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import { Card } from './ui/Card';
 import { Button } from './ui/Button';
-import { extractReceiptData } from '../services/gemini';
+import { extractReceiptData } from '../services/ai';
 import { cn } from '../lib/utils';
 import { format } from 'date-fns';
 

@@ -1,7 +1,5 @@
 import './index.css';
 
-console.log("Application starting...");
-
 // Global error handler for debugging production crashes - MUST BE AT THE TOP
 window.onerror = (message, source, lineno, colno, error) => {
   console.error("Global Error:", message, error);
@@ -26,10 +24,16 @@ window.onerror = (message, source, lineno, colno, error) => {
 
 import {StrictMode} from 'react';
 import {createRoot} from 'react-dom/client';
+import {BrowserRouter, Navigate, Route, Routes} from 'react-router-dom';
 import App from './App.tsx';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <App />
+    <BrowserRouter>
+      <Routes>
+        <Route path="/app/:tab?" element={<App />} />
+        <Route path="*" element={<Navigate to="/app/dashboard" replace />} />
+      </Routes>
+    </BrowserRouter>
   </StrictMode>,
 );

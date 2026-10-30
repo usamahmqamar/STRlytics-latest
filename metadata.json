@@ -1,8 +1,0 @@
-{
-  "name": "STR Copilot",
-  "description": "Professional short-term rental management platform with AI-powered ROI tracking, automated financial reconciliation, and operational logistics.",
-  "requestFramePermissions": [
-    "camera",
-    "geolocation"
-  ]
-}

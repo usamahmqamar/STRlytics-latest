@@ -16,6 +16,7 @@ import {
   setDoc, 
   getDocFromServer 
 } from 'firebase/firestore';
+import { useNavigate, useParams } from 'react-router-dom';
 import { auth, db, googleProvider } from './services/firebase';
 import { UserData } from './types';
 import { DEFAULT_USER_DATA } from './constants';
@@ -49,8 +50,12 @@ import { GlobalSearch } from './components/GlobalSearch';
 import { cn } from './lib/utils';
 import { format, startOfMonth, endOfMonth, differenceInDays, parseISO, addDays, startOfDay } from 'date-fns';
 
+export const APP_TABS = [
+  'dashboard', 'calendar', 'reservations', 'occupancy', 'projections', 'reports', 'setup',
+  'assets', 'documents', 'ocr', 'daily-pl', 'analytics', 'cashflow', 'operations', 'data', 'settings',
+];
+
 export default function App() {
-  console.log("App component rendering...");
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [userData, setUserData] = useState<UserData>(DEFAULT_USER_DATA);
@@ -58,7 +63,11 @@ export default function App() {
   const [syncStatus, setSyncStatus] = useState<'synced' | 'syncing' | 'error'>('synced');
   const [lastSyncTime, setLastSyncTime] = useState<Date>(new Date());
   const [syncError, setSyncError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState('dashboard');
+  // The active screen comes from the URL (/app/:tab) so every screen can be linked and survives a refresh.
+  const { tab } = useParams();
+  const navigate = useNavigate();
+  const activeTab = tab && APP_TABS.includes(tab) ? tab : 'dashboard';
+  const setActiveTab = (next: string) => navigate(`/app/${next}`);
   const [prefilledExpense, setPrefilledExpense] = useState<any>(null);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -186,10 +195,8 @@ export default function App() {
     }
     
     setIsLoggingIn(true);
-    console.log("Attempting Google Sign-In...");
     try {
       const result = await signInWithPopup(auth, googleProvider);
-      console.log("Login successful:", result.user.email);
     } catch (error: any) {
       console.error("Login Error:", error);
       
