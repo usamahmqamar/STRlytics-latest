@@ -9,7 +9,7 @@ import {
   LayoutDashboard, Calendar, ClipboardList, TrendingUp, 
   Wallet, BarChart3, Building2, Package, ShieldCheck, 
   ScanLine, Table, Database, Settings, LogOut,
-  ChevronLeft, ChevronRight, Bell, Trash2, Users
+  ChevronLeft, ChevronRight, Bell, Trash2, Users, UsersRound
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useNavigate } from 'react-router-dom';
@@ -51,6 +51,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { id: 'cashflow', icon: Wallet, label: 'Cashflow' },
     { id: 'operations', icon: Users, label: 'Operations' },
     { id: 'data', icon: Database, label: 'Data Manager' },
+    { id: 'team', icon: UsersRound, label: 'Team' },
     { id: 'settings', icon: Settings, label: 'Settings' },
   ];
 

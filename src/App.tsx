@@ -40,6 +40,7 @@ import { Documents } from './components/Documents';
 import { Cashflow } from './components/Cashflow';
 import { InvestorReports } from './components/InvestorReports';
 import { Settings } from './components/Settings';
+import { Team } from './components/Team';
 import { Button } from './components/ui/Button';
 import { 
   TrendingUp, Globe, Bell, HelpCircle, 
@@ -52,7 +53,7 @@ import { format, startOfMonth, endOfMonth, differenceInDays, parseISO, addDays, 
 
 export const APP_TABS = [
   'dashboard', 'calendar', 'reservations', 'occupancy', 'projections', 'reports', 'setup',
-  'assets', 'documents', 'ocr', 'daily-pl', 'analytics', 'cashflow', 'operations', 'data', 'settings',
+  'assets', 'documents', 'ocr', 'daily-pl', 'analytics', 'cashflow', 'operations', 'data', 'team', 'settings',
 ];
 
 export default function App() {
@@ -281,7 +282,7 @@ export default function App() {
 
       <main className={cn(
         "transition-all duration-500 p-4 max-w-7xl mx-auto min-h-screen relative z-10",
-        isSidebarCollapsed ? "ml-20" : "ml-64"
+        isSidebarCollapsed ? "ml-24" : "ml-72"
       )}>
         <header className="flex items-center justify-between mb-6 relative">
           <div>
@@ -328,11 +329,13 @@ export default function App() {
 
         <HelpGuide isOpen={isHelpOpen} onClose={() => setIsHelpOpen(false)} />
 
-        <FilterBar 
-          filters={filters} 
-          setFilters={setFilters} 
-          apartments={userData.apartments} 
-        />
+        {activeTab !== 'team' && (
+          <FilterBar 
+            filters={filters} 
+            setFilters={setFilters} 
+            apartments={userData.apartments} 
+          />
+        )}
 
         {syncError && (
           <motion.div 
@@ -403,6 +406,7 @@ export default function App() {
                 handleReset={() => setUserData(DEFAULT_USER_DATA)} 
               />
             )}
+            {activeTab === 'team' && <Team />}
             {activeTab === 'settings' && <Settings data={userData} setData={setUserData} />}
           </motion.div>
         </AnimatePresence>
