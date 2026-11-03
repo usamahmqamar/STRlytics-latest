@@ -32,6 +32,8 @@ import {LoginPage} from './pages/auth/LoginPage';
 import {SignupPage} from './pages/auth/SignupPage';
 import {ForgotPasswordPage, UpdatePasswordPage} from './pages/auth/PasswordPages';
 import {InvitePage} from './pages/auth/InvitePage';
+import {RequireWorkspace} from './auth/RequireWorkspace';
+import {OnboardingPage} from './pages/onboarding/OnboardingPage';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
@@ -43,7 +45,8 @@ createRoot(document.getElementById('root')!).render(
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/update-password" element={<UpdatePasswordPage />} />
           <Route path="/invite/:token" element={<InvitePage />} />
-          <Route path="/app/:tab?" element={<RequireAuth><App /></RequireAuth>} />
+          <Route path="/onboarding" element={<RequireAuth><OnboardingPage /></RequireAuth>} />
+          <Route path="/app/:tab?" element={<RequireAuth><RequireWorkspace><App /></RequireWorkspace></RequireAuth>} />
           <Route path="*" element={<Navigate to="/app/dashboard" replace />} />
         </Routes>
       </AuthProvider>

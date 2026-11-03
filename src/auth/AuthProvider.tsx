@@ -42,7 +42,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [session, setSession] = useState<Session | null>(null);
   const [sessionLoading, setSessionLoading] = useState(true);
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
-  const [workspacesLoading, setWorkspacesLoading] = useState(false);
+  // The user id whose workspaces are loaded; until it matches the session, the app waits.
+  const [loadedFor, setLoadedFor] = useState<string | null>(null);
   const [currentId, setCurrentId] = useState<string | null>(readStoredWorkspace);
 
   useEffect(() => {
@@ -57,19 +58,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const userId = session?.user.id;
 
   const refreshWorkspaces = useCallback(async () => {
-    if (!userId) { setWorkspaces([]); return; }
-    setWorkspacesLoading(true);
+    if (!userId) { setWorkspaces([]); setLoadedFor(null); return; }
     const { data, error } = await supabase
       .from('memberships')
       .select('role, organizations(id, name, status, trial_ends_at, base_currency, country, timezone, onboarding_completed_at)')
       .eq('user_id', userId);
-    setWorkspacesLoading(false);
-    if (error) { console.error('Could not load workspaces', error); return; }
+    if (error) { console.error('Could not load workspaces', error); setLoadedFor(userId); return; }
     const list = (data ?? [])
       .filter((m: any) => m.organizations)
       .map((m: any) => ({ ...m.organizations, role: m.role })) as Workspace[];
     list.sort((a, b) => a.name.localeCompare(b.name));
     setWorkspaces(list);
+    setLoadedFor(userId);
   }, [userId]);
 
   useEffect(() => { refreshWorkspaces(); }, [refreshWorkspaces]);
@@ -80,7 +80,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   );
 
   const value = useMemo<AuthState>(() => ({
-    loading: sessionLoading || (Boolean(userId) && workspacesLoading && workspaces.length === 0),
+    loading: sessionLoading || (Boolean(userId) && loadedFor !== userId),
     session,
     user: session?.user ?? null,
     workspaces,
@@ -88,7 +88,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     selectWorkspace: (id: string) => { setCurrentId(id); storeWorkspace(id); },
     refreshWorkspaces,
     signOut: async () => { await supabase.auth.signOut(); setWorkspaces([]); },
-  }), [sessionLoading, userId, workspacesLoading, session, workspaces, workspace, refreshWorkspaces]);
+  }), [sessionLoading, userId, loadedFor, session, workspaces, workspace, refreshWorkspaces]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
