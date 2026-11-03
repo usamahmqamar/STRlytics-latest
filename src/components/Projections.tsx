@@ -17,7 +17,7 @@ import {
 } from 'recharts';
 import { Card } from './ui/Card';
 import { Button } from './ui/Button';
-import { getMarketIntelligence } from '../services/gemini';
+import { getMarketIntelligence } from '../services/ai';
 import { cn } from '../lib/utils';
 import { format, addMonths, startOfMonth } from 'date-fns';
 import { convertCurrency } from '../services/analytics';

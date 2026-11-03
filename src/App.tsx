@@ -16,6 +16,7 @@ import {
   setDoc, 
   getDocFromServer 
 } from 'firebase/firestore';
+import { useNavigate, useParams } from 'react-router-dom';
 import { auth, db, googleProvider } from './services/firebase';
 import { UserData } from './types';
 import { DEFAULT_USER_DATA } from './constants';
@@ -39,6 +40,7 @@ import { Documents } from './components/Documents';
 import { Cashflow } from './components/Cashflow';
 import { InvestorReports } from './components/InvestorReports';
 import { Settings } from './components/Settings';
+import { Team } from './components/Team';
 import { Button } from './components/ui/Button';
 import { 
   TrendingUp, Globe, Bell, HelpCircle, 
@@ -49,8 +51,12 @@ import { GlobalSearch } from './components/GlobalSearch';
 import { cn } from './lib/utils';
 import { format, startOfMonth, endOfMonth, differenceInDays, parseISO, addDays, startOfDay } from 'date-fns';
 
+export const APP_TABS = [
+  'dashboard', 'calendar', 'reservations', 'occupancy', 'projections', 'reports', 'setup',
+  'assets', 'documents', 'ocr', 'daily-pl', 'analytics', 'cashflow', 'operations', 'data', 'team', 'settings',
+];
+
 export default function App() {
-  console.log("App component rendering...");
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [userData, setUserData] = useState<UserData>(DEFAULT_USER_DATA);
@@ -58,7 +64,11 @@ export default function App() {
   const [syncStatus, setSyncStatus] = useState<'synced' | 'syncing' | 'error'>('synced');
   const [lastSyncTime, setLastSyncTime] = useState<Date>(new Date());
   const [syncError, setSyncError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState('dashboard');
+  // The active screen comes from the URL (/app/:tab) so every screen can be linked and survives a refresh.
+  const { tab } = useParams();
+  const navigate = useNavigate();
+  const activeTab = tab && APP_TABS.includes(tab) ? tab : 'dashboard';
+  const setActiveTab = (next: string) => navigate(`/app/${next}`);
   const [prefilledExpense, setPrefilledExpense] = useState<any>(null);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -186,10 +196,8 @@ export default function App() {
     }
     
     setIsLoggingIn(true);
-    console.log("Attempting Google Sign-In...");
     try {
       const result = await signInWithPopup(auth, googleProvider);
-      console.log("Login successful:", result.user.email);
     } catch (error: any) {
       console.error("Login Error:", error);
       
@@ -274,7 +282,7 @@ export default function App() {
 
       <main className={cn(
         "transition-all duration-500 p-4 max-w-7xl mx-auto min-h-screen relative z-10",
-        isSidebarCollapsed ? "ml-20" : "ml-64"
+        isSidebarCollapsed ? "ml-24" : "ml-72"
       )}>
         <header className="flex items-center justify-between mb-6 relative">
           <div>
@@ -321,11 +329,13 @@ export default function App() {
 
         <HelpGuide isOpen={isHelpOpen} onClose={() => setIsHelpOpen(false)} />
 
-        <FilterBar 
-          filters={filters} 
-          setFilters={setFilters} 
-          apartments={userData.apartments} 
-        />
+        {activeTab !== 'team' && (
+          <FilterBar 
+            filters={filters} 
+            setFilters={setFilters} 
+            apartments={userData.apartments} 
+          />
+        )}
 
         {syncError && (
           <motion.div 
@@ -396,6 +406,7 @@ export default function App() {
                 handleReset={() => setUserData(DEFAULT_USER_DATA)} 
               />
             )}
+            {activeTab === 'team' && <Team />}
             {activeTab === 'settings' && <Settings data={userData} setData={setUserData} />}
           </motion.div>
         </AnimatePresence>

@@ -9,11 +9,11 @@ import {
   LayoutDashboard, Calendar, ClipboardList, TrendingUp, 
   Wallet, BarChart3, Building2, Package, ShieldCheck, 
   ScanLine, Table, Database, Settings, LogOut,
-  ChevronLeft, ChevronRight, Bell, Trash2, Users
+  ChevronLeft, ChevronRight, Bell, Trash2, Users, UsersRound
 } from 'lucide-react';
 import { cn } from '../lib/utils';
-import { auth } from '../services/firebase';
-import { signOut } from 'firebase/auth';
+import { useNavigate } from 'react-router-dom';
+import { useAuth, trialDaysLeft } from '../auth/AuthProvider';
 
 interface SidebarProps {
   activeTab: string;
@@ -32,6 +32,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
   upcomingChequesCount,
   onSearchClick
 }) => {
+  const { user, workspace, workspaces, selectWorkspace, signOut } = useAuth();
+  const navigate = useNavigate();
+  const trialLeft = trialDaysLeft(workspace);
   const navItems = [
     { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard' },
     { id: 'calendar', icon: Calendar, label: 'Calendar' },
@@ -48,6 +51,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { id: 'cashflow', icon: Wallet, label: 'Cashflow' },
     { id: 'operations', icon: Users, label: 'Operations' },
     { id: 'data', icon: Database, label: 'Data Manager' },
+    { id: 'team', icon: UsersRound, label: 'Team' },
     { id: 'settings', icon: Settings, label: 'Settings' },
   ];
 
@@ -70,8 +74,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
               animate={{ opacity: 1, x: 0 }}
               className="overflow-hidden whitespace-nowrap"
             >
-              <h1 className="font-semibold text-base leading-none text-zinc-900 dark:text-zinc-100 tracking-tight">STR Copilot</h1>
-              <p className="text-[10px] text-zinc-400 mt-0.5">Property Management OS</p>
+              <h1 className="font-semibold text-base leading-none text-zinc-900 dark:text-zinc-100 tracking-tight">Staylytics</h1>
+              <p className="text-[10px] text-zinc-400 mt-0.5 max-w-[150px] truncate" title={workspace?.name}>{workspace?.name ?? 'Short-term rental P&L'}</p>
             </motion.div>
           )}
           <button 
@@ -159,31 +163,37 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </motion.div>
         )}
 
-        {/* Auth Actions */}
-        <div className="mt-auto pt-4 border-t border-zinc-150 dark:border-zinc-800">
-          {auth?.currentUser?.uid !== 'guest_user' ? (
-            <button 
-              onClick={() => signOut(auth)}
-              className={cn(
-                "w-full flex items-center text-zinc-500 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/20 rounded-xl transition-all",
-                isCollapsed ? "justify-center p-3" : "gap-3 px-4 py-2"
-              )}
-              title={isCollapsed ? "Log Out" : undefined}
-            >
-              <LogOut size={16} />
-              {!isCollapsed && <span className="text-xs font-medium">Log Out</span>}
-            </button>
-          ) : (
-            <div className="flex flex-col gap-2">
-              <div className={cn(
-                "flex items-center text-amber-600 dark:text-amber-400 bg-amber-50/55 dark:bg-amber-950/10 rounded-xl p-2 md:px-3 border border-amber-100/40 dark:border-amber-900/20",
-                isCollapsed ? "justify-center" : "gap-2"
-              )}>
-                <ShieldCheck size={14} />
-                {!isCollapsed && <span className="text-xs font-medium">Guest Mode</span>}
-              </div>
+        {/* Workspace and account */}
+        <div className="mt-auto pt-4 border-t border-zinc-150 dark:border-zinc-800 w-full space-y-2">
+          {!isCollapsed && trialLeft !== null && (
+            <div className="mx-2 rounded-xl bg-emerald-50 border border-emerald-100 px-3 py-2 text-[11px] text-emerald-800">
+              <span className="font-semibold">{trialLeft} {trialLeft === 1 ? 'day' : 'days'}</span> left in your free trial
             </div>
           )}
+          {!isCollapsed && workspaces.length > 1 && (
+            <select
+              aria-label="Switch workspace"
+              value={workspace?.id}
+              onChange={e => selectWorkspace(e.target.value)}
+              className="mx-2 w-[calc(100%-1rem)] rounded-xl border border-zinc-200 bg-white px-2 py-1.5 text-xs text-zinc-700"
+            >
+              {workspaces.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
+            </select>
+          )}
+          {!isCollapsed && user?.email && (
+            <p className="px-4 text-[11px] text-zinc-400 truncate" title={user.email}>{user.email}</p>
+          )}
+          <button
+            onClick={async () => { await signOut(); navigate('/login', { replace: true }); }}
+            className={cn(
+              "w-full flex items-center text-zinc-500 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/20 rounded-xl transition-all",
+              isCollapsed ? "justify-center p-3" : "gap-3 px-4 py-2"
+            )}
+            title={isCollapsed ? "Log out" : undefined}
+          >
+            <LogOut size={16} />
+            {!isCollapsed && <span className="text-xs font-medium">Log out</span>}
+          </button>
         </div>
       </div>
     </aside>
