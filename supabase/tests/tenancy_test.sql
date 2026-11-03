@@ -1,4 +1,4 @@
--- Policy tests for 20261031000100_tenancy.sql. Everything runs in one transaction and is rolled back.
+-- Policy tests for 20261103142951_tenancy.sql. Everything runs in one transaction and is rolled back.
 -- A failing check raises an exception, which stops psql (ON_ERROR_STOP) and fails CI.
 begin;
 
@@ -127,6 +127,18 @@ do $$ begin
   update public.memberships set role = 'owner' where user_id = auth.uid();
   if found then raise exception 'FAILED: staff promoted themselves'; end if;
 end $$;
+
+-- Carol opens the invitation link again after joining at sign-up: she gets the workspace, not an error.
+select tests.ok((select public.accept_invitation(tests.token('carol@example.com'))
+                 = (select id from public.organizations)), 'reopening a used invitation is harmless for its owner');
+
+-- Mallory cannot reuse Carol's used token.
+select tests.login('e0000000-0000-0000-0000-00000000000e');
+do $$ begin
+  perform public.accept_invitation(tests.token('carol@example.com'));
+  raise exception 'FAILED: someone else reused an accepted invitation';
+exception when sqlstate 'P0002' then null; end $$;
+select tests.login('c0000000-0000-0000-0000-00000000000c');
 
 -- Existing user Bob accepts from inside the app; he now belongs to two workspaces.
 select tests.login('b0000000-0000-0000-0000-00000000000b');

@@ -2,9 +2,25 @@
  * Server-side AI endpoint. The Gemini key stays on the server (GEMINI_API_KEY in Vercel),
  * never in the browser bundle.
  *
- * TODO(step 1.2): require a valid Supabase session and check the organisation's AI quota (step 5.3).
+ * Only signed-in users may call it (Supabase access token in the Authorization header).
+ * TODO(step 5.3): check the organisation's monthly AI quota.
  */
 import { extractReceiptData, getMarketIntelligence } from './_gemini.js';
+
+const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+const SUPABASE_KEY = process.env.SUPABASE_PUBLISHABLE_KEY || process.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+
+/** Returns the user id for a valid Supabase access token, or null. */
+async function authenticatedUserId(request: Request): Promise<string | null> {
+  const auth = request.headers.get('authorization') || '';
+  if (!auth.startsWith('Bearer ') || !SUPABASE_URL || !SUPABASE_KEY) return null;
+  const res = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+    headers: { authorization: auth, apikey: SUPABASE_KEY },
+  });
+  if (!res.ok) return null;
+  const user = await res.json().catch(() => null);
+  return typeof user?.id === 'string' ? user.id : null;
+}
 
 const MAX_IMAGE_CHARS = 8_000_000; // ~6 MB base64
 
@@ -16,6 +32,8 @@ function json(body: unknown, status = 200): Response {
 }
 
 export async function POST(request: Request): Promise<Response> {
+  if (!(await authenticatedUserId(request))) return json({ error: 'Sign in required' }, 401);
+
   let body: any;
   try {
     body = await request.json();

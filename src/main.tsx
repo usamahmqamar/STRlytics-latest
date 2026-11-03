@@ -26,14 +26,27 @@ import {StrictMode} from 'react';
 import {createRoot} from 'react-dom/client';
 import {BrowserRouter, Navigate, Route, Routes} from 'react-router-dom';
 import App from './App.tsx';
+import {AuthProvider} from './auth/AuthProvider';
+import {RequireAuth} from './auth/RequireAuth';
+import {LoginPage} from './pages/auth/LoginPage';
+import {SignupPage} from './pages/auth/SignupPage';
+import {ForgotPasswordPage, UpdatePasswordPage} from './pages/auth/PasswordPages';
+import {InvitePage} from './pages/auth/InvitePage';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <BrowserRouter>
-      <Routes>
-        <Route path="/app/:tab?" element={<App />} />
-        <Route path="*" element={<Navigate to="/app/dashboard" replace />} />
-      </Routes>
+      <AuthProvider>
+        <Routes>
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/signup" element={<SignupPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/update-password" element={<UpdatePasswordPage />} />
+          <Route path="/invite/:token" element={<InvitePage />} />
+          <Route path="/app/:tab?" element={<RequireAuth><App /></RequireAuth>} />
+          <Route path="*" element={<Navigate to="/app/dashboard" replace />} />
+        </Routes>
+      </AuthProvider>
     </BrowserRouter>
   </StrictMode>,
 );

@@ -1,15 +1,20 @@
 /**
  * Browser client for the server-side AI endpoint (api/ai.ts).
  */
+import { supabase } from '../lib/supabase';
+
 async function callAi<T>(payload: Record<string, unknown>): Promise<T> {
+  const { data } = await supabase.auth.getSession();
+  const token = data.session?.access_token;
+  if (!token) throw new Error('Please log in again.');
   const res = await fetch('/api/ai', {
     method: 'POST',
-    headers: { 'content-type': 'application/json' },
+    headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
     body: JSON.stringify(payload),
   });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data?.error || `AI request failed (${res.status})`);
-  return data as T;
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(body?.error || `AI request failed (${res.status})`);
+  return body as T;
 }
 
 export const extractReceiptData = (base64Image: string) =>
