@@ -5,7 +5,7 @@
 
 import { initializeApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider } from 'firebase/auth';
-import { initializeFirestore, doc, getDocFromServer } from 'firebase/firestore';
+import { initializeFirestore } from 'firebase/firestore';
 import firebaseConfigJson from '../../firebase-applet-config.json';
 
 // Use environment variables if available, otherwise fallback to the applet config
@@ -42,20 +42,3 @@ try {
 }
 
 export { db, auth, googleProvider };
-
-// Test connection
-async function testConnection() {
-  if (!db) return;
-  try {
-    // Try to get a doc to verify connection. Path match expected in rules.
-    await getDocFromServer(doc(db, '_connection_test_', 'ping'));
-    console.log("Firebase connection test successful.");
-  } catch (error) {
-    if (error instanceof Error && (error.message.includes('offline') || error.message.includes('Failed to get document'))) {
-      console.warn("Firestore connection check: Client may still be establishing connection or is offline.");
-    } else {
-      console.error("Firebase Connection Test Error:", error);
-    }
-  }
-}
-testConnection();

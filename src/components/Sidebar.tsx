@@ -161,7 +161,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
         {/* Auth Actions */}
         <div className="mt-auto pt-4 border-t border-zinc-150 dark:border-zinc-800">
-          {auth?.currentUser?.uid !== 'guest_user' ? (
+          {auth?.currentUser ? (
             <button 
               onClick={() => signOut(auth)}
               className={cn(

@@ -77,9 +77,5 @@ service cloud.firestore {
       allow delete: if isOwner(userId);
     }
 
-    // Connection Test Collection
-    match /_connection_test_/{docId} {
-      allow get: if true;
-    }
   }
 }

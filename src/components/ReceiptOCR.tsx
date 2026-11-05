@@ -29,6 +29,15 @@ export const ReceiptOCR: React.FC<ReceiptOCRProps> = ({ onSuccess }) => {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      e.target.value = '';
+      if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+        setError('Please upload a JPEG, PNG or WebP image.');
+        return;
+      }
+      if (file.size > 3 * 1024 * 1024) {
+        setError('Image must be 3 MB or smaller.');
+        return;
+      }
       const reader = new FileReader();
       reader.onloadend = () => {
         const base64 = reader.result as string;
@@ -48,7 +57,7 @@ export const ReceiptOCR: React.FC<ReceiptOCRProps> = ({ onSuccess }) => {
       setPreviewUrl(null);
     } catch (err) {
       console.error("OCR Error:", err);
-      setError("Failed to process receipt. Please try again or enter manually.");
+      setError(err instanceof Error ? err.message : "Failed to process receipt. Please try again or enter manually.");
     } finally {
       setIsProcessing(false);
     }
@@ -67,7 +76,7 @@ export const ReceiptOCR: React.FC<ReceiptOCRProps> = ({ onSuccess }) => {
           type="file" 
           ref={fileInputRef} 
           onChange={handleFileChange} 
-          accept="image/*" 
+          accept="image/jpeg,image/png,image/webp" 
           className="hidden" 
         />
         

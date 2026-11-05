@@ -14,7 +14,7 @@ import {
   doc, 
   onSnapshot, 
   setDoc, 
-  getDocFromServer 
+  serverTimestamp 
 } from 'firebase/firestore';
 import { auth, db, googleProvider } from './services/firebase';
 import { UserData } from './types';
@@ -50,7 +50,6 @@ import { cn } from './lib/utils';
 import { format, startOfMonth, endOfMonth, differenceInDays, parseISO, addDays, startOfDay } from 'date-fns';
 
 export default function App() {
-  console.log("App component rendering...");
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [userData, setUserData] = useState<UserData>(DEFAULT_USER_DATA);
@@ -74,18 +73,18 @@ export default function App() {
   useEffect(() => {
     if (!auth) {
       console.error("Firebase Auth not initialized");
-      // Use a guest user for bypass
-      setUser({ uid: 'guest_user', email: 'guest@example.com' } as any);
       setLoading(false);
       return;
     }
     const unsubscribe = onAuthStateChanged(auth, (u) => {
       if (u) {
         setUser(u);
-        toast.success(`Welcome back, ${u.displayName || u.email}`, { id: 'auth-success' });
+        toast.success(`Welcome back, ${u.displayName || 'there'}`, { id: 'auth-success' });
       } else {
-        // BYPASS: Set a guest user if not logged in
-        setUser({ uid: 'guest_user', email: 'guest@example.com' } as any);
+        // Signed out: drop the previous user's data from memory so it can't be seen on a shared device.
+        setUser(null);
+        lastSavedDataRef.current = JSON.stringify(DEFAULT_USER_DATA);
+        setUserData(DEFAULT_USER_DATA);
       }
       setLoading(false);
     });
@@ -132,7 +131,7 @@ export default function App() {
         setDoc(userDocRef, {
           uid: user.uid,
           data: DEFAULT_USER_DATA,
-          updatedAt: new Date().toISOString()
+          updatedAt: serverTimestamp()
         });
       }
     }, (error) => {
@@ -154,7 +153,7 @@ export default function App() {
       setDoc(userDocRef, {
         uid: user.uid,
         data: userData,
-        updatedAt: new Date().toISOString()
+        updatedAt: serverTimestamp()
       }, { merge: true })
       .then(() => {
         setSyncStatus('synced');
@@ -186,10 +185,8 @@ export default function App() {
     }
     
     setIsLoggingIn(true);
-    console.log("Attempting Google Sign-In...");
     try {
-      const result = await signInWithPopup(auth, googleProvider);
-      console.log("Login successful:", result.user.email);
+      await signInWithPopup(auth, googleProvider);
     } catch (error: any) {
       console.error("Login Error:", error);
       
@@ -200,8 +197,8 @@ export default function App() {
         errorMessage = `This domain (${window.location.hostname}) is not authorized in the Firebase Console. Please add it to Authentication > Settings > Authorized domains.`;
       } else if (error.code === 'auth/operation-not-allowed') {
         errorMessage = "Google Sign-In is not enabled in your Firebase project. Please enable it in the Firebase Console.";
-      } else if (error.message) {
-        errorMessage = error.message;
+      } else if (error.code === 'auth/popup-closed-by-user' || error.code === 'auth/cancelled-popup-request') {
+        return;
       }
       alert(`Login Failed: ${errorMessage}`);
     } finally {
@@ -235,7 +232,7 @@ export default function App() {
     }).length;
   }, [userData]);
 
-  if (!user && loading) {
+  if (loading) {
     return (
       <div className="min-h-screen bg-zinc-50 flex items-center justify-center">
         <div className="w-10 h-10 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
@@ -243,7 +240,25 @@ export default function App() {
     );
   }
 
-  // Sign-in is bypassed
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-zinc-50 flex items-center justify-center p-6">
+        <Toaster position="top-right" />
+        <div className="w-full max-w-sm bg-white border border-zinc-200 rounded-2xl shadow-sm p-8 text-center">
+          <div className="mx-auto mb-4 w-12 h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center">
+            <TrendingUp className="text-emerald-600" size={24} />
+          </div>
+          <h1 className="text-xl font-bold text-zinc-900">Sign in to Staylytics</h1>
+          <p className="mt-2 text-sm text-zinc-500">Your portfolio data is private to your account.</p>
+          <Button className="mt-6 w-full" onClick={handleLogin} disabled={isLoggingIn || !auth}>
+            {isLoggingIn ? <Loader2 size={16} className="animate-spin" /> : null}
+            Continue with Google
+          </Button>
+          {!auth && <p className="mt-4 text-xs text-rose-600">Sign-in is unavailable. Please try again later.</p>}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={cn(

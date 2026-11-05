@@ -22,4 +22,4 @@
 12. **PII Leak**: An unauthenticated user attempting to 'get' a user profile.
 
 ## The Test Runner
-A test suite will be created in `src/tests/firestore.rules.test.ts` to verify these protections.
+Server-side security tests live in `tests/security.test.ts` (`npm run test:security`). Firestore rules tests with the Firebase emulator are still to be added; see SECURITY.md.

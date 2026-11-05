@@ -19,6 +19,7 @@ import { format, parseISO, addDays, differenceInDays, isAfter, subDays } from 'd
 import { cn } from '../lib/utils';
 import { convertCurrency } from '../services/analytics';
 import Papa from 'papaparse';
+import { csvFileProblem, safeParseOptions } from '../lib/csv';
 
 interface ReservationsProps {
   data: UserData;
@@ -123,10 +124,15 @@ export const Reservations: React.FC<ReservationsProps> = ({ data, setData, filte
   const handleImportCSV = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
+    const problem = csvFileProblem(file);
+    if (problem) {
+      alert(problem);
+      event.target.value = '';
+      return;
+    }
 
     Papa.parse(file, {
-      header: true,
-      skipEmptyLines: true,
+      ...safeParseOptions,
       complete: (results) => {
         const imported = results.data.map((row: any) => {
           const gross = parseFloat(row.total_booking_revenue_aed) || 0;
