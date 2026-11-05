@@ -2,12 +2,6 @@
  * Shared server-side security helpers for Vercel functions.
  * Files under api/_lib are not exposed as endpoints.
  */
-import { createRemoteJWKSet, jwtVerify } from 'jose';
-
-// Google's public keys for Firebase ID tokens.
-const FIREBASE_JWKS = createRemoteJWKSet(
-  new URL('https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com'),
-);
 
 export class HttpError extends Error {
   constructor(public status: number, message: string) {
@@ -15,39 +9,69 @@ export class HttpError extends Error {
   }
 }
 
-/** Verifies the Firebase ID token in the Authorization header and returns the user's uid. */
-export async function requireUser(request: Request): Promise<string> {
-  const projectId = process.env.FIREBASE_PROJECT_ID;
-  if (!projectId) throw new HttpError(500, 'Server is not configured.');
+function supabaseConfig() {
+  const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+  const key = process.env.SUPABASE_PUBLISHABLE_KEY || process.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+  if (!url || !key) throw new HttpError(500, 'Server is not configured.');
+  return { url: url.replace(/\/+$/, ''), key };
+}
 
-  const header = request.headers.get('authorization') || '';
-  const match = header.match(/^Bearer\s+(.+)$/i);
-  if (!match) throw new HttpError(401, 'Sign in required.');
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-  try {
-    const { payload } = await jwtVerify(match[1], FIREBASE_JWKS, {
-      issuer: `https://securetoken.google.com/${projectId}`,
-      audience: projectId,
-      algorithms: ['RS256'],
-    });
-    if (!payload.sub || typeof payload.sub !== 'string') throw new Error('missing sub');
-    return payload.sub;
-  } catch {
-    throw new HttpError(401, 'Session expired. Please sign in again.');
-  }
+export interface Caller {
+  userId: string;
+  token: string;
+  workspaceId: string;
 }
 
 /**
- * Best-effort per-user rate limit (per warm function instance).
- * Not a substitute for a shared store; see SECURITY.md.
+ * Confirms the caller's Supabase session with Supabase Auth (so signed-out or revoked
+ * sessions are refused) and reads the workspace they are acting in.
  */
-const buckets = new Map<string, number[]>();
-export function rateLimit(key: string, limit: number, windowMs: number) {
-  const now = Date.now();
-  const hits = (buckets.get(key) || []).filter(t => now - t < windowMs);
-  if (hits.length >= limit) throw new HttpError(429, 'Too many requests. Please wait and try again.');
-  hits.push(now);
-  buckets.set(key, hits);
+export async function requireUser(request: Request): Promise<Caller> {
+  const { url, key } = supabaseConfig();
+  const match = (request.headers.get('authorization') || '').match(/^Bearer\s+([A-Za-z0-9._-]{20,4096})$/);
+  if (!match) throw new HttpError(401, 'Sign in required.');
+  const workspaceId = request.headers.get('x-workspace-id') || '';
+  if (!UUID.test(workspaceId)) throw new HttpError(400, 'Workspace missing.');
+
+  let res: Response;
+  try {
+    res = await fetch(`${url}/auth/v1/user`, {
+      headers: { apikey: key, authorization: `Bearer ${match[1]}` },
+      signal: AbortSignal.timeout(5000),
+    });
+  } catch {
+    throw new HttpError(503, 'Sign-in service unavailable. Please try again.');
+  }
+  if (!res.ok) throw new HttpError(401, 'Session expired. Please sign in again.');
+  const user = await res.json().catch(() => null);
+  if (!user?.id || typeof user.id !== 'string') throw new HttpError(401, 'Session expired. Please sign in again.');
+  return { userId: user.id, token: match[1], workspaceId };
+}
+
+/**
+ * Records one AI use in the database with the caller's own token. The database function
+ * checks workspace membership, role, workspace status and shared hourly/daily limits.
+ */
+export async function consumeAiQuota(caller: Caller, kind: 'receipt' | 'market'): Promise<void> {
+  const { url, key } = supabaseConfig();
+  let res: Response;
+  try {
+    res = await fetch(`${url}/rest/v1/rpc/consume_ai_quota`, {
+      method: 'POST',
+      headers: { apikey: key, authorization: `Bearer ${caller.token}`, 'content-type': 'application/json' },
+      body: JSON.stringify({ p_org: caller.workspaceId, p_kind: kind }),
+      signal: AbortSignal.timeout(5000),
+    });
+  } catch {
+    throw new HttpError(503, 'Service unavailable. Please try again.');
+  }
+  if (res.ok) return;
+  const err = await res.json().catch(() => ({}));
+  if (err?.code === 'P0429') throw new HttpError(429, 'AI usage limit reached. Please try again later.');
+  if (err?.code === '42501') throw new HttpError(403, 'AI features are not available for your role or workspace.');
+  throw new HttpError(503, 'Service unavailable. Please try again.');
 }
 
 export async function readJson(request: Request, maxBytes: number): Promise<any> {

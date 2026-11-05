@@ -17,8 +17,10 @@ const forbidden = [
   ['Gemini API endpoint (AI calls must go through /api)', /generativelanguage\.googleapis\.com/],
   ['private key material', /-----BEGIN [A-Z ]*PRIVATE KEY-----/],
   ['guest sign-in bypass', /guest_user/],
+  ['Supabase secret or service-role key', /sb_secret_[A-Za-z0-9_-]+|"role"\s*:\s*"service_role"|service_role/],
+  ['leftover Firebase SDK', /firestore\.googleapis\.com|identitytoolkit\.googleapis\.com/],
 ];
-const secretValues = [process.env.GEMINI_API_KEY].filter(v => v && v.length > 8);
+const secretValues = [process.env.GEMINI_API_KEY, process.env.SUPABASE_SERVICE_ROLE_KEY, process.env.SUPABASE_SECRET_KEY].filter(v => v && v.length > 8);
 
 for (const f of files) {
   if (f.endsWith('.map')) problems.push(`${f}: source map published`);

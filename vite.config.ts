@@ -20,9 +20,7 @@ export default defineConfig(({mode}) => {
         output: {
           manualChunks: {
             'vendor-react': ['react', 'react-dom'],
-            'vendor-firebase-auth': ['firebase/auth'],
-            'vendor-firebase-firestore': ['firebase/firestore'],
-            'vendor-firebase-app': ['firebase/app'],
+            'vendor-supabase': ['@supabase/supabase-js'],
             'vendor-ui': ['lucide-react', 'framer-motion', 'clsx', 'tailwind-merge'],
             'vendor-utils': ['date-fns'],
           },

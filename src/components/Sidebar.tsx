@@ -12,8 +12,7 @@ import {
   ChevronLeft, ChevronRight, Bell, Trash2, Users
 } from 'lucide-react';
 import { cn } from '../lib/utils';
-import { auth } from '../services/firebase';
-import { signOut } from 'firebase/auth';
+import { supabase } from '../services/supabase';
 
 interface SidebarProps {
   activeTab: string;
@@ -161,9 +160,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
         {/* Auth Actions */}
         <div className="mt-auto pt-4 border-t border-zinc-150 dark:border-zinc-800">
-          {auth?.currentUser ? (
-            <button 
-              onClick={() => signOut(auth)}
+          <button 
+              onClick={() => supabase.auth.signOut()}
               className={cn(
                 "w-full flex items-center text-zinc-500 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/20 rounded-xl transition-all",
                 isCollapsed ? "justify-center p-3" : "gap-3 px-4 py-2"
@@ -173,17 +171,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <LogOut size={16} />
               {!isCollapsed && <span className="text-xs font-medium">Log Out</span>}
             </button>
-          ) : (
-            <div className="flex flex-col gap-2">
-              <div className={cn(
-                "flex items-center text-amber-600 dark:text-amber-400 bg-amber-50/55 dark:bg-amber-950/10 rounded-xl p-2 md:px-3 border border-amber-100/40 dark:border-amber-900/20",
-                isCollapsed ? "justify-center" : "gap-2"
-              )}>
-                <ShieldCheck size={14} />
-                {!isCollapsed && <span className="text-xs font-medium">Guest Mode</span>}
-              </div>
-            </div>
-          )}
         </div>
       </div>
     </aside>

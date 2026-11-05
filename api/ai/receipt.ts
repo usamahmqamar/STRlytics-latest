@@ -1,16 +1,18 @@
 import { GoogleGenAI, Type } from '@google/genai';
-import { HttpError, getGeminiKey, handle, json, rateLimit, readJson, requireUser } from '../_lib/security';
+import { HttpError, consumeAiQuota, getGeminiKey, handle, json, readJson, requireUser } from '../_lib/security';
 import { MAX_BODY_BYTES, validateReceiptImage } from '../_lib/validate';
 
 const clip = (v: unknown, n: number) => (typeof v === 'string' ? v.slice(0, n) : '');
 const CATEGORIES = ['maintenance', 'utilities', 'supplies', 'marketing', 'other'];
 
 export const POST = handle(async request => {
-  const uid = await requireUser(request);
-  rateLimit(`receipt:${uid}`, 20, 60 * 60 * 1000); // 20 receipts per hour
+  const caller = await requireUser(request);
 
   const body = await readJson(request, MAX_BODY_BYTES);
   const { mime, data } = validateReceiptImage(body);
+
+  // Count usage only for valid requests; the database enforces shared per-user and per-workspace limits.
+  await consumeAiQuota(caller, 'receipt');
 
   const ai = new GoogleGenAI({ apiKey: getGeminiKey() });
   const response = await ai.models.generateContent({

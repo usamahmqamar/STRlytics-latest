@@ -3,23 +3,31 @@
  * SPDX-License-Identifier: Apache-2.0
  *
  * AI features run on the server (api/ai/*). The Gemini key never reaches the browser.
- * Each request carries the signed-in user's Firebase ID token.
+ * Each request carries the signed-in user's Supabase access token and the active workspace;
+ * the server checks both and records usage against shared limits.
  */
-import { auth } from './firebase';
+import { supabase } from './supabase';
+
+let activeWorkspaceId: string | null = null;
+export const setActiveWorkspace = (id: string | null) => { activeWorkspaceId = id; };
 
 async function callAi<T>(path: string, body: unknown): Promise<T> {
-  const user = auth?.currentUser;
-  if (!user) throw new Error('Please sign in to use AI features.');
-  const token = await user.getIdToken();
+  const { data } = await supabase.auth.getSession();
+  const token = data.session?.access_token;
+  if (!token || !activeWorkspaceId) throw new Error('Please sign in to use AI features.');
 
   const res = await fetch(path, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+      'X-Workspace-Id': activeWorkspaceId,
+    },
     body: JSON.stringify(body),
   });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data?.error || 'AI request failed.');
-  return data as T;
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(json?.error || 'AI request failed.');
+  return json as T;
 }
 
 export const extractReceiptData = (dataUrl: string) => callAi<any>('/api/ai/receipt', { image: dataUrl });

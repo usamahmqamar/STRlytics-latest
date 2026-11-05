@@ -1,13 +1,15 @@
 import { GoogleGenAI, Type } from '@google/genai';
 import { validateMarketInput } from '../_lib/validate';
-import { HttpError, getGeminiKey, handle, json, rateLimit, readJson, requireUser } from '../_lib/security';
+import { HttpError, consumeAiQuota, getGeminiKey, handle, json, readJson, requireUser } from '../_lib/security';
 
 export const POST = handle(async request => {
-  const uid = await requireUser(request);
-  rateLimit(`market:${uid}`, 10, 60 * 60 * 1000); // 10 analyses per hour
+  const caller = await requireUser(request);
 
   const body = await readJson(request, 2_000);
   const { location, bedrooms } = validateMarketInput(body);
+
+  // Count usage only for valid requests; the database enforces shared per-user and per-workspace limits.
+  await consumeAiQuota(caller, 'market');
 
   const ai = new GoogleGenAI({ apiKey: getGeminiKey() });
   const response = await ai.models.generateContent({

@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import type { Workspace } from '../services/supabase';
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -21,9 +22,10 @@ import { cn, formatCurrency } from '../lib/utils';
 interface SettingsProps {
   data: UserData;
   setData: React.Dispatch<React.SetStateAction<UserData>>;
+  workspace: Workspace;
 }
 
-export const Settings: React.FC<SettingsProps> = ({ data, setData }) => {
+export const Settings: React.FC<SettingsProps> = ({ data, setData, workspace }) => {
   const [activeTab, setActiveTab] = useState<'profile' | 'subscription' | 'payments' | 'display' | 'dashboard'>('profile');
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [profileForm, setProfileForm] = useState<any>(data.companyProfile || {});
@@ -216,89 +218,23 @@ export const Settings: React.FC<SettingsProps> = ({ data, setData }) => {
           )}
 
           {activeTab === 'subscription' && (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-              <div className="lg:col-span-2 space-y-8">
-                <Card title="ACTIVE SUBSCRIPTION">
-                  <div className="mt-4 p-4 bg-white border border-zinc-100 rounded-2xl flex items-center gap-4 relative overflow-hidden group">
-                    <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/5 blur-[80px] rounded-full -mr-32 -mt-32" />
-                    <div className="w-20 h-20 bg-emerald-50 rounded-3xl flex items-center justify-center shrink-0 border border-emerald-100 shadow-sm">
-                      <Zap size={32} className="text-emerald-600" />
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="text-2xl font-black text-amber-600 uppercase tracking-tighter">PRO PLAN</h3>
-                      <p className="text-sm text-zinc-500 mt-1">Your plan includes unlimited properties and advanced analytics.</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-4xl font-black text-zinc-900">499.00</p>
-                      <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] mt-1">AED PER MONTH</p>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4 mt-6">
-                    <div className="space-y-4">
-                      <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em]">PAYMENT METHOD</p>
-                      <div className="p-6 bg-white border border-zinc-100 rounded-[2rem] flex items-center justify-between group hover:border-emerald-500/30 transition-all">
-                        <div className="flex items-center gap-4">
-                          <div className="w-12 h-12 bg-zinc-50 rounded-2xl flex items-center justify-center text-zinc-400">
-                            <CreditCard size={24} />
-                          </div>
-                          <div>
-                            <p className="text-sm font-bold text-zinc-900">Expires 12/28</p>
-                          </div>
-                        </div>
-                        <button className="text-[10px] font-black text-emerald-600 uppercase tracking-widest hover:underline">Edit</button>
-                      </div>
-                    </div>
-
-                    <div className="space-y-4">
-                      <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em]">NEXT BILLING CYCLE</p>
-                      <div className="p-6 bg-white border border-zinc-100 rounded-[2rem] flex items-center justify-between group hover:border-emerald-500/30 transition-all">
-                        <div className="flex-1">
-                          <p className="text-xs font-medium text-zinc-500 leading-relaxed">
-                            Your card will be automatically charged on this date.
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-lg font-black text-emerald-600">AED 499.00</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="mt-12 pt-8 border-t border-zinc-100 flex items-center justify-between">
-                    <div className="flex items-center gap-2 text-amber-600">
-                      <div className="w-5 h-5 bg-amber-50 rounded-full flex items-center justify-center text-amber-600 border border-amber-100">
-                        <Zap size={10} />
-                      </div>
-                      <p className="text-[10px] font-bold uppercase tracking-widest">Cancel your subscription anytime. No hidden fees.</p>
-                    </div>
-                    <button className="text-rose-500 text-sm font-black hover:underline">Cancel Subscription</button>
-                  </div>
-                </Card>
+            <Card title="WORKSPACE PLAN">
+              <div className="mt-4 space-y-3 text-sm text-zinc-600">
+                <p>
+                  <span className="font-bold text-zinc-900">{workspace.name}</span>
+                  {' · '}your role: <span className="font-semibold capitalize">{workspace.role}</span>
+                </p>
+                <p>
+                  Status: <span className="font-semibold capitalize">{workspace.status.replace('_', ' ')}</span>
+                  {workspace.status === 'trialing' && workspace.trialEndsAt && (
+                    <> · free trial ends {format(parseISO(workspace.trialEndsAt), 'MMM d, yyyy')}</>
+                  )}
+                </p>
+                <p className="text-xs text-zinc-400">
+                  Paid plans and billing are coming soon. Card details are never stored in Staylytics.
+                </p>
               </div>
-
-              <div className="space-y-6">
-                <Card title="PLAN FEATURES">
-                  <div className="mt-6 space-y-6">
-                    {[
-                      "Unlimited Properties",
-                      "Advanced ROI Tracking",
-                      "AI-Powered Projections",
-                      "Custom Report Export",
-                      "Multi-User Access",
-                      "Priority Support"
-                    ].map((feature, i) => (
-                      <div key={i} className="flex items-center gap-4">
-                        <div className="w-6 h-6 bg-emerald-50 rounded-full flex items-center justify-center text-emerald-600 border border-emerald-100">
-                          <CheckCircle2 size={14} />
-                        </div>
-                        <span className="text-sm font-medium text-zinc-600">{feature}</span>
-                      </div>
-                    ))}
-                  </div>
-                </Card>
-              </div>
-            </div>
+            </Card>
           )}
 
           {activeTab === 'payments' && (
@@ -315,10 +251,7 @@ export const Settings: React.FC<SettingsProps> = ({ data, setData }) => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-zinc-50">
-                    {(data.paymentHistory || [
-                      { payment_id: 'pay-001', date: '2024-03-01', plan: 'PRO', amount_aed: 499, status: 'Success' },
-                      { payment_id: 'pay-002', date: '2024-02-01', plan: 'PRO', amount_aed: 499, status: 'Success' }
-                    ]).map((pay) => (
+                    {(data.paymentHistory || []).map((pay) => (
                       <tr key={pay.payment_id} className="group hover:bg-zinc-50/50 transition-colors">
                         <td className="py-4">
                           <p className="text-sm font-bold text-zinc-900">{format(parseISO(pay.date), 'MMM d, yyyy')}</p>

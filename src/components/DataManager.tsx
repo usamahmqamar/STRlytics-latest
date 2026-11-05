@@ -153,7 +153,7 @@ export const DataManager: React.FC<DataManagerProps> = ({
             check_out: row.check_out || format(addDays(new Date(), 1), 'yyyy-MM-dd'),
             total_payout_aed: Number(row.total_payout_aed) || 0,
             net_payout_aed: Number(row.total_payout_aed) || 0,
-            status: row.status || 'confirmed',
+            status: String(row.status || '').toLowerCase() === 'cancelled' ? 'cancelled' : 'confirmed',
             apartment_id: row.apartment_id || data.apartments[0]?.apartment_id || '',
             nights: differenceInDays(parseISO(row.check_out || format(addDays(new Date(), 1), 'yyyy-MM-dd')), parseISO(row.check_in || format(new Date(), 'yyyy-MM-dd')))
           }));
