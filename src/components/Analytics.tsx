@@ -67,7 +67,7 @@ export const Analytics: React.FC<AnalyticsProps> = ({ data, filters }) => {
     return Object.entries(channels).map(([name, value]) => ({ name, value }));
   }, [data.reservations]);
 
-  const COLORS = ['#18181b', '#10b981', '#f59e0b', '#3b82f6', '#8b5cf6', '#ec4899'];
+  const COLORS = ['#1a2420', '#0e5a4a', '#a9843a', '#4f7a8c', '#6d6a92', '#9a6b7d'];
 
   const roiData = useMemo(() => {
     return data.apartments.map(apt => {
@@ -113,7 +113,7 @@ export const Analytics: React.FC<AnalyticsProps> = ({ data, filters }) => {
       <div className="space-y-6">
         <div className="flex items-center gap-3">
           <div className="w-1 h-6 bg-emerald-500 rounded-full" />
-          <h2 className="text-2xl font-black tracking-tighter text-zinc-900 dark:text-zinc-100 uppercase italic">ROI Tracking</h2>
+          <h2 className="text-2xl font-semibold tracking-tighter text-zinc-900 dark:text-zinc-100 italic">ROI Tracking</h2>
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -124,13 +124,13 @@ export const Analytics: React.FC<AnalyticsProps> = ({ data, filters }) => {
               </div>
               <div className="flex items-center gap-2 mb-4">
                 <Building2 className="text-zinc-400" size={14} />
-                <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">{roi.name}</span>
+                <span className="text-[11px] font-bold text-zinc-400">{roi.name}</span>
               </div>
               <div className="space-y-4">
                 <div>
-                  <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Return on Investment</p>
+                  <p className="text-[11px] font-bold text-zinc-400">Return on Investment</p>
                   <h3 className={cn(
-                    "text-xl font-black font-mono tracking-tighter mt-1",
+                    "text-xl font-semibold font-mono tracking-tighter mt-1",
                     roi.roi >= 0 ? "text-emerald-500" : "text-rose-500"
                   )}>
                     {roi.roi.toFixed(1)}%
@@ -138,16 +138,16 @@ export const Analytics: React.FC<AnalyticsProps> = ({ data, filters }) => {
                 </div>
                 <div className="grid grid-cols-2 gap-4 pt-4 border-t border-zinc-100 dark:border-zinc-800">
                   <div>
-                    <p className="text-[8px] font-bold text-zinc-400 uppercase tracking-widest">Investment</p>
+                    <p className="text-[8px] font-bold text-zinc-400">Investment</p>
                     <p className="text-xs font-bold font-mono">{formatValue(roi.investment)}</p>
                   </div>
                   <div>
-                    <p className="text-[8px] font-bold text-zinc-400 uppercase tracking-widest">Net Profit</p>
+                    <p className="text-[8px] font-bold text-zinc-400">Net Profit</p>
                     <p className="text-xs font-bold font-mono">{formatValue(roi.profit)}</p>
                   </div>
                 </div>
                 <div className="pt-2">
-                  <p className="text-[8px] font-bold text-zinc-400 uppercase tracking-widest">Est. Payback</p>
+                  <p className="text-[8px] font-bold text-zinc-400">Est. Payback</p>
                   <p className="text-xs font-bold text-zinc-600 dark:text-zinc-400">
                     {roi.payback === Infinity ? 'N/A' : `${roi.payback.toFixed(1)} Months`}
                   </p>
@@ -163,25 +163,25 @@ export const Analytics: React.FC<AnalyticsProps> = ({ data, filters }) => {
           <div className="h-[300px] w-full mt-4">
             <ResponsiveContainer width="100%" height="100%">
               <ComposedChart data={monthlyStats}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f4f4f5" />
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eceee9" />
                 <XAxis 
                   dataKey="month" 
                   axisLine={false} 
                   tickLine={false} 
-                  tick={{ fontSize: 10, fill: '#a1a1aa' }}
+                  tick={{ fontSize: 10, fill: '#949d95' }}
                 />
                 <YAxis 
                   axisLine={false} 
                   tickLine={false} 
-                  tick={{ fontSize: 10, fill: '#a1a1aa' }}
+                  tick={{ fontSize: 10, fill: '#949d95' }}
                   tickFormatter={(val) => `${filters.displayCurrency} ${(val / 1000).toFixed(0)}k`}
                 />
                 <RechartsTooltip 
                   contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
                   formatter={(val: number) => [formatValue(val), ""]}
                 />
-                <Bar dataKey="revenue_aed" fill="#18181b" radius={[4, 4, 0, 0]} barSize={40} name="Revenue" />
-                <Line type="monotone" dataKey="net_profit_aed" stroke="#10b981" strokeWidth={3} dot={{ r: 4, fill: '#10b981' }} name="Net Profit" />
+                <Bar dataKey="revenue_aed" fill="#1a2420" radius={[4, 4, 0, 0]} barSize={40} name="Revenue" />
+                <Line type="monotone" dataKey="net_profit_aed" stroke="#0e5a4a" strokeWidth={3} dot={{ r: 4, fill: '#0e5a4a' }} name="Net Profit" />
               </ComposedChart>
             </ResponsiveContainer>
           </div>
@@ -193,21 +193,21 @@ export const Analytics: React.FC<AnalyticsProps> = ({ data, filters }) => {
               <AreaChart data={monthlyStats}>
                 <defs>
                   <linearGradient id="colorOcc" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.1}/>
-                    <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                    <stop offset="5%" stopColor="#0e5a4a" stopOpacity={0.1}/>
+                    <stop offset="95%" stopColor="#0e5a4a" stopOpacity={0}/>
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f4f4f5" />
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eceee9" />
                 <XAxis 
                   dataKey="month" 
                   axisLine={false} 
                   tickLine={false} 
-                  tick={{ fontSize: 10, fill: '#a1a1aa' }}
+                  tick={{ fontSize: 10, fill: '#949d95' }}
                 />
                 <YAxis 
                   axisLine={false} 
                   tickLine={false} 
-                  tick={{ fontSize: 10, fill: '#a1a1aa' }}
+                  tick={{ fontSize: 10, fill: '#949d95' }}
                   domain={[0, 1]}
                   tickFormatter={(val) => `${Math.round(val * 100)}%`}
                 />
@@ -218,7 +218,7 @@ export const Analytics: React.FC<AnalyticsProps> = ({ data, filters }) => {
                 <Area 
                   type="monotone" 
                   dataKey="occupancy_rate" 
-                  stroke="#10b981" 
+                  stroke="#0e5a4a" 
                   strokeWidth={3} 
                   fillOpacity={1} 
                   fill="url(#colorOcc)" 
@@ -262,11 +262,11 @@ export const Analytics: React.FC<AnalyticsProps> = ({ data, filters }) => {
             <table className="w-full text-left text-xs">
               <thead>
                 <tr className="border-b border-zinc-100">
-                  <th className="pb-4 font-bold text-zinc-400 uppercase tracking-widest">Month</th>
-                  <th className="pb-4 font-bold text-zinc-400 uppercase tracking-widest">Revenue</th>
-                  <th className="pb-4 font-bold text-zinc-400 uppercase tracking-widest">Occupancy</th>
-                  <th className="pb-4 font-bold text-zinc-400 uppercase tracking-widest">ADR</th>
-                  <th className="pb-4 font-bold text-zinc-400 uppercase tracking-widest">Profit</th>
+                  <th className="pb-4 font-bold text-zinc-400">Month</th>
+                  <th className="pb-4 font-bold text-zinc-400">Revenue</th>
+                  <th className="pb-4 font-bold text-zinc-400">Occupancy</th>
+                  <th className="pb-4 font-bold text-zinc-400">ADR</th>
+                  <th className="pb-4 font-bold text-zinc-400">Profit</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-50">

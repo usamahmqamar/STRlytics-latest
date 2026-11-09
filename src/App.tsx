@@ -13,7 +13,7 @@ import { setActiveWorkspace } from './services/ai';
 import { UserData } from './types';
 import { DEFAULT_USER_DATA } from './constants';
 import { Toaster, toast } from 'react-hot-toast';
-import { Sidebar } from './components/Sidebar';
+import { Sidebar, NAV_LABELS } from './components/Sidebar';
 import { FilterBar } from './components/FilterBar';
 import { Dashboard } from './components/Dashboard';
 import { Calendar } from './components/Calendar';
@@ -47,6 +47,9 @@ export const APP_TABS = [
   'dashboard', 'calendar', 'reservations', 'occupancy', 'projections', 'reports', 'setup',
   'assets', 'documents', 'ocr', 'daily-pl', 'analytics', 'cashflow', 'operations', 'data', 'team', 'settings',
 ];
+
+// Screens where the property, date and currency filters change what is shown.
+const FILTERED_TABS = new Set(['dashboard', 'reservations', 'occupancy', 'daily-pl', 'analytics', 'cashflow', 'reports', 'operations']);
 
 export default function App() {
   // Sign-in and the active workspace come from AuthProvider; RequireAuth and RequireWorkspace
@@ -241,55 +244,56 @@ export default function App() {
       />
 
       <main className={cn(
-        "transition-all duration-500 p-4 max-w-7xl mx-auto min-h-screen relative z-10",
-        isSidebarCollapsed ? "ml-24" : "ml-72"
+        "min-h-screen transition-[padding] duration-300",
+        isSidebarCollapsed ? "pl-[72px]" : "pl-64"
       )}>
-        <header className="flex items-center justify-between mb-6 relative">
-          <div>
-            <h2 className="text-xl md:text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100 capitalize">
-              {activeTab === 'ocr' ? 'Receipt AI OCR' : activeTab === 'daily-pl' ? 'Daily P&L' : activeTab.replace('-', ' ')}
-            </h2>
-          </div>
-          
-          <div className="flex items-center gap-3">
-            <div className={cn(
-              "flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl text-xs font-medium text-zinc-500 dark:text-zinc-400 transition-all shadow-sm",
-              syncStatus === 'error' && "border-rose-200 dark:border-rose-950 text-rose-600 dark:text-rose-400"
-            )}>
+       <div className="mx-auto max-w-[1280px] px-8 py-7">
+        <header className="mb-6 flex items-end justify-between gap-4">
+          <h1 className="text-[28px] font-semibold leading-tight tracking-[-0.02em] text-zinc-900 dark:text-zinc-50">
+            {NAV_LABELS[activeTab] ?? 'Dashboard'}
+          </h1>
+
+          <div className="flex items-center gap-2">
+            <div
+              role="status"
+              className={cn(
+                "flex h-8 items-center gap-2 rounded-lg px-2.5 text-xs text-zinc-500 dark:text-zinc-400",
+                syncStatus === 'error' && "bg-rose-50 text-rose-700 dark:bg-rose-900/20 dark:text-rose-300"
+              )}
+              title={syncError ?? undefined}
+            >
               {syncStatus === 'synced' ? (
                 <>
-                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                  <span className="hidden sm:inline">Saved</span>
-                  <span className="text-[10px] text-zinc-400 dark:text-zinc-500 font-mono">
-                    {format(lastSyncTime, 'HH:mm')}
-                  </span>
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                  <span>Saved at {format(lastSyncTime, 'HH:mm')}</span>
                 </>
               ) : syncStatus === 'syncing' ? (
                 <>
-                  <Loader2 size={12} className="animate-spin text-amber-500" />
-                  <span>Syncing</span>
+                  <Loader2 size={12} className="animate-spin text-zinc-400" />
+                  <span>Saving</span>
                 </>
               ) : (
                 <>
-                  <div className="w-1.5 h-1.5 rounded-full bg-rose-500" />
-                  <span>Error</span>
+                  <AlertTriangle size={12} />
+                  <span>Not saved</span>
                 </>
               )}
             </div>
 
-            <button 
+            <button
               onClick={() => setIsHelpOpen(true)}
-              className="p-2.5 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:border-zinc-300 dark:hover:border-zinc-700 transition-all shadow-sm flex items-center justify-center group"
-              title="Help & User Guide"
+              className="flex h-8 w-8 items-center justify-center rounded-lg border border-zinc-200 bg-white text-zinc-500 transition-colors hover:border-zinc-300 hover:text-zinc-900 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:text-zinc-100"
+              title="Help and user guide"
+              aria-label="Help and user guide"
             >
-              <HelpCircle size={16} className="group-hover:scale-105 transition-transform" />
+              <HelpCircle size={15} />
             </button>
           </div>
         </header>
 
         <HelpGuide isOpen={isHelpOpen} onClose={() => setIsHelpOpen(false)} />
 
-        {activeTab !== 'team' && (
+        {FILTERED_TABS.has(activeTab) && (
           <FilterBar 
             filters={filters} 
             setFilters={setFilters} 
@@ -316,7 +320,7 @@ export default function App() {
             <p className="text-xs font-medium">{syncError}</p>
             <button 
               onClick={() => setSyncError(null)}
-              className="ml-auto text-[10px] font-black uppercase tracking-widest hover:underline"
+              className="ml-auto text-[11px] font-semibold hover:underline"
             >
               Dismiss
             </button>
@@ -379,6 +383,7 @@ export default function App() {
             {activeTab === 'settings' && <Settings data={userData} setData={setUserData} workspace={workspace} />}
           </motion.div>
         </AnimatePresence>
+       </div>
       </main>
     </div>
   );

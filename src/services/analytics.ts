@@ -485,8 +485,12 @@ export function getUpcomingTasks(data: UserData) {
         tasks.push({
           id: chq.cheque_id,
           type: 'cheque',
-          title: `Cheque Due: ${apt.name}`,
-          description: `AED ${chq.amount_aed.toLocaleString()} due in ${daysDiff} days`,
+          title: daysDiff < 0 ? `Rent cheque overdue: ${apt.name}` : `Rent cheque due: ${apt.name}`,
+          description: daysDiff < 0
+            ? `AED ${chq.amount_aed.toLocaleString()}, ${Math.abs(daysDiff)} ${Math.abs(daysDiff) === 1 ? 'day' : 'days'} overdue`
+            : daysDiff === 0
+              ? `AED ${chq.amount_aed.toLocaleString()} due today`
+              : `AED ${chq.amount_aed.toLocaleString()} due in ${daysDiff} ${daysDiff === 1 ? 'day' : 'days'}`,
           date: chq.due_date,
           urgent: daysDiff <= 0
         });

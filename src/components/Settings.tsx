@@ -105,10 +105,10 @@ export const Settings: React.FC<SettingsProps> = ({ data, setData, workspace }) 
           {activeTab === 'profile' && (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
               <div className="lg:col-span-2">
-                <Card title="COMPANY INFORMATION">
+                <Card title="Company information">
                   <div className="mt-8 space-y-12">
                     <div className="flex items-center gap-4">
-                      <div className="w-32 h-32 bg-zinc-100 dark:bg-zinc-800 rounded-[2.5rem] overflow-hidden border border-zinc-200 dark:border-zinc-800 flex items-center justify-center shrink-0 shadow-inner">
+                      <div className="w-32 h-32 bg-zinc-100 dark:bg-zinc-800 rounded-2xl overflow-hidden border border-zinc-200 dark:border-zinc-800 flex items-center justify-center shrink-0 shadow-inner">
                         {data.companyProfile?.logo_url ? (
                           <img 
                             src={data.companyProfile.logo_url} 
@@ -141,7 +141,7 @@ export const Settings: React.FC<SettingsProps> = ({ data, setData, workspace }) 
                           <Mail size={18} />
                         </div>
                         <div>
-                          <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] mb-0.5">Email</p>
+                          <p className="text-[11px] font-semibold text-zinc-400 mb-0.5">Email</p>
                           <p className="text-sm font-bold text-zinc-900">{data.companyProfile?.email || "contact@strcopilot.com"}</p>
                         </div>
                       </div>
@@ -150,7 +150,7 @@ export const Settings: React.FC<SettingsProps> = ({ data, setData, workspace }) 
                           <MapPin size={18} />
                         </div>
                         <div>
-                          <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] mb-0.5">Location</p>
+                          <p className="text-[11px] font-semibold text-zinc-400 mb-0.5">Location</p>
                           <p className="text-sm font-bold text-zinc-900">{data.companyProfile?.location || "Dubai, UAE"}</p>
                         </div>
                       </div>
@@ -159,7 +159,7 @@ export const Settings: React.FC<SettingsProps> = ({ data, setData, workspace }) 
                           <Phone size={18} />
                         </div>
                         <div>
-                          <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] mb-0.5">Phone</p>
+                          <p className="text-[11px] font-semibold text-zinc-400 mb-0.5">Phone</p>
                           <p className="text-sm font-bold text-zinc-900">{data.companyProfile?.phone || "+971 50 000 0000"}</p>
                         </div>
                       </div>
@@ -168,7 +168,7 @@ export const Settings: React.FC<SettingsProps> = ({ data, setData, workspace }) 
                           <ShieldCheck size={18} />
                         </div>
                         <div>
-                          <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] mb-0.5">Tax ID / TRN</p>
+                          <p className="text-[11px] font-semibold text-zinc-400 mb-0.5">Tax ID / TRN</p>
                           <p className="text-sm font-bold text-zinc-900">{data.companyProfile?.tax_id || "100-2345-6789-001"}</p>
                         </div>
                       </div>
@@ -177,7 +177,7 @@ export const Settings: React.FC<SettingsProps> = ({ data, setData, workspace }) 
                           <Globe size={18} />
                         </div>
                         <div>
-                          <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] mb-0.5">Website</p>
+                          <p className="text-[11px] font-semibold text-zinc-400 mb-0.5">Website</p>
                           <p className="text-sm font-bold text-zinc-900">{data.companyProfile?.website || "www.strcopilot.com"}</p>
                         </div>
                       </div>
@@ -187,11 +187,11 @@ export const Settings: React.FC<SettingsProps> = ({ data, setData, workspace }) 
               </div>
 
               <div className="space-y-6">
-                <Card title="QUICK ACTIONS">
+                <Card title="Quick actions">
                   <div className="mt-6 space-y-4">
                     <button 
                       onClick={handleGeneratePDF}
-                      className="w-full p-6 bg-white border border-zinc-100 rounded-[2rem] flex items-center gap-4 hover:border-emerald-500/50 hover:bg-emerald-50/30 transition-all group text-left"
+                      className="w-full p-6 bg-white border border-zinc-100 rounded-2xl flex items-center gap-4 hover:border-emerald-500/50 hover:bg-emerald-50/30 transition-all group text-left"
                     >
                       <div className="w-12 h-12 bg-zinc-50 rounded-2xl flex items-center justify-center text-zinc-400 group-hover:text-emerald-600 transition-colors">
                         <FileText size={24} />
@@ -202,7 +202,7 @@ export const Settings: React.FC<SettingsProps> = ({ data, setData, workspace }) 
                     </button>
                     <button 
                       onClick={handleSharePortfolio}
-                      className="w-full p-6 bg-white border border-zinc-100 rounded-[2rem] flex items-center gap-4 hover:border-emerald-500/50 hover:bg-emerald-50/30 transition-all group text-left"
+                      className="w-full p-6 bg-white border border-zinc-100 rounded-2xl flex items-center gap-4 hover:border-emerald-500/50 hover:bg-emerald-50/30 transition-all group text-left"
                     >
                       <div className="w-12 h-12 bg-zinc-50 rounded-2xl flex items-center justify-center text-zinc-400 group-hover:text-emerald-600 transition-colors">
                         <Share2 size={24} />
@@ -218,7 +218,7 @@ export const Settings: React.FC<SettingsProps> = ({ data, setData, workspace }) 
           )}
 
           {activeTab === 'subscription' && (
-            <Card title="WORKSPACE PLAN">
+            <Card title="Workspace plan">
               <div className="mt-4 space-y-3 text-sm text-zinc-600">
                 <p>
                   <span className="font-bold text-zinc-900">{workspace.name}</span>
@@ -238,16 +238,16 @@ export const Settings: React.FC<SettingsProps> = ({ data, setData, workspace }) 
           )}
 
           {activeTab === 'payments' && (
-            <Card title="PAYMENT HISTORY">
+            <Card title="Payment history">
               <div className="mt-8 overflow-x-auto">
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="border-b border-zinc-100">
-                      <th className="pb-3 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">DATE</th>
-                      <th className="pb-3 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">PLAN</th>
-                      <th className="pb-3 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">AMOUNT</th>
-                      <th className="pb-3 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">STATUS</th>
-                      <th className="pb-3 text-[10px] font-bold text-zinc-400 uppercase tracking-widest text-right">INVOICE</th>
+                      <th className="pb-3 text-[11px] font-bold text-zinc-400">DATE</th>
+                      <th className="pb-3 text-[11px] font-bold text-zinc-400">PLAN</th>
+                      <th className="pb-3 text-[11px] font-bold text-zinc-400">AMOUNT</th>
+                      <th className="pb-3 text-[11px] font-bold text-zinc-400">STATUS</th>
+                      <th className="pb-3 text-[11px] font-bold text-zinc-400 text-right">Invoice</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-zinc-50">
@@ -255,15 +255,15 @@ export const Settings: React.FC<SettingsProps> = ({ data, setData, workspace }) 
                       <tr key={pay.payment_id} className="group hover:bg-zinc-50/50 transition-colors">
                         <td className="py-4">
                           <p className="text-sm font-bold text-zinc-900">{format(parseISO(pay.date), 'MMM d, yyyy')}</p>
-                          <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mt-1">ID: {pay.payment_id}</p>
+                          <p className="text-[11px] font-bold text-zinc-400 mt-1">ID: {pay.payment_id}</p>
                         </td>
                         <td className="py-4">
-                          <span className="px-3 py-1 bg-zinc-100 text-zinc-500 text-[10px] font-black uppercase rounded-lg border border-zinc-200">
+                          <span className="px-3 py-1 bg-zinc-100 text-zinc-500 text-[11px] font-semibold rounded-lg border border-zinc-200">
                             {pay.plan}
                           </span>
                         </td>
                         <td className="py-4">
-                          <p className="text-sm font-black text-zinc-900">{formatCurrency(pay.amount_aed)}</p>
+                          <p className="text-sm font-semibold text-zinc-900">{formatCurrency(pay.amount_aed)}</p>
                         </td>
                         <td className="py-4">
                           <div className="flex items-center gap-2">
@@ -285,7 +285,7 @@ export const Settings: React.FC<SettingsProps> = ({ data, setData, workspace }) 
           )}
 
           {activeTab === 'dashboard' && (
-            <Card title="DASHBOARD WIDGETS">
+            <Card title="Dashboard sections">
               <div className="mt-6 space-y-4">
                 <p className="text-sm font-medium text-zinc-500 leading-relaxed max-w-lg mb-8">
                   Toggle the visibility of specific dashboard components. Changes are saved automatically.
@@ -296,7 +296,7 @@ export const Settings: React.FC<SettingsProps> = ({ data, setData, workspace }) 
                       key={widget.id}
                       onClick={() => toggleWidget(widget.id)}
                       className={cn(
-                        "p-6 rounded-[2rem] border transition-all duration-300 flex items-center justify-between group",
+                        "p-6 rounded-2xl border transition-all duration-300 flex items-center justify-between group",
                         widget.visible 
                           ? "bg-zinc-900 border-zinc-800 text-white shadow-xl shadow-zinc-200" 
                           : "bg-white border-zinc-100 text-zinc-400 grayscale opacity-60 hover:opacity-100 hover:grayscale-0"
@@ -310,9 +310,9 @@ export const Settings: React.FC<SettingsProps> = ({ data, setData, workspace }) 
                           <LayoutDashboard size={18} />
                         </div>
                         <div className="text-left">
-                          <p className="text-xs font-black uppercase tracking-widest">{widget.title || widget.id.replace(/-/g, ' ')}</p>
+                          <p className="text-xs font-semibold">{widget.title || widget.id.replace(/-/g, ' ')}</p>
                           <p className={cn(
-                            "text-[10px] mt-0.5",
+                            "text-[11px] mt-0.5",
                             widget.visible ? "text-zinc-400" : "text-zinc-300"
                           )}>
                             {widget.visible ? 'Visible' : 'Hidden'}
@@ -335,7 +335,7 @@ export const Settings: React.FC<SettingsProps> = ({ data, setData, workspace }) 
           {activeTab === 'display' && (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
               <div className="lg:col-span-2 space-y-4">
-                <Card title="FONT SIZE SETTINGS">
+                <Card title="Text size">
                   <div className="mt-6 space-y-8">
                     <p className="text-sm font-medium text-zinc-500 leading-relaxed max-w-lg">
                       Adjust the application's font size for better readability.
@@ -347,20 +347,20 @@ export const Settings: React.FC<SettingsProps> = ({ data, setData, workspace }) 
                           key={size}
                           onClick={() => handleUpdateDisplay({ fontSize: size })}
                           className={cn(
-                            "p-8 rounded-[2rem] border transition-all duration-300 flex flex-col items-center gap-3 group",
+                            "p-8 rounded-2xl border transition-all duration-300 flex flex-col items-center gap-3 group",
                             data.displaySettings?.fontSize === size 
                               ? "bg-emerald-50 dark:bg-emerald-500/10 border-emerald-500 shadow-lg shadow-emerald-500/10" 
                               : "bg-white dark:bg-zinc-900 border-zinc-100 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-600"
                           )}
                         >
                           <span className={cn(
-                            "font-black uppercase tracking-widest",
+                            "font-semibold",
                             data.displaySettings?.fontSize === size ? "text-emerald-600" : "text-zinc-400 group-hover:text-zinc-900 dark:group-hover:text-zinc-100"
                           )}>
                             {size}
                           </span>
                           <span className={cn(
-                            "text-[10px] font-bold",
+                            "text-[11px] font-bold",
                             data.displaySettings?.fontSize === size ? "text-emerald-500" : "text-zinc-300"
                           )}>
                             Sample Text
@@ -370,7 +370,7 @@ export const Settings: React.FC<SettingsProps> = ({ data, setData, workspace }) 
                     </div>
 
                     <div className="p-4 bg-zinc-50/50 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-800 rounded-2xl space-y-2">
-                      <h4 className="text-sm font-black text-zinc-900 dark:text-zinc-100 uppercase tracking-widest">Preview</h4>
+                      <h4 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Preview</h4>
                       <p className={cn(
                         "text-zinc-500 dark:text-zinc-400 leading-relaxed transition-all duration-300",
                         data.displaySettings?.fontSize === 'sm' && "text-xs",
@@ -386,12 +386,12 @@ export const Settings: React.FC<SettingsProps> = ({ data, setData, workspace }) 
               </div>
 
               <div className="space-y-6">
-                <Card title="VISUAL THEME">
+                <Card title="Theme">
                   <div className="mt-6 space-y-4">
                     <button 
                       onClick={() => handleUpdateDisplay({ theme: 'light' })}
                       className={cn(
-                        "w-full p-6 border rounded-[2rem] space-y-2 text-left transition-all",
+                        "w-full p-6 border rounded-2xl space-y-2 text-left transition-all",
                         data.displaySettings?.theme === 'light' 
                           ? "bg-emerald-50/30 dark:bg-emerald-500/10 border-emerald-500/20" 
                           : "bg-white dark:bg-zinc-900 border-zinc-100 dark:border-zinc-800 hover:border-zinc-200 dark:hover:border-zinc-700"
@@ -408,7 +408,7 @@ export const Settings: React.FC<SettingsProps> = ({ data, setData, workspace }) 
                     <button 
                       onClick={() => handleUpdateDisplay({ theme: 'dark' })}
                       className={cn(
-                        "w-full p-6 border rounded-[2rem] space-y-2 text-left transition-all",
+                        "w-full p-6 border rounded-2xl space-y-2 text-left transition-all",
                         data.displaySettings?.theme === 'dark' 
                           ? "bg-zinc-900 border-zinc-700" 
                           : "bg-white border-zinc-100 hover:border-zinc-200"
@@ -444,7 +444,7 @@ export const Settings: React.FC<SettingsProps> = ({ data, setData, workspace }) 
               className="bg-white rounded-[32px] shadow-2xl w-full max-w-2xl overflow-hidden"
             >
               <div className="p-8 border-b border-zinc-100 flex justify-between items-center bg-zinc-50/50">
-                <h3 className="text-xl font-black text-zinc-900 tracking-tight">Edit Company Profile</h3>
+                <h3 className="text-xl font-semibold text-zinc-900 tracking-tight">Edit Company Profile</h3>
                 <button onClick={() => setIsEditingProfile(false)} className="p-2 hover:bg-zinc-100 rounded-full transition-colors">
                   <X size={24} />
                 </button>
@@ -453,7 +453,7 @@ export const Settings: React.FC<SettingsProps> = ({ data, setData, workspace }) 
               <div className="p-8 space-y-6">
                 <div className="grid grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Company Name</label>
+                    <label className="text-[11px] font-semibold text-zinc-400 ml-1">Company Name</label>
                     <input 
                       type="text" 
                       className="w-full px-5 py-4 rounded-2xl border border-zinc-200 focus:border-emerald-500 focus:ring-0 transition-all text-sm font-medium"
@@ -462,7 +462,7 @@ export const Settings: React.FC<SettingsProps> = ({ data, setData, workspace }) 
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Website</label>
+                    <label className="text-[11px] font-semibold text-zinc-400 ml-1">Website</label>
                     <input 
                       type="text" 
                       className="w-full px-5 py-4 rounded-2xl border border-zinc-200 focus:border-emerald-500 focus:ring-0 transition-all text-sm font-medium"
@@ -474,7 +474,7 @@ export const Settings: React.FC<SettingsProps> = ({ data, setData, workspace }) 
 
                 <div className="grid grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Email</label>
+                    <label className="text-[11px] font-semibold text-zinc-400 ml-1">Email</label>
                     <input 
                       type="email" 
                       className="w-full px-5 py-4 rounded-2xl border border-zinc-200 focus:border-emerald-500 focus:ring-0 transition-all text-sm font-medium"
@@ -483,7 +483,7 @@ export const Settings: React.FC<SettingsProps> = ({ data, setData, workspace }) 
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Phone</label>
+                    <label className="text-[11px] font-semibold text-zinc-400 ml-1">Phone</label>
                     <input 
                       type="text" 
                       className="w-full px-5 py-4 rounded-2xl border border-zinc-200 focus:border-emerald-500 focus:ring-0 transition-all text-sm font-medium"
@@ -494,7 +494,7 @@ export const Settings: React.FC<SettingsProps> = ({ data, setData, workspace }) 
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Description</label>
+                  <label className="text-[11px] font-semibold text-zinc-400 ml-1">Description</label>
                   <textarea 
                     rows={3}
                     className="w-full px-5 py-4 rounded-2xl border border-zinc-200 focus:border-emerald-500 focus:ring-0 transition-all text-sm font-medium resize-none"

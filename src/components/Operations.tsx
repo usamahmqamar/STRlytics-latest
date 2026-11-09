@@ -57,7 +57,7 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({
             className="bg-white rounded-[32px] shadow-2xl w-full max-w-lg overflow-hidden"
           >
             <div className="p-4 border-b border-zinc-100 flex justify-between items-center bg-zinc-50/50">
-              <h3 className="text-xl font-black text-zinc-900 tracking-tight italic uppercase">Raise Maintenance Ticket</h3>
+              <h3 className="text-xl font-semibold text-zinc-900 tracking-tight italic">Raise Maintenance Ticket</h3>
               <button onClick={onClose} className="p-2 hover:bg-zinc-100 rounded-full transition-colors">
                 <X size={24} />
               </button>
@@ -65,7 +65,7 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({
 
             <div className="p-4 space-y-4">
               <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Task Title</label>
+                <label className="text-[11px] font-semibold text-zinc-400 ml-1">Task Title</label>
                 <input 
                   type="text" 
                   placeholder="e.g. AC Leakage in Living Room"
@@ -76,7 +76,7 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Description</label>
+                <label className="text-[11px] font-semibold text-zinc-400 ml-1">Description</label>
                 <textarea 
                   placeholder="Provide details about the issue..."
                   className="w-full px-4 py-3 rounded-xl border border-zinc-200 focus:border-zinc-900 focus:ring-0 transition-all text-sm font-medium h-24 resize-none"
@@ -87,7 +87,7 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Property</label>
+                  <label className="text-[11px] font-semibold text-zinc-400 ml-1">Property</label>
                   <select 
                     className="w-full px-4 py-3 rounded-xl border border-zinc-200 focus:border-zinc-900 focus:ring-0 transition-all text-sm font-medium bg-white"
                     value={newTask.apartment_id || ''}
@@ -98,7 +98,7 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({
                   </select>
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Priority</label>
+                  <label className="text-[11px] font-semibold text-zinc-400 ml-1">Priority</label>
                   <select 
                     className="w-full px-4 py-3 rounded-xl border border-zinc-200 focus:border-zinc-900 focus:ring-0 transition-all text-sm font-medium bg-white"
                     value={newTask.priority}
@@ -114,7 +114,7 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Assign Vendor (Optional)</label>
+                  <label className="text-[11px] font-semibold text-zinc-400 ml-1">Assign Vendor (Optional)</label>
                   <select 
                     className="w-full px-4 py-3 rounded-xl border border-zinc-200 focus:border-zinc-900 focus:ring-0 transition-all text-sm font-medium bg-white"
                     value={newTask.vendor_id || ''}
@@ -125,7 +125,7 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({
                   </select>
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Due Date</label>
+                  <label className="text-[11px] font-semibold text-zinc-400 ml-1">Due Date</label>
                   <input 
                     type="date" 
                     className="w-full px-4 py-3 rounded-xl border border-zinc-200 focus:border-zinc-900 focus:ring-0 transition-all text-sm font-medium"
@@ -445,8 +445,8 @@ export const Operations: React.FC<OperationsProps> = ({
               <TrendingUp size={24} />
             </div>
             <div>
-              <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Total Payable</p>
-              <h3 className="text-2xl font-black text-zinc-900">{formatValue(totals.payable)}</h3>
+              <p className="text-[11px] font-bold text-zinc-400">Total Payable</p>
+              <h3 className="text-2xl font-semibold text-zinc-900">{formatValue(totals.payable)}</h3>
             </div>
           </div>
         </Card>
@@ -456,8 +456,8 @@ export const Operations: React.FC<OperationsProps> = ({
               <TrendingDown size={24} />
             </div>
             <div>
-              <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Total Advances</p>
-              <h3 className="text-2xl font-black text-zinc-900">{formatValue(totals.advances)}</h3>
+              <p className="text-[11px] font-bold text-zinc-400">Total Advances</p>
+              <h3 className="text-2xl font-semibold text-zinc-900">{formatValue(totals.advances)}</h3>
             </div>
           </div>
         </Card>
@@ -467,8 +467,8 @@ export const Operations: React.FC<OperationsProps> = ({
               <Clock size={24} />
             </div>
             <div>
-              <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Unbilled Work</p>
-              <h3 className="text-2xl font-black text-zinc-900">{formatValue(totals.unbilled)}</h3>
+              <p className="text-[11px] font-bold text-zinc-400">Unbilled Work</p>
+              <h3 className="text-2xl font-semibold text-zinc-900">{formatValue(totals.unbilled)}</h3>
             </div>
           </div>
         </Card>
@@ -478,8 +478,8 @@ export const Operations: React.FC<OperationsProps> = ({
               <FileText size={24} />
             </div>
             <div>
-              <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Billed Unpaid</p>
-              <h3 className="text-2xl font-black text-zinc-900">{formatValue(totals.billedUnpaid)}</h3>
+              <p className="text-[11px] font-bold text-zinc-400">Billed Unpaid</p>
+              <h3 className="text-2xl font-semibold text-zinc-900">{formatValue(totals.billedUnpaid)}</h3>
             </div>
           </div>
         </Card>
@@ -498,12 +498,12 @@ export const Operations: React.FC<OperationsProps> = ({
                     </div>
                     <div>
                       <p className="text-xs font-bold text-zinc-900">{record.description}</p>
-                      <p className="text-[10px] text-zinc-400 uppercase tracking-wider">{vendor?.name}</p>
+                      <p className="text-[11px] text-zinc-400">{vendor?.name}</p>
                     </div>
                   </div>
                   <div className="text-right">
                     <p className="text-xs font-mono font-bold text-zinc-900">{formatValue(record.total_cost)}</p>
-                    <p className="text-[9px] text-zinc-400">{format(parseISO(record.date), 'MMM dd')}</p>
+                    <p className="text-[11px] text-zinc-400">{format(parseISO(record.date), 'MMM dd')}</p>
                   </div>
                 </div>
               );
@@ -523,12 +523,12 @@ export const Operations: React.FC<OperationsProps> = ({
                     </div>
                     <div>
                       <p className="text-xs font-bold text-zinc-900">{vendor?.name}</p>
-                      <p className="text-[10px] text-zinc-400 uppercase tracking-wider">{payment.type.replace('_', ' ')}</p>
+                      <p className="text-[11px] text-zinc-400">{payment.type.replace('_', ' ')}</p>
                     </div>
                   </div>
                   <div className="text-right">
                     <p className="text-xs font-mono font-bold text-emerald-600">{formatValue(payment.amount_paid)}</p>
-                    <p className="text-[9px] text-zinc-400">{format(parseISO(payment.date), 'MMM dd')}</p>
+                    <p className="text-[11px] text-zinc-400">{format(parseISO(payment.date), 'MMM dd')}</p>
                   </div>
                 </div>
               );
@@ -582,7 +582,7 @@ export const Operations: React.FC<OperationsProps> = ({
             <div className="space-y-6">
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
-                  <h3 className="text-2xl font-black text-zinc-900 tracking-tight">Vendors & Partners</h3>
+                  <h3 className="text-2xl font-semibold text-zinc-900 tracking-tight">Vendors & Partners</h3>
                   <p className="text-xs text-zinc-500 font-medium">Manage your service providers and track their balances.</p>
                 </div>
                 <Button onClick={() => setIsAddVendorOpen(true)}>
@@ -593,20 +593,20 @@ export const Operations: React.FC<OperationsProps> = ({
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <Card className="bg-white dark:bg-zinc-900 border-zinc-100 dark:border-zinc-800 shadow-sm">
-                  <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Active Vendors</p>
-                  <h3 className="text-2xl font-black text-zinc-900 dark:text-zinc-100">{totals.activeVendors}</h3>
+                  <p className="text-[11px] font-bold text-zinc-400 mb-1">Active Vendors</p>
+                  <h3 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">{totals.activeVendors}</h3>
                 </Card>
                 <Card className="bg-white dark:bg-zinc-900 border-zinc-100 dark:border-zinc-800 shadow-sm">
-                  <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Total Payable</p>
-                  <h3 className="text-2xl font-black text-rose-600">{formatValue(totals.payable)}</h3>
+                  <p className="text-[11px] font-bold text-zinc-400 mb-1">Total Payable</p>
+                  <h3 className="text-2xl font-semibold text-rose-600">{formatValue(totals.payable)}</h3>
                 </Card>
                 <Card className="bg-white dark:bg-zinc-900 border-zinc-100 dark:border-zinc-800 shadow-sm">
-                  <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Total Advances</p>
-                  <h3 className="text-2xl font-black text-emerald-600">{formatValue(totals.advances)}</h3>
+                  <p className="text-[11px] font-bold text-zinc-400 mb-1">Total Advances</p>
+                  <h3 className="text-2xl font-semibold text-emerald-600">{formatValue(totals.advances)}</h3>
                 </Card>
                 <Card className="bg-white dark:bg-zinc-900 border-zinc-100 dark:border-zinc-800 shadow-sm">
-                  <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Pending Invoices</p>
-                  <h3 className="text-2xl font-black text-zinc-900 dark:text-zinc-100">{totals.pendingInvoices}</h3>
+                  <p className="text-[11px] font-bold text-zinc-400 mb-1">Pending Invoices</p>
+                  <h3 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">{totals.pendingInvoices}</h3>
                 </Card>
               </div>
 
@@ -615,13 +615,13 @@ export const Operations: React.FC<OperationsProps> = ({
                   <table className="w-full text-left">
                     <thead>
                       <tr className="border-b border-zinc-100">
-                        <th className="pb-4 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Vendor</th>
-                        <th className="pb-4 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Service</th>
-                        <th className="pb-4 text-[10px] font-bold text-zinc-400 uppercase tracking-widest text-right">Work Done</th>
-                        <th className="pb-4 text-[10px] font-bold text-zinc-400 uppercase tracking-widest text-right">Paid</th>
-                        <th className="pb-4 text-[10px] font-bold text-zinc-400 uppercase tracking-widest text-right">Pending</th>
-                        <th className="pb-4 text-[10px] font-bold text-zinc-400 uppercase tracking-widest text-right">Advance</th>
-                        <th className="pb-4 text-[10px] font-bold text-zinc-400 uppercase tracking-widest text-right">Action</th>
+                        <th className="pb-4 text-[11px] font-bold text-zinc-400">Vendor</th>
+                        <th className="pb-4 text-[11px] font-bold text-zinc-400">Service</th>
+                        <th className="pb-4 text-[11px] font-bold text-zinc-400 text-right">Work Done</th>
+                        <th className="pb-4 text-[11px] font-bold text-zinc-400 text-right">Paid</th>
+                        <th className="pb-4 text-[11px] font-bold text-zinc-400 text-right">Pending</th>
+                        <th className="pb-4 text-[11px] font-bold text-zinc-400 text-right">Advance</th>
+                        <th className="pb-4 text-[11px] font-bold text-zinc-400 text-right">Action</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-zinc-50">
@@ -634,12 +634,12 @@ export const Operations: React.FC<OperationsProps> = ({
                               </div>
                               <div>
                                 <p className="font-bold text-zinc-900 text-sm">{v.name}</p>
-                                <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest">{v.status}</p>
+                                <p className="text-[11px] text-zinc-400 font-bold">{v.status}</p>
                               </div>
                             </div>
                           </td>
                           <td className="py-4">
-                            <span className="px-2 py-1 bg-zinc-100 text-zinc-500 rounded text-[10px] font-black uppercase tracking-widest">
+                            <span className="px-2 py-1 bg-zinc-100 text-zinc-500 rounded text-[11px] font-semibold">
                               {v.service_type}
                             </span>
                           </td>
@@ -661,7 +661,7 @@ export const Operations: React.FC<OperationsProps> = ({
 
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-black text-zinc-900 uppercase tracking-widest">Vendor Profiles</h3>
+                  <h3 className="text-sm font-semibold text-zinc-900">Vendor Profiles</h3>
                   <div className="relative w-64">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" size={14} />
                     <input 
@@ -681,14 +681,14 @@ export const Operations: React.FC<OperationsProps> = ({
                           <Users size={20} />
                         </div>
                         <span className={cn(
-                          "px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest border",
+                          "px-2 py-0.5 rounded-full text-[11px] font-semibold border",
                           v.status === 'active' ? "bg-emerald-50 text-emerald-600 border-emerald-100" : "bg-zinc-50 text-zinc-400 border-zinc-100"
                         )}>
                           {v.status}
                         </span>
                       </div>
                       <h4 className="font-bold text-zinc-900">{v.name}</h4>
-                      <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest mb-4">{v.service_type}</p>
+                      <p className="text-[11px] text-zinc-400 font-bold mb-4">{v.service_type}</p>
                       <div className="space-y-2 mb-6">
                         <div className="flex items-center gap-2 text-xs">
                           <span className="text-zinc-400">$</span>
@@ -702,7 +702,7 @@ export const Operations: React.FC<OperationsProps> = ({
                         </div>
                       </div>
                       <div className="flex gap-2">
-                        <Button variant="outline" size="sm" className="flex-1 text-[10px]">VIEW DETAILS</Button>
+                        <Button variant="outline" size="sm" className="flex-1 text-[11px]">View details</Button>
                         <button className="p-2 hover:bg-rose-50 text-zinc-400 hover:text-rose-600 rounded-xl transition-colors">
                           <Trash2 size={16} />
                         </button>
@@ -756,13 +756,13 @@ export const Operations: React.FC<OperationsProps> = ({
                 <table className="w-full text-left">
                   <thead>
                     <tr className="border-b border-zinc-100">
-                      <th className="pb-4 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Date</th>
-                      <th className="pb-4 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Property</th>
-                      <th className="pb-4 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Vendor</th>
-                      <th className="pb-4 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Description</th>
-                      <th className="pb-4 text-[10px] font-bold text-zinc-400 uppercase tracking-widest text-right">Total Cost</th>
-                      <th className="pb-4 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Status</th>
-                      <th className="pb-4 text-[10px] font-bold text-zinc-400 uppercase tracking-widest text-right">Action</th>
+                      <th className="pb-4 text-[11px] font-bold text-zinc-400">Date</th>
+                      <th className="pb-4 text-[11px] font-bold text-zinc-400">Property</th>
+                      <th className="pb-4 text-[11px] font-bold text-zinc-400">Vendor</th>
+                      <th className="pb-4 text-[11px] font-bold text-zinc-400">Description</th>
+                      <th className="pb-4 text-[11px] font-bold text-zinc-400 text-right">Total Cost</th>
+                      <th className="pb-4 text-[11px] font-bold text-zinc-400">Status</th>
+                      <th className="pb-4 text-[11px] font-bold text-zinc-400 text-right">Action</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-zinc-50">
@@ -778,7 +778,7 @@ export const Operations: React.FC<OperationsProps> = ({
                           <td className="py-4 text-right font-mono text-sm font-bold text-zinc-900">{formatValue(r.total_cost)}</td>
                           <td className="py-4">
                             <span className={cn(
-                              "px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest border",
+                              "px-2 py-0.5 rounded-full text-[11px] font-semibold border",
                               r.status === 'paid' ? "bg-emerald-50 text-emerald-600 border-emerald-100" : 
                               r.status === 'billed' ? "bg-blue-50 text-blue-600 border-blue-100" :
                               "bg-zinc-50 text-zinc-400 border-zinc-100"
@@ -804,16 +804,16 @@ export const Operations: React.FC<OperationsProps> = ({
             <div className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <Card className="bg-white border-zinc-100 shadow-sm">
-                  <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Total Invoiced</p>
-                  <h3 className="text-2xl font-black text-zinc-900">{formatValue(totals.totalInvoiced)}</h3>
+                  <p className="text-[11px] font-bold text-zinc-400 mb-1">Total Invoiced</p>
+                  <h3 className="text-2xl font-semibold text-zinc-900">{formatValue(totals.totalInvoiced)}</h3>
                 </Card>
                 <Card className="bg-white border-zinc-100 shadow-sm">
-                  <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Pending Payment</p>
-                  <h3 className="text-2xl font-black text-amber-600">{formatValue(totals.billedUnpaid)}</h3>
+                  <p className="text-[11px] font-bold text-zinc-400 mb-1">Pending Payment</p>
+                  <h3 className="text-2xl font-semibold text-amber-600">{formatValue(totals.billedUnpaid)}</h3>
                 </Card>
                 <Card className="bg-white border-zinc-100 shadow-sm">
-                  <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Paid Invoices</p>
-                  <h3 className="text-2xl font-black text-emerald-600">{totals.paidInvoices}</h3>
+                  <p className="text-[11px] font-bold text-zinc-400 mb-1">Paid Invoices</p>
+                  <h3 className="text-2xl font-semibold text-emerald-600">{totals.paidInvoices}</h3>
                 </Card>
               </div>
 
@@ -839,12 +839,12 @@ export const Operations: React.FC<OperationsProps> = ({
                   <table className="w-full text-left">
                     <thead>
                       <tr className="border-b border-zinc-100">
-                        <th className="pb-4 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Invoice ID</th>
-                        <th className="pb-4 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Date</th>
-                        <th className="pb-4 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Vendor</th>
-                        <th className="pb-4 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Records</th>
-                        <th className="pb-4 text-[10px] font-bold text-zinc-400 uppercase tracking-widest text-right">Amount</th>
-                        <th className="pb-4 text-[10px] font-bold text-zinc-400 uppercase tracking-widest text-right">Status</th>
+                        <th className="pb-4 text-[11px] font-bold text-zinc-400">Invoice ID</th>
+                        <th className="pb-4 text-[11px] font-bold text-zinc-400">Date</th>
+                        <th className="pb-4 text-[11px] font-bold text-zinc-400">Vendor</th>
+                        <th className="pb-4 text-[11px] font-bold text-zinc-400">Records</th>
+                        <th className="pb-4 text-[11px] font-bold text-zinc-400 text-right">Amount</th>
+                        <th className="pb-4 text-[11px] font-bold text-zinc-400 text-right">Status</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-zinc-50">
@@ -859,7 +859,7 @@ export const Operations: React.FC<OperationsProps> = ({
                             <td className="py-4 text-right font-mono text-sm font-bold text-zinc-900">{formatValue(invoice.total_amount)}</td>
                             <td className="py-4 text-right">
                               <span className={cn(
-                                "px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest border",
+                                "px-2 py-0.5 rounded-full text-[11px] font-semibold border",
                                 invoice.status === 'paid' ? "bg-emerald-50 text-emerald-600 border-emerald-100" : 
                                 invoice.status === 'partial' ? "bg-amber-50 text-amber-600 border-amber-100" :
                                 "bg-amber-50 text-amber-600 border-amber-100"
@@ -880,16 +880,16 @@ export const Operations: React.FC<OperationsProps> = ({
             <div className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <Card className="bg-white border-zinc-100 shadow-sm">
-                  <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Total Paid Out</p>
-                  <h3 className="text-2xl font-black text-zinc-900">{formatValue(totals.totalPaidOut)}</h3>
+                  <p className="text-[11px] font-bold text-zinc-400 mb-1">Total Paid Out</p>
+                  <h3 className="text-2xl font-semibold text-zinc-900">{formatValue(totals.totalPaidOut)}</h3>
                 </Card>
                 <Card className="bg-white border-zinc-100 shadow-sm">
-                  <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Last 30 Days</p>
-                  <h3 className="text-2xl font-black text-emerald-600">{formatValue(totals.last30DaysPaid)}</h3>
+                  <p className="text-[11px] font-bold text-zinc-400 mb-1">Last 30 Days</p>
+                  <h3 className="text-2xl font-semibold text-emerald-600">{formatValue(totals.last30DaysPaid)}</h3>
                 </Card>
                 <Card className="bg-white border-zinc-100 shadow-sm">
-                  <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Payment Count</p>
-                  <h3 className="text-2xl font-black text-zinc-900">{totals.paymentCount}</h3>
+                  <p className="text-[11px] font-bold text-zinc-400 mb-1">Payment Count</p>
+                  <h3 className="text-2xl font-semibold text-zinc-900">{totals.paymentCount}</h3>
                 </Card>
               </div>
 
@@ -915,12 +915,12 @@ export const Operations: React.FC<OperationsProps> = ({
                 <table className="w-full text-left">
                   <thead>
                     <tr className="border-b border-zinc-100">
-                      <th className="pb-4 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Date</th>
-                      <th className="pb-4 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Vendor</th>
-                      <th className="pb-4 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Type</th>
-                      <th className="pb-4 text-[10px] font-bold text-zinc-400 uppercase tracking-widest text-right">Amount</th>
-                      <th className="pb-4 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Notes</th>
-                      <th className="pb-4 text-[10px] font-bold text-zinc-400 uppercase tracking-widest text-right">Action</th>
+                      <th className="pb-4 text-[11px] font-bold text-zinc-400">Date</th>
+                      <th className="pb-4 text-[11px] font-bold text-zinc-400">Vendor</th>
+                      <th className="pb-4 text-[11px] font-bold text-zinc-400">Type</th>
+                      <th className="pb-4 text-[11px] font-bold text-zinc-400 text-right">Amount</th>
+                      <th className="pb-4 text-[11px] font-bold text-zinc-400">Notes</th>
+                      <th className="pb-4 text-[11px] font-bold text-zinc-400 text-right">Action</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-zinc-50">
@@ -930,7 +930,7 @@ export const Operations: React.FC<OperationsProps> = ({
                         <tr key={p.payment_id} className="hover:bg-zinc-50 transition-colors">
                           <td className="py-4 text-xs font-bold text-zinc-900">{format(parseISO(p.date), 'MMM dd, yyyy')}</td>
                           <td className="py-4 text-xs font-medium text-zinc-900">{vendor?.name}</td>
-                          <td className="py-4 text-[10px] text-zinc-400 uppercase font-black tracking-widest">{p.type.replace('_', ' ')}</td>
+                          <td className="py-4 text-[11px] text-zinc-400 font-semibold">{p.type.replace('_', ' ')}</td>
                           <td className="py-4 text-right font-mono text-sm text-emerald-600 font-bold">{formatValue(p.amount_paid)}</td>
                           <td className="py-4 text-xs text-zinc-500">{p.notes}</td>
                           <td className="py-4 text-right">
@@ -955,16 +955,16 @@ export const Operations: React.FC<OperationsProps> = ({
             <div className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <Card className="bg-white border-zinc-100 shadow-sm">
-                  <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Total Expenses</p>
-                  <h3 className="text-2xl font-black text-zinc-900">{formatValue(totals.totalExpenses)}</h3>
+                  <p className="text-[11px] font-bold text-zinc-400 mb-1">Total Expenses</p>
+                  <h3 className="text-2xl font-semibold text-zinc-900">{formatValue(totals.totalExpenses)}</h3>
                 </Card>
                 <Card className="bg-white border-zinc-100 shadow-sm">
-                  <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-1">This Month</p>
-                  <h3 className="text-2xl font-black text-rose-600">{formatValue(totals.thisMonthExpenses)}</h3>
+                  <p className="text-[11px] font-bold text-zinc-400 mb-1">This Month</p>
+                  <h3 className="text-2xl font-semibold text-rose-600">{formatValue(totals.thisMonthExpenses)}</h3>
                 </Card>
                 <Card className="bg-white border-zinc-100 shadow-sm">
-                  <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Categories</p>
-                  <h3 className="text-2xl font-black text-zinc-900">{totals.expenseCategories}</h3>
+                  <p className="text-[11px] font-bold text-zinc-400 mb-1">Categories</p>
+                  <h3 className="text-2xl font-semibold text-zinc-900">{totals.expenseCategories}</h3>
                 </Card>
               </div>
 
@@ -990,12 +990,12 @@ export const Operations: React.FC<OperationsProps> = ({
                 <table className="w-full text-left">
                   <thead>
                     <tr className="border-b border-zinc-100">
-                      <th className="pb-4 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Date</th>
-                      <th className="pb-4 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Property</th>
-                      <th className="pb-4 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Category</th>
-                      <th className="pb-4 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Notes</th>
-                      <th className="pb-4 text-[10px] font-bold text-zinc-400 uppercase tracking-widest text-right">Amount</th>
-                      <th className="pb-4 text-[10px] font-bold text-zinc-400 uppercase tracking-widest text-right">Action</th>
+                      <th className="pb-4 text-[11px] font-bold text-zinc-400">Date</th>
+                      <th className="pb-4 text-[11px] font-bold text-zinc-400">Property</th>
+                      <th className="pb-4 text-[11px] font-bold text-zinc-400">Category</th>
+                      <th className="pb-4 text-[11px] font-bold text-zinc-400">Notes</th>
+                      <th className="pb-4 text-[11px] font-bold text-zinc-400 text-right">Amount</th>
+                      <th className="pb-4 text-[11px] font-bold text-zinc-400 text-right">Action</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-zinc-50">
@@ -1005,7 +1005,7 @@ export const Operations: React.FC<OperationsProps> = ({
                         <tr key={e.expense_id} className="hover:bg-zinc-50 transition-colors">
                           <td className="py-4 text-xs font-bold text-zinc-900">{format(parseISO(e.date), 'MMM dd, yyyy')}</td>
                           <td className="py-4 text-xs font-medium text-zinc-400">{e.apartment_id === 'PORTFOLIO' ? 'Shared' : apt?.name}</td>
-                          <td className="py-4 text-[10px] text-zinc-400 uppercase font-black tracking-widest">{e.category}</td>
+                          <td className="py-4 text-[11px] text-zinc-400 font-semibold">{e.category}</td>
                           <td className="py-4 text-xs text-zinc-500">{e.notes}</td>
                           <td className="py-4 text-right font-mono text-sm text-rose-600 font-bold">{formatValue(e.amount_aed)}</td>
                           <td className="py-4 text-right">
@@ -1030,7 +1030,7 @@ export const Operations: React.FC<OperationsProps> = ({
           <div className="space-y-6">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div>
-                <h3 className="text-2xl font-black text-zinc-900 tracking-tight uppercase italic">Maintenance Tickets</h3>
+                <h3 className="text-2xl font-semibold text-zinc-900 tracking-tight italic">Maintenance Tickets</h3>
                 <p className="text-xs text-zinc-500 font-medium">Track and manage property maintenance requests.</p>
               </div>
               <Button onClick={() => setIsAddTaskOpen(true)}>
@@ -1041,20 +1041,20 @@ export const Operations: React.FC<OperationsProps> = ({
 
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
               <Card className="bg-white border-zinc-100 shadow-sm">
-                <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Open Tickets</p>
-                <h3 className="text-2xl font-black text-zinc-900">{(data.maintenanceTasks || []).filter(t => t.status !== 'completed' && t.status !== 'cancelled').length}</h3>
+                <p className="text-[11px] font-bold text-zinc-400 mb-1">Open Tickets</p>
+                <h3 className="text-2xl font-semibold text-zinc-900">{(data.maintenanceTasks || []).filter(t => t.status !== 'completed' && t.status !== 'cancelled').length}</h3>
               </Card>
               <Card className="bg-white border-zinc-100 shadow-sm">
-                <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-1">High Priority</p>
-                <h3 className="text-2xl font-black text-rose-600">{(data.maintenanceTasks || []).filter(t => t.priority === 'high' || t.priority === 'urgent').length}</h3>
+                <p className="text-[11px] font-bold text-zinc-400 mb-1">High Priority</p>
+                <h3 className="text-2xl font-semibold text-rose-600">{(data.maintenanceTasks || []).filter(t => t.priority === 'high' || t.priority === 'urgent').length}</h3>
               </Card>
               <Card className="bg-white border-zinc-100 shadow-sm">
-                <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-1">In Progress</p>
-                <h3 className="text-2xl font-black text-blue-600">{(data.maintenanceTasks || []).filter(t => t.status === 'in_progress').length}</h3>
+                <p className="text-[11px] font-bold text-zinc-400 mb-1">In Progress</p>
+                <h3 className="text-2xl font-semibold text-blue-600">{(data.maintenanceTasks || []).filter(t => t.status === 'in_progress').length}</h3>
               </Card>
               <Card className="bg-white border-zinc-100 shadow-sm">
-                <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Completed (MTD)</p>
-                <h3 className="text-2xl font-black text-emerald-600">{(data.maintenanceTasks || []).filter(t => t.status === 'completed').length}</h3>
+                <p className="text-[11px] font-bold text-zinc-400 mb-1">Completed (MTD)</p>
+                <h3 className="text-2xl font-semibold text-emerald-600">{(data.maintenanceTasks || []).filter(t => t.status === 'completed').length}</h3>
               </Card>
             </div>
 
@@ -1063,12 +1063,12 @@ export const Operations: React.FC<OperationsProps> = ({
                 <table className="w-full text-left">
                   <thead>
                     <tr className="border-b border-zinc-100">
-                      <th className="pb-4 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Ticket</th>
-                      <th className="pb-4 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Property</th>
-                      <th className="pb-4 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Priority</th>
-                      <th className="pb-4 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Status</th>
-                      <th className="pb-4 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Created</th>
-                      <th className="pb-4 text-[10px] font-bold text-zinc-400 uppercase tracking-widest text-right">Action</th>
+                      <th className="pb-4 text-[11px] font-bold text-zinc-400">Ticket</th>
+                      <th className="pb-4 text-[11px] font-bold text-zinc-400">Property</th>
+                      <th className="pb-4 text-[11px] font-bold text-zinc-400">Priority</th>
+                      <th className="pb-4 text-[11px] font-bold text-zinc-400">Status</th>
+                      <th className="pb-4 text-[11px] font-bold text-zinc-400">Created</th>
+                      <th className="pb-4 text-[11px] font-bold text-zinc-400 text-right">Action</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-zinc-50">
@@ -1078,12 +1078,12 @@ export const Operations: React.FC<OperationsProps> = ({
                         <tr key={task.task_id} className="hover:bg-zinc-50 transition-colors">
                           <td className="py-4">
                             <p className="text-sm font-bold text-zinc-900">{task.title}</p>
-                            <p className="text-[10px] text-zinc-400 line-clamp-1">{task.description}</p>
+                            <p className="text-[11px] text-zinc-400 line-clamp-1">{task.description}</p>
                           </td>
                           <td className="py-4 text-xs font-medium text-zinc-500">{apt?.name}</td>
                           <td className="py-4">
                             <span className={cn(
-                              "px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest border",
+                              "px-2 py-0.5 rounded-full text-[11px] font-semibold border",
                               task.priority === 'urgent' ? "bg-rose-100 text-rose-700 border-rose-200" :
                               task.priority === 'high' ? "bg-orange-50 text-orange-600 border-orange-100" :
                               "bg-zinc-50 text-zinc-400 border-zinc-100"
@@ -1093,7 +1093,7 @@ export const Operations: React.FC<OperationsProps> = ({
                           </td>
                           <td className="py-4">
                             <span className={cn(
-                              "px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest border",
+                              "px-2 py-0.5 rounded-full text-[11px] font-semibold border",
                               task.status === 'completed' ? "bg-emerald-50 text-emerald-600 border-emerald-100" :
                               task.status === 'in_progress' ? "bg-blue-50 text-blue-600 border-blue-100" :
                               "bg-zinc-50 text-zinc-400 border-zinc-100"
@@ -1135,14 +1135,14 @@ export const Operations: React.FC<OperationsProps> = ({
               className="bg-white rounded-[32px] shadow-2xl w-full max-w-md overflow-hidden"
             >
               <div className="p-6 border-b border-zinc-100 flex justify-between items-center bg-zinc-50/50">
-                <h3 className="text-lg font-black text-zinc-900 tracking-tight">New Maintenance Ticket</h3>
+                <h3 className="text-lg font-semibold text-zinc-900 tracking-tight">New Maintenance Ticket</h3>
                 <button onClick={() => setIsAddTaskOpen(false)} className="p-2 hover:bg-zinc-100 rounded-full transition-colors">
                   <X size={20} />
                 </button>
               </div>
               <div className="p-6 space-y-4">
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Title</label>
+                  <label className="text-[11px] font-semibold text-zinc-400 ml-1">Title</label>
                   <input 
                     type="text" 
                     className="w-full px-4 py-3 rounded-xl border border-zinc-200 focus:border-zinc-900 focus:ring-0 transition-all text-sm font-medium"
@@ -1152,7 +1152,7 @@ export const Operations: React.FC<OperationsProps> = ({
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Property</label>
+                  <label className="text-[11px] font-semibold text-zinc-400 ml-1">Property</label>
                   <select 
                     className="w-full px-4 py-3 rounded-xl border border-zinc-200 focus:border-zinc-900 focus:ring-0 transition-all text-sm font-medium bg-white"
                     value={newTask.apartment_id || ''}
@@ -1164,7 +1164,7 @@ export const Operations: React.FC<OperationsProps> = ({
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Priority</label>
+                    <label className="text-[11px] font-semibold text-zinc-400 ml-1">Priority</label>
                     <select 
                       className="w-full px-4 py-3 rounded-xl border border-zinc-200 focus:border-zinc-900 focus:ring-0 transition-all text-sm font-medium bg-white"
                       value={newTask.priority}
@@ -1177,7 +1177,7 @@ export const Operations: React.FC<OperationsProps> = ({
                     </select>
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Vendor (Optional)</label>
+                    <label className="text-[11px] font-semibold text-zinc-400 ml-1">Vendor (Optional)</label>
                     <select 
                       className="w-full px-4 py-3 rounded-xl border border-zinc-200 focus:border-zinc-900 focus:ring-0 transition-all text-sm font-medium bg-white"
                       value={newTask.vendor_id || ''}
@@ -1189,7 +1189,7 @@ export const Operations: React.FC<OperationsProps> = ({
                   </div>
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Description</label>
+                  <label className="text-[11px] font-semibold text-zinc-400 ml-1">Description</label>
                   <textarea 
                     rows={3}
                     className="w-full px-4 py-3 rounded-xl border border-zinc-200 focus:border-zinc-900 focus:ring-0 transition-all text-sm font-medium resize-none"
@@ -1227,14 +1227,14 @@ export const Operations: React.FC<OperationsProps> = ({
               className="bg-white rounded-[32px] shadow-2xl w-full max-w-md overflow-hidden"
             >
               <div className="p-6 border-b border-zinc-100 dark:border-zinc-800 flex justify-between items-center bg-zinc-50/50 dark:bg-zinc-800/50">
-                <h3 className="text-lg font-black text-zinc-900 dark:text-zinc-100 tracking-tight">Add New Vendor</h3>
+                <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight">Add New Vendor</h3>
                 <button onClick={() => setIsAddVendorOpen(false)} className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-full transition-colors">
                   <X size={20} />
                 </button>
               </div>
               <div className="p-6 space-y-4 dark:bg-zinc-900">
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Vendor Name</label>
+                  <label className="text-[11px] font-semibold text-zinc-400 ml-1">Vendor Name</label>
                   <input 
                     type="text" 
                     className="w-full px-4 py-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus:border-zinc-900 dark:focus:border-zinc-100 focus:ring-0 transition-all text-sm font-medium dark:text-zinc-100"
@@ -1243,7 +1243,7 @@ export const Operations: React.FC<OperationsProps> = ({
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Service Type</label>
+                  <label className="text-[11px] font-semibold text-zinc-400 ml-1">Service Type</label>
                   <input 
                     type="text" 
                     placeholder="e.g. Plumbing, Cleaning, AC"
@@ -1254,7 +1254,7 @@ export const Operations: React.FC<OperationsProps> = ({
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Phone</label>
+                    <label className="text-[11px] font-semibold text-zinc-400 ml-1">Phone</label>
                     <input 
                       type="text" 
                       className="w-full px-4 py-3 rounded-xl border border-zinc-200 focus:border-zinc-900 focus:ring-0 transition-all text-sm font-medium"
@@ -1263,7 +1263,7 @@ export const Operations: React.FC<OperationsProps> = ({
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Email</label>
+                    <label className="text-[11px] font-semibold text-zinc-400 ml-1">Email</label>
                     <input 
                       type="email" 
                       className="w-full px-4 py-3 rounded-xl border border-zinc-200 focus:border-zinc-900 focus:ring-0 transition-all text-sm font-medium"
@@ -1293,7 +1293,7 @@ export const Operations: React.FC<OperationsProps> = ({
               className="bg-white rounded-[32px] shadow-2xl w-full max-w-md overflow-hidden"
             >
               <div className="p-6 border-b border-zinc-100 flex justify-between items-center bg-zinc-50/50">
-                <h3 className="text-lg font-black text-zinc-900 tracking-tight">Record Work Done</h3>
+                <h3 className="text-lg font-semibold text-zinc-900 tracking-tight">Record Work Done</h3>
                 <button onClick={() => setIsAddRecordOpen(false)} className="p-2 hover:bg-zinc-100 rounded-full transition-colors">
                   <X size={20} />
                 </button>
@@ -1301,7 +1301,7 @@ export const Operations: React.FC<OperationsProps> = ({
               <div className="p-6 space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Vendor</label>
+                    <label className="text-[11px] font-semibold text-zinc-400 ml-1">Vendor</label>
                     <select 
                       className="w-full px-4 py-3 rounded-xl border border-zinc-200 focus:border-zinc-900 focus:ring-0 transition-all text-sm font-medium bg-white"
                       value={newRecord.vendor_id || ''}
@@ -1312,7 +1312,7 @@ export const Operations: React.FC<OperationsProps> = ({
                     </select>
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Property</label>
+                    <label className="text-[11px] font-semibold text-zinc-400 ml-1">Property</label>
                     <select 
                       className="w-full px-4 py-3 rounded-xl border border-zinc-200 focus:border-zinc-900 focus:ring-0 transition-all text-sm font-medium bg-white"
                       value={newRecord.apartment_id || ''}
@@ -1324,7 +1324,7 @@ export const Operations: React.FC<OperationsProps> = ({
                   </div>
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Description</label>
+                  <label className="text-[11px] font-semibold text-zinc-400 ml-1">Description</label>
                   <input 
                     type="text" 
                     className="w-full px-4 py-3 rounded-xl border border-zinc-200 focus:border-zinc-900 focus:ring-0 transition-all text-sm font-medium"
@@ -1334,7 +1334,7 @@ export const Operations: React.FC<OperationsProps> = ({
                 </div>
                 <div className="grid grid-cols-3 gap-4">
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Quantity</label>
+                    <label className="text-[11px] font-semibold text-zinc-400 ml-1">Quantity</label>
                     <input 
                       type="number" 
                       className="w-full px-4 py-3 rounded-xl border border-zinc-200 focus:border-zinc-900 focus:ring-0 transition-all text-sm font-medium"
@@ -1343,7 +1343,7 @@ export const Operations: React.FC<OperationsProps> = ({
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Unit Cost</label>
+                    <label className="text-[11px] font-semibold text-zinc-400 ml-1">Unit Cost</label>
                     <input 
                       type="number" 
                       className="w-full px-4 py-3 rounded-xl border border-zinc-200 focus:border-zinc-900 focus:ring-0 transition-all text-sm font-medium"
@@ -1352,7 +1352,7 @@ export const Operations: React.FC<OperationsProps> = ({
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Date</label>
+                    <label className="text-[11px] font-semibold text-zinc-400 ml-1">Date</label>
                     <input 
                       type="date" 
                       className="w-full px-4 py-3 rounded-xl border border-zinc-200 focus:border-zinc-900 focus:ring-0 transition-all text-sm font-medium"
@@ -1382,14 +1382,14 @@ export const Operations: React.FC<OperationsProps> = ({
               className="bg-white rounded-[32px] shadow-2xl w-full max-w-md overflow-hidden"
             >
               <div className="p-6 border-b border-zinc-100 flex justify-between items-center bg-zinc-50/50">
-                <h3 className="text-lg font-black text-zinc-900 tracking-tight">Raise Vendor Invoice</h3>
+                <h3 className="text-lg font-semibold text-zinc-900 tracking-tight">Raise Vendor Invoice</h3>
                 <button onClick={() => setIsAddInvoiceOpen(false)} className="p-2 hover:bg-zinc-100 rounded-full transition-colors">
                   <X size={20} />
                 </button>
               </div>
               <div className="p-6 space-y-4">
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Select Vendor</label>
+                  <label className="text-[11px] font-semibold text-zinc-400 ml-1">Select Vendor</label>
                   <select 
                     className="w-full px-4 py-3 rounded-xl border border-zinc-200 focus:border-zinc-900 focus:ring-0 transition-all text-sm font-medium bg-white"
                     value={newInvoice.vendor_id}
@@ -1401,7 +1401,7 @@ export const Operations: React.FC<OperationsProps> = ({
                 </div>
                 {newInvoice.vendor_id && (
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Select Unbilled Records</label>
+                    <label className="text-[11px] font-semibold text-zinc-400 ml-1">Select Unbilled Records</label>
                     <div className="max-h-48 overflow-y-auto space-y-2 custom-scrollbar pr-2">
                       {data.serviceRecords
                         .filter(r => r.vendor_id === newInvoice.vendor_id && r.status === 'unbilled')
@@ -1421,7 +1421,7 @@ export const Operations: React.FC<OperationsProps> = ({
                             />
                             <div className="flex-1">
                               <p className="text-xs font-bold text-zinc-900">{r.description}</p>
-                              <p className="text-[9px] text-zinc-400">{format(parseISO(r.date), 'MMM dd, yyyy')} • {formatValue(r.total_cost)}</p>
+                              <p className="text-[11px] text-zinc-400">{format(parseISO(r.date), 'MMM dd, yyyy')} • {formatValue(r.total_cost)}</p>
                             </div>
                           </label>
                         ))
@@ -1453,7 +1453,7 @@ export const Operations: React.FC<OperationsProps> = ({
               className="bg-white rounded-[32px] shadow-2xl w-full max-w-md overflow-hidden"
             >
               <div className="p-6 border-b border-zinc-100 flex justify-between items-center bg-zinc-50/50">
-                <h3 className="text-lg font-black text-zinc-900 tracking-tight">Record Payment</h3>
+                <h3 className="text-lg font-semibold text-zinc-900 tracking-tight">Record Payment</h3>
                 <button onClick={() => setIsAddPaymentOpen(false)} className="p-2 hover:bg-zinc-100 rounded-full transition-colors">
                   <X size={20} />
                 </button>
@@ -1461,7 +1461,7 @@ export const Operations: React.FC<OperationsProps> = ({
               <div className="p-6 space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Vendor</label>
+                    <label className="text-[11px] font-semibold text-zinc-400 ml-1">Vendor</label>
                     <select 
                       className="w-full px-4 py-3 rounded-xl border border-zinc-200 focus:border-zinc-900 focus:ring-0 transition-all text-sm font-medium bg-white"
                       value={newPayment.vendor_id || ''}
@@ -1472,7 +1472,7 @@ export const Operations: React.FC<OperationsProps> = ({
                     </select>
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Payment Type</label>
+                    <label className="text-[11px] font-semibold text-zinc-400 ml-1">Payment Type</label>
                     <select 
                       className="w-full px-4 py-3 rounded-xl border border-zinc-200 focus:border-zinc-900 focus:ring-0 transition-all text-sm font-medium bg-white"
                       value={newPayment.type || 'invoice_payment'}
@@ -1486,7 +1486,7 @@ export const Operations: React.FC<OperationsProps> = ({
                 </div>
                 {newPayment.vendor_id && newPayment.type !== 'advance' && (
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Select Invoice (Optional)</label>
+                    <label className="text-[11px] font-semibold text-zinc-400 ml-1">Select Invoice (Optional)</label>
                     <select 
                       className="w-full px-4 py-3 rounded-xl border border-zinc-200 focus:border-zinc-900 focus:ring-0 transition-all text-sm font-medium bg-white"
                       value={newPayment.invoice_id || ''}
@@ -1505,7 +1505,7 @@ export const Operations: React.FC<OperationsProps> = ({
                 )}
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Amount Paid</label>
+                    <label className="text-[11px] font-semibold text-zinc-400 ml-1">Amount Paid</label>
                     <input 
                       type="number" 
                       className="w-full px-4 py-3 rounded-xl border border-zinc-200 focus:border-zinc-900 focus:ring-0 transition-all text-sm font-medium"
@@ -1514,7 +1514,7 @@ export const Operations: React.FC<OperationsProps> = ({
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Date</label>
+                    <label className="text-[11px] font-semibold text-zinc-400 ml-1">Date</label>
                     <input 
                       type="date" 
                       className="w-full px-4 py-3 rounded-xl border border-zinc-200 focus:border-zinc-900 focus:ring-0 transition-all text-sm font-medium"
@@ -1524,7 +1524,7 @@ export const Operations: React.FC<OperationsProps> = ({
                   </div>
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Notes</label>
+                  <label className="text-[11px] font-semibold text-zinc-400 ml-1">Notes</label>
                   <input 
                     type="text" 
                     className="w-full px-4 py-3 rounded-xl border border-zinc-200 focus:border-zinc-900 focus:ring-0 transition-all text-sm font-medium"
@@ -1553,7 +1553,7 @@ export const Operations: React.FC<OperationsProps> = ({
               className="bg-white rounded-[32px] shadow-2xl w-full max-w-md overflow-hidden"
             >
               <div className="p-6 border-b border-zinc-100 flex justify-between items-center bg-zinc-50/50">
-                <h3 className="text-lg font-black text-zinc-900 tracking-tight">Add General Expense</h3>
+                <h3 className="text-lg font-semibold text-zinc-900 tracking-tight">Add General Expense</h3>
                 <button onClick={() => setIsAddExpenseOpen(false)} className="p-2 hover:bg-zinc-100 rounded-full transition-colors">
                   <X size={20} />
                 </button>
@@ -1561,7 +1561,7 @@ export const Operations: React.FC<OperationsProps> = ({
               <div className="p-6 space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Category</label>
+                    <label className="text-[11px] font-semibold text-zinc-400 ml-1">Category</label>
                     <input 
                       type="text" 
                       placeholder="e.g. Marketing, Office, Staff"
@@ -1571,7 +1571,7 @@ export const Operations: React.FC<OperationsProps> = ({
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Property Scoping</label>
+                    <label className="text-[11px] font-semibold text-zinc-400 ml-1">Property Scoping</label>
                     <select 
                       className="w-full px-4 py-3 rounded-xl border border-zinc-200 focus:border-zinc-900 focus:ring-0 transition-all text-sm font-medium bg-white"
                       value={newExpense.apartment_id || 'PORTFOLIO'}
@@ -1584,7 +1584,7 @@ export const Operations: React.FC<OperationsProps> = ({
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Amount (AED)</label>
+                    <label className="text-[11px] font-semibold text-zinc-400 ml-1">Amount (AED)</label>
                     <input 
                       type="number" 
                       className="w-full px-4 py-3 rounded-xl border border-zinc-200 focus:border-zinc-900 focus:ring-0 transition-all text-sm font-medium"
@@ -1593,7 +1593,7 @@ export const Operations: React.FC<OperationsProps> = ({
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Date</label>
+                    <label className="text-[11px] font-semibold text-zinc-400 ml-1">Date</label>
                     <input 
                       type="date" 
                       className="w-full px-4 py-3 rounded-xl border border-zinc-200 focus:border-zinc-900 focus:ring-0 transition-all text-sm font-medium"
@@ -1603,7 +1603,7 @@ export const Operations: React.FC<OperationsProps> = ({
                   </div>
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Notes</label>
+                  <label className="text-[11px] font-semibold text-zinc-400 ml-1">Notes</label>
                   <input 
                     type="text" 
                     className="w-full px-4 py-3 rounded-xl border border-zinc-200 focus:border-zinc-900 focus:ring-0 transition-all text-sm font-medium"

@@ -104,7 +104,7 @@ export const Calendar: React.FC<CalendarProps> = ({ data, filters }) => {
             {/* Calendar Header */}
             <div className="flex border-b border-zinc-100 bg-zinc-50/50">
               <div className="w-64 p-6 border-r border-zinc-100 shrink-0">
-                <span className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em]">Property Portfolio</span>
+                <span className="text-[11px] font-semibold text-zinc-400">Property Portfolio</span>
               </div>
               <div className="flex flex-grow">
                 {days.map(day => (
@@ -116,12 +116,12 @@ export const Calendar: React.FC<CalendarProps> = ({ data, filters }) => {
                     )}
                   >
                     <span className={cn(
-                      "text-[9px] font-black uppercase tracking-widest",
+                      "text-[11px] font-semibold",
                       isToday(day) ? "text-zinc-400" : "text-zinc-400"
                     )}>
                       {format(day, 'EEE')}
                     </span>
-                    <span className="text-sm font-black tracking-tight">
+                    <span className="text-sm font-semibold tracking-tight">
                       {format(day, 'd')}
                     </span>
                   </div>
@@ -134,11 +134,11 @@ export const Calendar: React.FC<CalendarProps> = ({ data, filters }) => {
               {filteredApartments.map(apt => (
                 <div key={apt.apartment_id} className="flex group">
                   <div className="w-64 p-6 border-r border-zinc-100 shrink-0 bg-white group-hover:bg-zinc-50 transition-colors">
-                    <h4 className="text-sm font-black text-zinc-900 tracking-tight">{apt.name}</h4>
+                    <h4 className="text-sm font-semibold text-zinc-900 tracking-tight">{apt.name}</h4>
                     <div className="flex items-center gap-2 mt-1">
-                      <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest">{apt.nickname}</span>
+                      <span className="text-[11px] font-bold text-zinc-400">{apt.nickname}</span>
                       <span className="w-1 h-1 rounded-full bg-zinc-200" />
-                      <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest">{apt.building}</span>
+                      <span className="text-[11px] font-bold text-zinc-400">{apt.building}</span>
                     </div>
                   </div>
                   <div className="flex flex-grow relative bg-white group-hover:bg-zinc-50/30 transition-colors">
@@ -178,20 +178,20 @@ export const Calendar: React.FC<CalendarProps> = ({ data, filters }) => {
                               }}
                             >
                               <div className="flex items-center justify-between gap-2">
-                                <span className="text-[10px] font-black truncate uppercase tracking-widest">{res.guest_name}</span>
+                                <span className="text-[11px] font-semibold truncate">{res.guest_name}</span>
                                 <div className="flex items-center gap-1 shrink-0">
                                   <Users size={10} className="text-zinc-500" />
-                                  <span className="text-[9px] font-bold">{res.num_guests}</span>
+                                  <span className="text-[11px] font-bold">{res.num_guests}</span>
                                 </div>
                               </div>
                               <div className="flex items-center gap-3 mt-1.5 opacity-60">
                                 <div className="flex items-center gap-1">
                                   <Moon size={10} />
-                                  <span className="text-[9px] font-bold">{res.nights}n</span>
+                                  <span className="text-[11px] font-bold">{res.nights}n</span>
                                 </div>
                                 <div className="flex items-center gap-1">
                                   <CreditCard size={10} />
-                                  <span className="text-[9px] font-bold">{formatValue(res.net_payout_aed)}</span>
+                                  <span className="text-[11px] font-bold">{formatValue(res.net_payout_aed)}</span>
                                 </div>
                               </div>
                             </motion.div>
@@ -211,20 +211,20 @@ export const Calendar: React.FC<CalendarProps> = ({ data, filters }) => {
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-3">
               <div className="w-4 h-4 bg-zinc-900 rounded-full" />
-              <span className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em]">Confirmed Booking</span>
+              <span className="text-[11px] font-semibold text-zinc-500">Confirmed Booking</span>
             </div>
             <div className="flex items-center gap-3">
               <div className="w-4 h-4 bg-zinc-200 rounded-full" />
-              <span className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em]">Pending/Other</span>
+              <span className="text-[11px] font-semibold text-zinc-500">Pending/Other</span>
             </div>
             <div className="flex items-center gap-3">
               <div className="w-4 h-4 rounded-full border-2 border-zinc-900 flex items-center justify-center">
                 <div className="w-1 h-1 bg-zinc-900 rounded-full" />
               </div>
-              <span className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em]">Today's Marker</span>
+              <span className="text-[11px] font-semibold text-zinc-500">Today's Marker</span>
             </div>
           </div>
-          <p className="text-[10px] text-zinc-400 italic font-medium">
+          <p className="text-[11px] text-zinc-400 italic font-medium">
             * Checkout day is not counted as a stay night in the visualization
           </p>
         </div>
@@ -242,8 +242,8 @@ export const Calendar: React.FC<CalendarProps> = ({ data, filters }) => {
             >
               <div className="p-8 border-b border-zinc-100 bg-zinc-50/50 flex justify-between items-center">
                 <div>
-                  <h3 className="text-xl font-black text-zinc-900 tracking-tight">Booking Details</h3>
-                  <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mt-1">Code: {selectedReservation.reservation_code}</p>
+                  <h3 className="text-xl font-semibold text-zinc-900 tracking-tight">Booking Details</h3>
+                  <p className="text-[11px] font-bold text-zinc-400 mt-1">Code: {selectedReservation.reservation_code}</p>
                 </div>
                 <button onClick={() => setSelectedReservation(null)} className="p-2 hover:bg-zinc-100 rounded-full transition-colors">
                   <Search size={20} className="rotate-45" />
@@ -252,12 +252,12 @@ export const Calendar: React.FC<CalendarProps> = ({ data, filters }) => {
               <div className="p-8 space-y-6">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="p-4 bg-zinc-50 rounded-2xl border border-zinc-100">
-                    <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Check-in</p>
-                    <p className="text-sm font-black text-zinc-900">{format(parseISO(selectedReservation.check_in), 'EEE, MMM d')}</p>
+                    <p className="text-[11px] font-bold text-zinc-400 mb-1">Check-in</p>
+                    <p className="text-sm font-semibold text-zinc-900">{format(parseISO(selectedReservation.check_in), 'EEE, MMM d')}</p>
                   </div>
                   <div className="p-4 bg-zinc-50 rounded-2xl border border-zinc-100">
-                    <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Check-out</p>
-                    <p className="text-sm font-black text-zinc-900">{format(parseISO(selectedReservation.check_out), 'EEE, MMM d')}</p>
+                    <p className="text-[11px] font-bold text-zinc-400 mb-1">Check-out</p>
+                    <p className="text-sm font-semibold text-zinc-900">{format(parseISO(selectedReservation.check_out), 'EEE, MMM d')}</p>
                   </div>
                 </div>
 
@@ -266,34 +266,34 @@ export const Calendar: React.FC<CalendarProps> = ({ data, filters }) => {
                     <Users size={24} />
                   </div>
                   <div>
-                    <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Guest Name</p>
-                    <p className="text-lg font-black text-zinc-900">{selectedReservation.guest_name}</p>
+                    <p className="text-[11px] font-bold text-zinc-400">Guest Name</p>
+                    <p className="text-lg font-semibold text-zinc-900">{selectedReservation.guest_name}</p>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="p-4 bg-zinc-50 rounded-2xl border border-zinc-100">
-                    <p className="text-[9px] font-bold text-zinc-400 uppercase mb-1">Stay Duration</p>
-                    <p className="text-sm font-black text-zinc-900">{selectedReservation.nights} Nights</p>
-                    <p className="text-[10px] text-zinc-500 mt-1">{format(parseISO(selectedReservation.check_in), 'MMM dd')} - {format(parseISO(selectedReservation.check_out), 'MMM dd')}</p>
+                    <p className="text-[11px] font-bold text-zinc-400 mb-1">Stay Duration</p>
+                    <p className="text-sm font-semibold text-zinc-900">{selectedReservation.nights} Nights</p>
+                    <p className="text-[11px] text-zinc-500 mt-1">{format(parseISO(selectedReservation.check_in), 'MMM dd')} - {format(parseISO(selectedReservation.check_out), 'MMM dd')}</p>
                   </div>
                   <div className="p-4 bg-zinc-50 rounded-2xl border border-zinc-100">
-                    <p className="text-[9px] font-bold text-zinc-400 uppercase mb-1">Guests</p>
-                    <p className="text-sm font-black text-zinc-900">{selectedReservation.num_guests} Persons</p>
+                    <p className="text-[11px] font-bold text-zinc-400 mb-1">Guests</p>
+                    <p className="text-sm font-semibold text-zinc-900">{selectedReservation.num_guests} Persons</p>
                   </div>
                 </div>
 
                 <div className="p-6 bg-emerald-50 rounded-2xl border border-emerald-100">
                   <div className="flex justify-between items-center mb-2">
-                    <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Final Net Payout</p>
-                    <span className="px-2 py-0.5 bg-emerald-500 text-white text-[8px] font-black rounded uppercase tracking-widest">Confirmed</span>
+                    <p className="text-[11px] font-semibold text-emerald-600">Final Net Payout</p>
+                    <span className="px-2 py-0.5 bg-emerald-500 text-white text-[8px] font-semibold rounded">Confirmed</span>
                   </div>
-                  <p className="text-xl font-black text-emerald-700">{formatValue(selectedReservation.net_payout_aed)}</p>
-                  <p className="text-[10px] text-emerald-600/70 font-medium mt-1">Platform: {selectedReservation.channel}</p>
+                  <p className="text-xl font-semibold text-emerald-700">{formatValue(selectedReservation.net_payout_aed)}</p>
+                  <p className="text-[11px] text-emerald-600/70 font-medium mt-1">Platform: {selectedReservation.channel}</p>
                 </div>
               </div>
               <div className="p-8 border-t border-zinc-100 bg-zinc-50/50 flex justify-end">
-                <Button onClick={() => setSelectedReservation(null)} className="rounded-2xl font-black uppercase tracking-widest text-[10px]">Close Details</Button>
+                <Button onClick={() => setSelectedReservation(null)} className="rounded-2xl font-semibold text-[11px]">Close Details</Button>
               </div>
             </motion.div>
           </div>

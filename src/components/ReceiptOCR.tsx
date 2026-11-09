@@ -125,7 +125,7 @@ export const ReceiptOCR: React.FC<ReceiptOCRProps> = ({ onSuccess }) => {
         </div>
       )}
 
-      <div className="flex items-center gap-2 p-3 bg-zinc-50 rounded-xl text-[10px] uppercase tracking-widest font-bold text-zinc-400 border border-zinc-100">
+      <div className="flex items-center gap-2 p-3 bg-zinc-50 rounded-xl text-[11px] font-bold text-zinc-400 border border-zinc-100">
         <Sparkles className="w-3 h-3 text-emerald-500" />
         Powered by Gemini AI OCR
       </div>

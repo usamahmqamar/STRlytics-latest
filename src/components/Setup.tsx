@@ -530,7 +530,7 @@ export const Setup: React.FC<SetupProps> = ({ data, setData }) => {
       <section className="space-y-6">
         <div className="flex justify-between items-center">
           <div>
-            <h3 className="text-2xl font-black text-zinc-900 tracking-tight">Portfolio and Platform Setup</h3>
+            <h3 className="text-2xl font-semibold text-zinc-900 tracking-tight">Portfolio and Platform Setup</h3>
             <p className="text-sm text-zinc-500 font-medium">Configure your properties, manage rental payments, and set platform-specific commission structures.</p>
           </div>
           <Button onClick={() => {
@@ -567,12 +567,12 @@ export const Setup: React.FC<SetupProps> = ({ data, setData }) => {
                     <Home size={20} />
                   </div>
                   <div>
-                    <h4 className="text-base font-black text-zinc-900 leading-tight">{apt.name}</h4>
+                    <h4 className="text-base font-semibold text-zinc-900 leading-tight">{apt.name}</h4>
                     <div className="flex items-center gap-2 mt-0.5">
-                      <span className="text-[10px] font-bold text-zinc-400 bg-zinc-100 px-2 py-0.5 rounded uppercase tracking-wider">
+                      <span className="text-[11px] font-bold text-zinc-400 bg-zinc-100 px-2 py-0.5 rounded">
                         ID: {apt.nickname}
                       </span>
-                      <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded uppercase tracking-wider">
+                      <span className="text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">
                         {apt.specification}
                       </span>
                     </div>
@@ -600,7 +600,7 @@ export const Setup: React.FC<SetupProps> = ({ data, setData }) => {
                 {/* Property Info */}
                 <div className="space-y-6">
                   <div className="space-y-4">
-                    <h4 className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Property Details & Tenancy</h4>
+                    <h4 className="text-[11px] font-bold text-zinc-400">Property Details & Tenancy</h4>
                     <div className="space-y-3">
                       <div className="flex items-center gap-3 text-sm">
                         <MapPin size={14} className="text-zinc-400 shrink-0" />
@@ -619,7 +619,7 @@ export const Setup: React.FC<SetupProps> = ({ data, setData }) => {
                       <div className="flex items-center gap-2 pt-1 border-t border-zinc-100/60 dark:border-zinc-800">
                         <span className="text-[11px] font-medium text-zinc-500">Tenancy Lease Status:</span>
                         <span className={cn(
-                          "text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider",
+                          "text-[11px] font-semibold px-2 py-0.5 rounded-full",
                           apt.status === 'active' || !apt.status ? "bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-900/40" :
                           apt.status === 'expired' ? "bg-rose-50 dark:bg-rose-950/20 text-rose-600 dark:text-rose-450 border border-rose-100 dark:border-rose-900/40" :
                           "bg-amber-50 dark:bg-amber-950/20 text-amber-600 dark:text-amber-400 border border-amber-100 dark:border-amber-900/40"
@@ -632,7 +632,7 @@ export const Setup: React.FC<SetupProps> = ({ data, setData }) => {
 
                   {/* Tenancy Management Actions */}
                   <div className="space-y-3 pt-4 border-t border-zinc-100/60 dark:border-zinc-800">
-                    <h4 className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Tenancy Contract Controls</h4>
+                    <h4 className="text-[11px] font-bold text-zinc-400">Tenancy Contract Controls</h4>
                     <div className="flex flex-wrap gap-2">
                       <Button 
                         variant="outline" 
@@ -668,15 +668,15 @@ export const Setup: React.FC<SetupProps> = ({ data, setData }) => {
                   </div>
 
                   <div className="space-y-4 pt-4 border-t border-zinc-100/60 dark:border-zinc-800">
-                    <h4 className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Rental Structure</h4>
+                    <h4 className="text-[11px] font-bold text-zinc-400">Rental Structure</h4>
                     <div className="grid grid-cols-2 gap-3">
                       <div className="p-3 bg-zinc-50 dark:bg-zinc-850/40 rounded-xl border border-zinc-100/80 dark:border-zinc-800">
-                        <p className="text-[9px] font-bold text-zinc-400 uppercase mb-1">Annual Rent</p>
-                        <p className="text-sm font-black text-zinc-900 dark:text-zinc-150">{formatValue(apt.annual_rent_aed)}</p>
+                        <p className="text-[11px] font-bold text-zinc-400 mb-1">Annual Rent</p>
+                        <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-150">{formatValue(apt.annual_rent_aed)}</p>
                       </div>
                       <div className="p-3 bg-zinc-50 dark:bg-zinc-850/40 rounded-xl border border-zinc-100/80 dark:border-zinc-800">
-                        <p className="text-[9px] font-bold text-zinc-400 uppercase mb-1">Cheques</p>
-                        <p className="text-sm font-black text-zinc-900 dark:text-zinc-150">{apt.num_cheques} Payments</p>
+                        <p className="text-[11px] font-bold text-zinc-400 mb-1">Cheques</p>
+                        <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-150">{apt.num_cheques} Payments</p>
                       </div>
                     </div>
                   </div>
@@ -685,26 +685,26 @@ export const Setup: React.FC<SetupProps> = ({ data, setData }) => {
                 {/* Cheques Timeline */}
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
-                    <h4 className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Payment Schedule</h4>
-                    <span className="text-[9px] font-bold text-zinc-400 uppercase">Next 2 Due</span>
+                    <h4 className="text-[11px] font-bold text-zinc-400">Payment Schedule</h4>
+                    <span className="text-[11px] font-bold text-zinc-400">Next 2 Due</span>
                   </div>
                   <div className="space-y-3">
                     {apt.rent_cheques.map((chq, i) => (
                       <div key={chq.cheque_id} className="flex items-center justify-between p-3 bg-white rounded-xl border border-zinc-100 shadow-sm">
                         <div className="flex items-center gap-3">
                           <div className="w-8 h-8 rounded-lg bg-zinc-50 flex items-center justify-center text-zinc-400">
-                            <span className="text-[10px] font-black">{i + 1}</span>
+                            <span className="text-[11px] font-semibold">{i + 1}</span>
                           </div>
                           <div>
                             <p className="text-xs font-bold text-zinc-900">{format(parseISO(chq.due_date), 'MMM dd, yyyy')}</p>
-                            <p className="text-[10px] text-zinc-400 font-medium">{formatValue(chq.amount_aed)}</p>
+                            <p className="text-[11px] text-zinc-400 font-medium">{formatValue(chq.amount_aed)}</p>
                           </div>
                         </div>
                         <select 
                           value={chq.status}
                           onChange={(e) => updateChequeStatus(apt.apartment_id, chq.cheque_id, e.target.value as any)}
                           className={cn(
-                            "px-2 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border appearance-none cursor-pointer focus:outline-none",
+                            "px-2 py-1 rounded-full text-[11px] font-semibold border appearance-none cursor-pointer focus:outline-none",
                             chq.status === 'paid' ? "bg-emerald-50 text-emerald-600 border-emerald-100" : 
                             chq.status === 'due' ? "bg-amber-50 text-amber-600 border-amber-100" :
                             chq.status === 'postponed' ? "bg-blue-50 text-blue-600 border-blue-100" :
@@ -724,10 +724,10 @@ export const Setup: React.FC<SetupProps> = ({ data, setData }) => {
                 {/* Setup Costs */}
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
-                    <h4 className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Setup & Ongoing Costs</h4>
+                    <h4 className="text-[11px] font-bold text-zinc-400">Setup & Ongoing Costs</h4>
                     <button 
                       onClick={() => setIsAddSetupCostOpen({ open: true, apartmentId: apt.apartment_id })}
-                      className="text-[10px] font-bold text-emerald-600 hover:text-emerald-700 uppercase tracking-widest flex items-center gap-1"
+                      className="text-[11px] font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-1"
                     >
                       <Plus size={12} /> Add Cost
                     </button>
@@ -738,30 +738,30 @@ export const Setup: React.FC<SetupProps> = ({ data, setData }) => {
                         <div key={cost.item_id} className="p-3 bg-zinc-50 rounded-xl border border-zinc-100 group relative">
                           <div className="flex justify-between items-start mb-1">
                             <div className="flex items-center gap-2">
-                              <span className="text-[9px] font-black text-zinc-400 uppercase tracking-widest">{cost.category}</span>
+                              <span className="text-[11px] font-semibold text-zinc-400">{cost.category}</span>
                               {cost.is_refundable && (
-                                <span className="text-[8px] font-black text-blue-500 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-100 uppercase">Refundable</span>
+                                <span className="text-[8px] font-semibold text-blue-500 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-100">Refundable</span>
                               )}
                             </div>
-                            <span className="text-xs font-black text-zinc-900">{formatValue(cost.amount_aed)}</span>
+                            <span className="text-xs font-semibold text-zinc-900">{formatValue(cost.amount_aed)}</span>
                           </div>
                           <p className="text-[11px] text-zinc-600 font-medium leading-tight">{cost.description}</p>
                           <div className="flex justify-between items-center mt-2">
-                            <span className="text-[9px] text-zinc-400 font-bold">{format(parseISO(cost.date), 'MMM dd, yyyy')}</span>
-                            <span className="text-[9px] text-zinc-400 italic">{cost.vendor}</span>
+                            <span className="text-[11px] text-zinc-400 font-bold">{format(parseISO(cost.date), 'MMM dd, yyyy')}</span>
+                            <span className="text-[11px] text-zinc-400 italic">{cost.vendor}</span>
                           </div>
                         </div>
                       ))
                     ) : (
                       <div className="py-8 text-center border-2 border-dashed border-zinc-100 rounded-2xl">
-                        <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest">No costs recorded</p>
+                        <p className="text-[11px] text-zinc-400 font-bold">No costs recorded</p>
                       </div>
                     )}
                   </div>
                   {apt.setup_costs.length > 0 && (
                     <div className="pt-3 border-t border-zinc-100 dark:border-zinc-805 flex justify-between items-center">
-                      <span className="text-[10px] font-bold text-zinc-400 uppercase">Total Setup Investment</span>
-                      <span className="text-sm font-black text-zinc-900 dark:text-zinc-100">
+                      <span className="text-[11px] font-bold text-zinc-400">Total Setup Investment</span>
+                      <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
                         {formatValue(apt.setup_costs.reduce((sum, c) => sum + c.amount_aed, 0))}
                       </span>
                     </div>
@@ -778,7 +778,7 @@ export const Setup: React.FC<SetupProps> = ({ data, setData }) => {
                   >
                     <History size={14} className="text-zinc-405 shrink-0" />
                     <span>View Prior Tenancy History & Performance Records</span>
-                    <span className="px-2 py-0.5 text-[10px] bg-zinc-105 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-450 rounded-full font-bold">
+                    <span className="px-2 py-0.5 text-[11px] bg-zinc-105 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-450 rounded-full font-bold">
                       {apt.tenancy_history?.length || 0} Records
                     </span>
                   </button>
@@ -794,7 +794,7 @@ export const Setup: React.FC<SetupProps> = ({ data, setData }) => {
                     >
                       {apt.tenancy_history && apt.tenancy_history.length > 0 ? (
                         <div className="space-y-4 pt-2">
-                          <p className="text-[10px] text-zinc-400 dark:text-zinc-550 font-bold uppercase tracking-widest">Retained Portfolio Records</p>
+                          <p className="text-[11px] text-zinc-400 dark:text-zinc-550 font-bold">Retained Portfolio Records</p>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             {apt.tenancy_history.map((record) => (
                               <div key={record.tenancy_id} className="p-4 bg-zinc-50 dark:bg-zinc-900/45 rounded-2xl border border-zinc-150/60 dark:border-zinc-800/80 space-y-4 shadow-2xs">
@@ -803,10 +803,10 @@ export const Setup: React.FC<SetupProps> = ({ data, setData }) => {
                                     <p className="text-xs font-bold text-zinc-800 dark:text-zinc-200">
                                       {format(parseISO(record.start_date), 'MMM dd, yyyy')} — {format(parseISO(record.end_date), 'MMM dd, yyyy')}
                                     </p>
-                                    <p className="text-[10px] text-zinc-400 font-medium mt-0.5">Rent: {formatValue(record.annual_rent_aed)}/yr ({record.num_cheques} Cheques)</p>
+                                    <p className="text-[11px] text-zinc-400 font-medium mt-0.5">Rent: {formatValue(record.annual_rent_aed)}/yr ({record.num_cheques} Cheques)</p>
                                   </div>
                                   <span className={cn(
-                                    "text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider",
+                                    "text-[11px] font-bold px-2 py-0.5 rounded-full",
                                     record.status === 'expired' ? "bg-rose-50 dark:bg-rose-950/20 text-rose-600 dark:text-rose-400" : "bg-amber-50 dark:bg-amber-950/20 text-amber-600 dark:text-amber-400"
                                   )}>
                                     {record.status}
@@ -815,17 +815,17 @@ export const Setup: React.FC<SetupProps> = ({ data, setData }) => {
 
                                 <div className="grid grid-cols-3 gap-2 text-center">
                                   <div className="bg-white dark:bg-zinc-900 p-2 rounded-xl border border-zinc-150/40 dark:border-zinc-800">
-                                    <p className="text-[8px] font-bold text-zinc-405 uppercase tracking-wider">Revenue</p>
-                                    <p className="text-xs font-black text-zinc-850 dark:text-zinc-200">{formatValue(record.total_revenue_aed)}</p>
+                                    <p className="text-[8px] font-bold text-zinc-405">Revenue</p>
+                                    <p className="text-xs font-semibold text-zinc-850 dark:text-zinc-200">{formatValue(record.total_revenue_aed)}</p>
                                   </div>
                                   <div className="bg-white dark:bg-zinc-900 p-2 rounded-xl border border-zinc-150/40 dark:border-zinc-800">
-                                    <p className="text-[8px] font-bold text-zinc-405 uppercase tracking-wider">Payout</p>
-                                    <p className="text-xs font-black text-zinc-855 dark:text-zinc-250">{formatValue(record.net_payout_aed)}</p>
+                                    <p className="text-[8px] font-bold text-zinc-405">Payout</p>
+                                    <p className="text-xs font-semibold text-zinc-855 dark:text-zinc-250">{formatValue(record.net_payout_aed)}</p>
                                   </div>
                                   <div className="bg-white dark:bg-zinc-900 p-2 rounded-xl border border-zinc-150/40 dark:border-zinc-800">
-                                    <p className="text-[8px] font-bold text-zinc-405 uppercase tracking-wider">Net Profit</p>
+                                    <p className="text-[8px] font-bold text-zinc-405">Net Profit</p>
                                     <p className={cn(
-                                      "text-xs font-black",
+                                      "text-xs font-semibold",
                                       record.net_profit_aed >= 0 ? "text-emerald-600 dark:text-emerald-450" : "text-rose-600 dark:text-rose-450"
                                     )}>
                                       {formatValue(record.net_profit_aed)}
@@ -833,7 +833,7 @@ export const Setup: React.FC<SetupProps> = ({ data, setData }) => {
                                   </div>
                                 </div>
 
-                                <div className="flex items-center justify-between text-[10px] text-zinc-500 font-medium bg-zinc-100/50 dark:bg-zinc-800/40 p-2 rounded-xl">
+                                <div className="flex items-center justify-between text-[11px] text-zinc-500 font-medium bg-zinc-100/50 dark:bg-zinc-800/40 p-2 rounded-xl">
                                   <div className="flex items-center gap-1">
                                     <TrendingUp size={10} className="text-emerald-500" />
                                     <span>Occupancy: <strong className="text-zinc-700 dark:text-zinc-300">{record.occupancy_rate}%</strong></span>
@@ -846,7 +846,7 @@ export const Setup: React.FC<SetupProps> = ({ data, setData }) => {
                         </div>
                       ) : (
                         <div className="py-6 text-center border border-dashed border-zinc-200 dark:border-zinc-800 rounded-2xl mt-2 bg-zinc-50/40 dark:bg-transparent">
-                          <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest">No Prior Tenancy History Retained</p>
+                          <p className="text-[11px] text-zinc-400 font-bold">No Prior Tenancy History Retained</p>
                         </div>
                       )}
                     </motion.div>
@@ -870,7 +870,7 @@ export const Setup: React.FC<SetupProps> = ({ data, setData }) => {
             >
               <div className="p-8 border-b border-zinc-100 flex justify-between items-center bg-zinc-50/50">
                 <div>
-                  <h3 className="text-2xl font-black text-zinc-900 tracking-tight">{editingAptId ? 'Edit Property' : 'Add New Property'}</h3>
+                  <h3 className="text-2xl font-semibold text-zinc-900 tracking-tight">{editingAptId ? 'Edit Property' : 'Add New Property'}</h3>
                   <p className="text-sm text-zinc-500 font-medium">Configure property details, rental structure, and platform settings</p>
                 </div>
                 <button onClick={() => setIsAddAptOpen(false)} className="p-2 hover:bg-zinc-100 rounded-full transition-colors">
@@ -884,11 +884,11 @@ export const Setup: React.FC<SetupProps> = ({ data, setData }) => {
                   <div className="space-y-6">
                     <div className="flex items-center gap-2 text-zinc-900 mb-2">
                       <InfoIcon size={18} className="text-emerald-500" />
-                      <h4 className="text-xs font-black uppercase tracking-widest">Basic Information</h4>
+                      <h4 className="text-xs font-semibold">Basic Information</h4>
                     </div>
                     <div className="space-y-4">
                       <div className="space-y-1.5">
-                        <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Apartment Name</label>
+                        <label className="text-[11px] font-semibold text-zinc-400 ml-1">Apartment Name</label>
                         <input 
                           type="text" 
                           placeholder="e.g. Marina Gate 1 - 2204"
@@ -898,7 +898,7 @@ export const Setup: React.FC<SetupProps> = ({ data, setData }) => {
                         />
                       </div>
                       <div className="space-y-1.5">
-                        <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Property Nickname (ID)</label>
+                        <label className="text-[11px] font-semibold text-zinc-400 ml-1">Property Nickname (ID)</label>
                         <input 
                           type="text" 
                           placeholder="e.g. MG1-2204"
@@ -909,7 +909,7 @@ export const Setup: React.FC<SetupProps> = ({ data, setData }) => {
                       </div>
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-1.5">
-                          <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Building Name</label>
+                          <label className="text-[11px] font-semibold text-zinc-400 ml-1">Building Name</label>
                           <input 
                             type="text" 
                             placeholder="e.g. Marina Gate"
@@ -919,7 +919,7 @@ export const Setup: React.FC<SetupProps> = ({ data, setData }) => {
                           />
                         </div>
                         <div className="space-y-1.5">
-                          <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Specification</label>
+                          <label className="text-[11px] font-semibold text-zinc-400 ml-1">Specification</label>
                           <select 
                             className="w-full px-4 py-3 rounded-xl border border-zinc-200 focus:border-zinc-900 focus:ring-0 transition-all text-sm font-medium appearance-none"
                             value={newApt.specification}
@@ -936,7 +936,7 @@ export const Setup: React.FC<SetupProps> = ({ data, setData }) => {
                         </div>
                       </div>
                       <div className="space-y-1.5">
-                        <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Address</label>
+                        <label className="text-[11px] font-semibold text-zinc-400 ml-1">Address</label>
                         <textarea 
                           placeholder="Full property address..."
                           className="w-full px-4 py-3 rounded-xl border border-zinc-200 focus:border-zinc-900 focus:ring-0 transition-all text-sm font-medium h-20 resize-none"
@@ -946,7 +946,7 @@ export const Setup: React.FC<SetupProps> = ({ data, setData }) => {
                       </div>
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-1.5">
-                          <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Measurement (Sq. Ft.)</label>
+                          <label className="text-[11px] font-semibold text-zinc-400 ml-1">Measurement (Sq. Ft.)</label>
                           <input 
                             type="number" 
                             className="w-full px-4 py-3 rounded-xl border border-zinc-200 focus:border-zinc-900 focus:ring-0 transition-all text-sm font-medium"
@@ -955,7 +955,7 @@ export const Setup: React.FC<SetupProps> = ({ data, setData }) => {
                           />
                         </div>
                         <div className="space-y-1.5">
-                          <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Currency</label>
+                          <label className="text-[11px] font-semibold text-zinc-400 ml-1">Currency</label>
                           <select 
                             className="w-full px-4 py-3 rounded-xl border border-zinc-200 focus:border-zinc-900 focus:ring-0 transition-all text-sm font-medium appearance-none"
                             value={newApt.currency}
@@ -972,7 +972,7 @@ export const Setup: React.FC<SetupProps> = ({ data, setData }) => {
                         <div className="space-y-1.5 col-span-2">
                           <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-1.5">
-                              <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-400 uppercase tracking-widest ml-1">Tenancy Start Date</label>
+                              <label className="text-[11px] font-semibold text-zinc-400 dark:text-zinc-400 ml-1">Tenancy Start Date</label>
                               <input 
                                 type="date" 
                                 className="w-full px-4 py-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-905 focus:border-zinc-900 focus:ring-0 transition-all text-sm font-medium"
@@ -985,7 +985,7 @@ export const Setup: React.FC<SetupProps> = ({ data, setData }) => {
                               />
                             </div>
                             <div className="space-y-1.5">
-                              <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-400 uppercase tracking-widest ml-1">Tenancy Expiry Date</label>
+                              <label className="text-[11px] font-semibold text-zinc-400 dark:text-zinc-400 ml-1">Tenancy Expiry Date</label>
                               <input 
                                 type="date" 
                                 className="w-full px-4 py-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-905 focus:border-zinc-900 focus:ring-0 transition-all text-sm font-medium"
@@ -997,7 +997,7 @@ export const Setup: React.FC<SetupProps> = ({ data, setData }) => {
                         </div>
 
                         <div className="space-y-1.5 col-span-2">
-                          <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-400 uppercase tracking-widest ml-1">Lease Status</label>
+                          <label className="text-[11px] font-semibold text-zinc-400 dark:text-zinc-400 ml-1">Lease Status</label>
                           <select 
                             className="w-full px-4 py-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-905 focus:border-zinc-900 focus:ring-0 transition-all text-sm font-medium appearance-none"
                             value={newApt.status || 'active'}
@@ -1016,24 +1016,24 @@ export const Setup: React.FC<SetupProps> = ({ data, setData }) => {
                   <div className="space-y-6">
                     <div className="flex items-center gap-2 text-zinc-900 mb-2">
                       <Receipt size={18} className="text-amber-500" />
-                      <h4 className="text-xs font-black uppercase tracking-widest">Rental & Payment Structure</h4>
+                      <h4 className="text-xs font-semibold">Rental & Payment Structure</h4>
                     </div>
                     <div className="space-y-4">
                       <div className="space-y-1.5">
-                        <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Annual Rent (AED)</label>
+                        <label className="text-[11px] font-semibold text-zinc-400 ml-1">Annual Rent (AED)</label>
                         <div className="relative">
                           <span className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 font-bold text-sm">AED</span>
                           <input 
                             type="number" 
                             placeholder="0"
-                            className="w-full pl-12 pr-4 py-3 rounded-xl border border-zinc-200 focus:border-zinc-900 focus:ring-0 transition-all text-sm font-black"
+                            className="w-full pl-12 pr-4 py-3 rounded-xl border border-zinc-200 focus:border-zinc-900 focus:ring-0 transition-all text-sm font-semibold"
                             value={newApt.annual_rent_aed}
                             onChange={e => setNewApt({...newApt, annual_rent_aed: Number(e.target.value)})}
                           />
                         </div>
                       </div>
                       <div className="space-y-1.5">
-                        <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Number of Cheques</label>
+                        <label className="text-[11px] font-semibold text-zinc-400 ml-1">Number of Cheques</label>
                         <input 
                           type="range" 
                           min="1" 
@@ -1043,7 +1043,7 @@ export const Setup: React.FC<SetupProps> = ({ data, setData }) => {
                           value={newApt.num_cheques}
                           onChange={e => setNewApt({...newApt, num_cheques: Number(e.target.value)})}
                         />
-                        <div className="flex justify-between text-[10px] font-black text-zinc-400 uppercase mt-1">
+                        <div className="flex justify-between text-[11px] font-semibold text-zinc-400 mt-1">
                           <span>1 Cheque</span>
                           <span className="text-zinc-900 bg-zinc-100 px-2 py-0.5 rounded">{newApt.num_cheques} Cheques</span>
                           <span>12 Cheques</span>
@@ -1052,15 +1052,15 @@ export const Setup: React.FC<SetupProps> = ({ data, setData }) => {
 
                       {/* Generated Cheques Preview */}
                       <div className="space-y-3 pt-4">
-                        <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Payment Schedule Preview</label>
+                        <label className="text-[11px] font-semibold text-zinc-400 ml-1">Payment Schedule Preview</label>
                         <div className="space-y-2 max-h-[200px] overflow-y-auto pr-2 custom-scrollbar">
                           {(editingAptId ? (newApt.rent_cheques || []) : generatedCheques).map((chq, i) => (
                             <div key={i} className="flex items-center justify-between p-3 bg-zinc-50 rounded-xl border border-zinc-100">
                               <div className="flex items-center gap-3">
-                                <span className="text-[10px] font-black text-zinc-400">#{i + 1}</span>
+                                <span className="text-[11px] font-semibold text-zinc-400">#{i + 1}</span>
                                 <span className="text-xs font-bold text-zinc-900">{format(parseISO(chq.due_date), 'MMM dd, yyyy')}</span>
                               </div>
-                              <span className="text-xs font-black text-zinc-900">{formatValue(chq.amount_aed)}</span>
+                              <span className="text-xs font-semibold text-zinc-900">{formatValue(chq.amount_aed)}</span>
                             </div>
                           ))}
                         </div>
@@ -1073,7 +1073,7 @@ export const Setup: React.FC<SetupProps> = ({ data, setData }) => {
                 <div className="mt-10 pt-10 border-t border-zinc-100">
                   <div className="flex items-center gap-2 text-zinc-900 mb-6">
                     <Globe size={18} className="text-blue-500" />
-                    <h4 className="text-xs font-black uppercase tracking-widest">Property-Specific Platform Settings</h4>
+                    <h4 className="text-xs font-semibold">Property-Specific Platform Settings</h4>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     {data.platforms.map((platform) => {
@@ -1086,12 +1086,12 @@ export const Setup: React.FC<SetupProps> = ({ data, setData }) => {
                       return (
                         <div key={platform.platform_id} className="p-4 bg-zinc-50 rounded-2xl border border-zinc-100 space-y-4">
                           <div className="flex items-center justify-between">
-                            <p className="text-xs font-black text-zinc-900">{platform.name}</p>
-                            <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest">Override</span>
+                            <p className="text-xs font-semibold text-zinc-900">{platform.name}</p>
+                            <span className="text-[11px] font-bold text-zinc-400">Override</span>
                           </div>
                           <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-1">
-                              <label className="text-[9px] font-bold text-zinc-400 uppercase">Comm. %</label>
+                              <label className="text-[11px] font-bold text-zinc-400">Comm. %</label>
                               <input 
                                 type="number" 
                                 className="w-full px-2 py-1.5 rounded-lg border border-zinc-200 text-xs font-bold"
@@ -1107,7 +1107,7 @@ export const Setup: React.FC<SetupProps> = ({ data, setData }) => {
                               />
                             </div>
                             <div className="space-y-1">
-                              <label className="text-[9px] font-bold text-zinc-400 uppercase">Charge %</label>
+                              <label className="text-[11px] font-bold text-zinc-400">Charge %</label>
                               <input 
                                 type="number" 
                                 className="w-full px-2 py-1.5 rounded-lg border border-zinc-200 text-xs font-bold"
@@ -1152,7 +1152,7 @@ export const Setup: React.FC<SetupProps> = ({ data, setData }) => {
               className="bg-white rounded-[32px] shadow-2xl w-full max-w-md overflow-hidden"
             >
               <div className="p-6 border-b border-zinc-100 flex justify-between items-center">
-                <h3 className="text-lg font-black text-zinc-900 tracking-tight">Add Setup Cost</h3>
+                <h3 className="text-lg font-semibold text-zinc-900 tracking-tight">Add Setup Cost</h3>
                 <button onClick={() => setIsAddSetupCostOpen({ open: false, apartmentId: '' })} className="p-2 hover:bg-zinc-100 rounded-full transition-colors">
                   <X size={20} />
                 </button>
@@ -1160,7 +1160,7 @@ export const Setup: React.FC<SetupProps> = ({ data, setData }) => {
 
               <div className="p-6 space-y-4">
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Category</label>
+                  <label className="text-[11px] font-semibold text-zinc-400 ml-1">Category</label>
                   <select 
                     className="w-full px-4 py-3 rounded-xl border border-zinc-200 focus:border-zinc-900 focus:ring-0 transition-all text-sm font-medium appearance-none"
                     value={newSetupCost.category}
@@ -1178,7 +1178,7 @@ export const Setup: React.FC<SetupProps> = ({ data, setData }) => {
                   </select>
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Description</label>
+                  <label className="text-[11px] font-semibold text-zinc-400 ml-1">Description</label>
                   <input 
                     type="text" 
                     placeholder="e.g. Living room sofa set"
@@ -1189,16 +1189,16 @@ export const Setup: React.FC<SetupProps> = ({ data, setData }) => {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Amount (AED)</label>
+                    <label className="text-[11px] font-semibold text-zinc-400 ml-1">Amount (AED)</label>
                     <input 
                       type="number" 
-                      className="w-full px-4 py-3 rounded-xl border border-zinc-200 focus:border-zinc-900 focus:ring-0 transition-all text-sm font-black"
+                      className="w-full px-4 py-3 rounded-xl border border-zinc-200 focus:border-zinc-900 focus:ring-0 transition-all text-sm font-semibold"
                       value={newSetupCost.amount_aed}
                       onChange={e => setNewSetupCost({...newSetupCost, amount_aed: Number(e.target.value)})}
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Date</label>
+                    <label className="text-[11px] font-semibold text-zinc-400 ml-1">Date</label>
                     <input 
                       type="date" 
                       className="w-full px-4 py-3 rounded-xl border border-zinc-200 focus:border-zinc-900 focus:ring-0 transition-all text-sm font-medium"
@@ -1218,7 +1218,7 @@ export const Setup: React.FC<SetupProps> = ({ data, setData }) => {
                   <label htmlFor="is_refundable" className="text-xs font-bold text-zinc-700 cursor-pointer">This is a refundable deposit</label>
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Vendor / Provider</label>
+                  <label className="text-[11px] font-semibold text-zinc-400 ml-1">Vendor / Provider</label>
                   <input 
                     type="text" 
                     placeholder="e.g. IKEA"
@@ -1249,7 +1249,7 @@ export const Setup: React.FC<SetupProps> = ({ data, setData }) => {
               className="bg-white rounded-[32px] shadow-2xl w-full max-w-md overflow-hidden"
             >
               <div className="p-6 border-b border-zinc-100 flex justify-between items-center bg-zinc-50/50">
-                <h3 className="text-lg font-black text-zinc-900 tracking-tight">{editingPlatformId ? 'Edit Platform' : 'Add Platform'}</h3>
+                <h3 className="text-lg font-semibold text-zinc-900 tracking-tight">{editingPlatformId ? 'Edit Platform' : 'Add Platform'}</h3>
                 <button onClick={() => setIsPlatformModalOpen(false)} className="p-2 hover:bg-zinc-100 rounded-full transition-colors">
                   <X size={20} />
                 </button>
@@ -1257,7 +1257,7 @@ export const Setup: React.FC<SetupProps> = ({ data, setData }) => {
 
               <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto custom-scrollbar">
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Platform Name</label>
+                  <label className="text-[11px] font-semibold text-zinc-400 ml-1">Platform Name</label>
                   <input 
                     type="text" 
                     placeholder="e.g. Airbnb, Stripe, etc."
@@ -1268,19 +1268,19 @@ export const Setup: React.FC<SetupProps> = ({ data, setData }) => {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Commission %</label>
+                    <label className="text-[11px] font-semibold text-zinc-400 ml-1">Commission %</label>
                     <input 
                       type="number" 
-                      className="w-full px-4 py-3 rounded-xl border border-zinc-200 focus:border-zinc-900 focus:ring-0 transition-all text-sm font-black"
+                      className="w-full px-4 py-3 rounded-xl border border-zinc-200 focus:border-zinc-900 focus:ring-0 transition-all text-sm font-semibold"
                       value={newPlatform.commission_percent}
                       onChange={e => setNewPlatform({...newPlatform, commission_percent: Number(e.target.value)})}
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Payment Charge %</label>
+                    <label className="text-[11px] font-semibold text-zinc-400 ml-1">Payment Charge %</label>
                     <input 
                       type="number" 
-                      className="w-full px-4 py-3 rounded-xl border border-zinc-200 focus:border-zinc-900 focus:ring-0 transition-all text-sm font-black"
+                      className="w-full px-4 py-3 rounded-xl border border-zinc-200 focus:border-zinc-900 focus:ring-0 transition-all text-sm font-semibold"
                       value={newPlatform.payment_charge_percent}
                       onChange={e => setNewPlatform({...newPlatform, payment_charge_percent: Number(e.target.value)})}
                     />
@@ -1288,10 +1288,10 @@ export const Setup: React.FC<SetupProps> = ({ data, setData }) => {
                 </div>
                 
                 <div className="pt-4 border-t border-zinc-100">
-                  <h4 className="text-[10px] font-black text-zinc-900 uppercase tracking-widest mb-4">Payout Timeline Rules</h4>
+                  <h4 className="text-[11px] font-semibold text-zinc-900 mb-4">Payout Timeline Rules</h4>
                   <div className="space-y-4">
                     <div className="space-y-1.5">
-                      <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Payout Timing</label>
+                      <label className="text-[11px] font-semibold text-zinc-400 ml-1">Payout Timing</label>
                       <select 
                         className="w-full px-4 py-3 rounded-xl border border-zinc-200 focus:border-zinc-900 focus:ring-0 transition-all text-sm font-medium appearance-none"
                         value={newPlatform.payout_timing}
@@ -1306,7 +1306,7 @@ export const Setup: React.FC<SetupProps> = ({ data, setData }) => {
 
                     {newPlatform.payout_timing === 'next_specific_day' && (
                       <div className="space-y-1.5">
-                        <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Specific Day</label>
+                        <label className="text-[11px] font-semibold text-zinc-400 ml-1">Specific Day</label>
                         <select 
                           className="w-full px-4 py-3 rounded-xl border border-zinc-200 focus:border-zinc-900 focus:ring-0 transition-all text-sm font-medium appearance-none"
                           value={newPlatform.payout_day_of_week}
@@ -1325,19 +1325,19 @@ export const Setup: React.FC<SetupProps> = ({ data, setData }) => {
 
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-1.5">
-                        <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Days Offset</label>
+                        <label className="text-[11px] font-semibold text-zinc-400 ml-1">Days Offset</label>
                         <input 
                           type="number" 
-                          className="w-full px-4 py-3 rounded-xl border border-zinc-200 focus:border-zinc-900 focus:ring-0 transition-all text-sm font-black"
+                          className="w-full px-4 py-3 rounded-xl border border-zinc-200 focus:border-zinc-900 focus:ring-0 transition-all text-sm font-semibold"
                           value={newPlatform.payout_days_offset}
                           onChange={e => setNewPlatform({...newPlatform, payout_days_offset: Number(e.target.value)})}
                         />
                       </div>
                       <div className="space-y-1.5">
-                        <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Processing Days</label>
+                        <label className="text-[11px] font-semibold text-zinc-400 ml-1">Processing Days</label>
                         <input 
                           type="number" 
-                          className="w-full px-4 py-3 rounded-xl border border-zinc-200 focus:border-zinc-900 focus:ring-0 transition-all text-sm font-black"
+                          className="w-full px-4 py-3 rounded-xl border border-zinc-200 focus:border-zinc-900 focus:ring-0 transition-all text-sm font-semibold"
                           value={newPlatform.processing_days}
                           onChange={e => setNewPlatform({...newPlatform, processing_days: Number(e.target.value)})}
                         />
@@ -1401,20 +1401,20 @@ export const Setup: React.FC<SetupProps> = ({ data, setData }) => {
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Commission</p>
+                    <p className="text-[11px] font-bold text-zinc-400 mb-1">Commission</p>
                     <p className="text-sm font-bold">{platform.commission_percent}%</p>
                   </div>
                   <div>
-                    <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Payment Charge</p>
+                    <p className="text-[11px] font-bold text-zinc-400 mb-1">Payment Charge</p>
                     <p className="text-sm font-bold">{platform.payment_charge_percent || 0}%</p>
                   </div>
                 </div>
                 <div className="pt-4 border-t border-zinc-100">
-                  <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-2">Payout Timeline</p>
+                  <p className="text-[11px] font-bold text-zinc-400 mb-2">Payout Timeline</p>
                   <div className="space-y-2">
                     <div className="flex items-center gap-2">
                       <Calendar size={12} className="text-zinc-400" />
-                      <p className="text-[10px] text-zinc-600 font-medium">
+                      <p className="text-[11px] text-zinc-600 font-medium">
                         {platform.payout_timing === 'next_specific_day' 
                           ? `Next ${['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][platform.payout_day_of_week ?? 4]} after checkout`
                           : `${platform.payout_timing.replace('_', ' ')} (+${platform.payout_days_offset} days)`}
@@ -1423,7 +1423,7 @@ export const Setup: React.FC<SetupProps> = ({ data, setData }) => {
                     {platform.processing_days > 0 && (
                       <div className="flex items-center gap-2">
                         <Zap size={12} className="text-zinc-400" />
-                        <p className="text-[10px] text-zinc-500 italic">
+                        <p className="text-[11px] text-zinc-500 italic">
                           +{platform.processing_days} days bank processing
                         </p>
                       </div>
@@ -1482,19 +1482,19 @@ export const Setup: React.FC<SetupProps> = ({ data, setData }) => {
             >
               <div className="space-y-3">
                 <div className="flex items-center gap-2">
-                  <span className="px-2 py-0.5 bg-zinc-100 text-zinc-600 rounded-full text-[9px] font-black uppercase tracking-widest">
+                  <span className="px-2 py-0.5 bg-zinc-100 text-zinc-600 rounded-full text-[11px] font-semibold">
                     {template.category.replace('_', ' ')}
                   </span>
                 </div>
                 <p className="text-xs font-bold text-zinc-900 line-clamp-1">{template.subject}</p>
-                <p className="text-[10px] text-zinc-500 line-clamp-3 leading-relaxed">{template.content}</p>
+                <p className="text-[11px] text-zinc-500 line-clamp-3 leading-relaxed">{template.content}</p>
               </div>
             </Card>
           ))}
           {(data.communicationTemplates || []).length === 0 && (
-            <div className="col-span-full py-12 text-center border-2 border-dashed border-zinc-100 rounded-[2rem] bg-zinc-50/30">
+            <div className="col-span-full py-12 text-center border-2 border-dashed border-zinc-100 rounded-2xl bg-zinc-50/30">
               <p className="text-zinc-400 font-bold">No templates defined.</p>
-              <p className="text-[10px] text-zinc-400 uppercase tracking-widest mt-1">Create your first guest message template.</p>
+              <p className="text-[11px] text-zinc-400 mt-1">Create your first guest message template.</p>
             </div>
           )}
         </div>
@@ -1511,7 +1511,7 @@ export const Setup: React.FC<SetupProps> = ({ data, setData }) => {
               className="bg-white rounded-[32px] shadow-2xl w-full max-w-lg overflow-hidden"
             >
               <div className="p-6 border-b border-zinc-100 flex justify-between items-center bg-zinc-50/50">
-                <h3 className="text-lg font-black text-zinc-900 tracking-tight">{editingTemplateId ? 'Edit Template' : 'Add Template'}</h3>
+                <h3 className="text-lg font-semibold text-zinc-900 tracking-tight">{editingTemplateId ? 'Edit Template' : 'Add Template'}</h3>
                 <button onClick={() => setIsTemplateModalOpen(false)} className="p-2 hover:bg-zinc-100 rounded-full transition-colors">
                   <X size={20} />
                 </button>
@@ -1520,7 +1520,7 @@ export const Setup: React.FC<SetupProps> = ({ data, setData }) => {
               <div className="p-6 space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Template Name</label>
+                    <label className="text-[11px] font-semibold text-zinc-400 ml-1">Template Name</label>
                     <input 
                       type="text" 
                       placeholder="e.g. Check-in Instructions"
@@ -1530,7 +1530,7 @@ export const Setup: React.FC<SetupProps> = ({ data, setData }) => {
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Category</label>
+                    <label className="text-[11px] font-semibold text-zinc-400 ml-1">Category</label>
                     <select 
                       className="w-full px-4 py-3 rounded-xl border border-zinc-200 focus:border-zinc-900 focus:ring-0 transition-all text-sm font-medium appearance-none"
                       value={newTemplate.category}
@@ -1545,7 +1545,7 @@ export const Setup: React.FC<SetupProps> = ({ data, setData }) => {
                   </div>
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Subject Line</label>
+                  <label className="text-[11px] font-semibold text-zinc-400 ml-1">Subject Line</label>
                   <input 
                     type="text" 
                     placeholder="e.g. Welcome to your stay!"
@@ -1555,7 +1555,7 @@ export const Setup: React.FC<SetupProps> = ({ data, setData }) => {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Message Content</label>
+                  <label className="text-[11px] font-semibold text-zinc-400 ml-1">Message Content</label>
                   <textarea 
                     placeholder="Write your message here..."
                     className="w-full px-4 py-3 rounded-xl border border-zinc-200 focus:border-zinc-900 focus:ring-0 transition-all text-sm font-medium h-40 resize-none"
@@ -1588,7 +1588,7 @@ export const Setup: React.FC<SetupProps> = ({ data, setData }) => {
                 <div className="flex items-center gap-2">
                   <RefreshCw size={20} className="text-emerald-500" />
                   <div>
-                    <h3 className="text-lg font-black tracking-tight text-zinc-900 dark:text-zinc-50">Renew Tenancy</h3>
+                    <h3 className="text-lg font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">Renew Tenancy</h3>
                     <p className="text-xs text-zinc-500 dark:text-zinc-400 font-medium">For {renewingApt.name}</p>
                   </div>
                 </div>
@@ -1607,7 +1607,7 @@ export const Setup: React.FC<SetupProps> = ({ data, setData }) => {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-400 uppercase tracking-widest ml-1">New Start Date</label>
+                    <label className="text-[11px] font-semibold text-zinc-400 dark:text-zinc-400 ml-1">New Start Date</label>
                     <input 
                       type="date" 
                       className="w-full px-4 py-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-zinc-900 dark:focus:border-zinc-50 focus:ring-0 transition-all text-sm font-medium"
@@ -1619,7 +1619,7 @@ export const Setup: React.FC<SetupProps> = ({ data, setData }) => {
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-400 uppercase tracking-widest ml-1">New End Date</label>
+                    <label className="text-[11px] font-semibold text-zinc-400 dark:text-zinc-400 ml-1">New End Date</label>
                     <input 
                       type="date" 
                       className="w-full px-4 py-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-zinc-900 dark:focus:border-zinc-50 focus:ring-0 transition-all text-sm font-medium"
@@ -1630,12 +1630,12 @@ export const Setup: React.FC<SetupProps> = ({ data, setData }) => {
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-400 uppercase tracking-widest ml-1">New Annual Rent (AED)</label>
+                  <label className="text-[11px] font-semibold text-zinc-400 dark:text-zinc-400 ml-1">New Annual Rent (AED)</label>
                   <div className="relative">
                     <span className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 font-bold text-sm">AED</span>
                     <input 
                       type="number" 
-                      className="w-full pl-12 pr-4 py-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-zinc-900 dark:focus:border-zinc-50 focus:ring-0 transition-all text-sm font-black"
+                      className="w-full pl-12 pr-4 py-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-zinc-900 dark:focus:border-zinc-50 focus:ring-0 transition-all text-sm font-semibold"
                       value={renewAnnualRent}
                       onChange={e => setRenewAnnualRent(Number(e.target.value))}
                     />
@@ -1643,7 +1643,7 @@ export const Setup: React.FC<SetupProps> = ({ data, setData }) => {
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-400 uppercase tracking-widest ml-1">Number of Cheques</label>
+                  <label className="text-[11px] font-semibold text-zinc-400 dark:text-zinc-400 ml-1">Number of Cheques</label>
                   <select
                     className="w-full px-4 py-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-zinc-900 dark:focus:border-zinc-50 focus:ring-0 transition-all text-sm font-medium appearance-none"
                     value={renewNumCheques}
@@ -1683,7 +1683,7 @@ export const Setup: React.FC<SetupProps> = ({ data, setData }) => {
                 <div className="flex items-center gap-2">
                   <Power size={20} className="text-rose-500 animate-pulse" />
                   <div>
-                    <h3 className="text-lg font-black tracking-tight text-zinc-900 dark:text-zinc-50">End / Terminate Tenancy</h3>
+                    <h3 className="text-lg font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">End / Terminate Tenancy</h3>
                     <p className="text-xs text-zinc-500 dark:text-zinc-400 font-medium">For {terminatingApt.name}</p>
                   </div>
                 </div>
@@ -1701,7 +1701,7 @@ export const Setup: React.FC<SetupProps> = ({ data, setData }) => {
                 </div>
 
                 <div className="space-y-1.5 flex flex-col">
-                  <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-400 uppercase tracking-widest ml-1">Termination Effective Date</label>
+                  <label className="text-[11px] font-semibold text-zinc-400 dark:text-zinc-400 ml-1">Termination Effective Date</label>
                   <input 
                     type="date" 
                     className="w-full px-4 py-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-zinc-900 dark:focus:border-zinc-50 focus:ring-0 transition-all text-sm font-medium"
@@ -1711,7 +1711,7 @@ export const Setup: React.FC<SetupProps> = ({ data, setData }) => {
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-400 uppercase tracking-widest ml-1">Retirement Status / Reason</label>
+                  <label className="text-[11px] font-semibold text-zinc-400 dark:text-zinc-400 ml-1">Retirement Status / Reason</label>
                   <div className="grid grid-cols-2 gap-3">
                     <button
                       type="button"

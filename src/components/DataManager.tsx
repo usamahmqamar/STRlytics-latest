@@ -189,7 +189,7 @@ export const DataManager: React.FC<DataManagerProps> = ({
         <Card title="Data Management" className="h-full">
           <div className="space-y-8 mt-4">
             <div className="space-y-4">
-              <h4 className="text-xs font-black text-zinc-900 uppercase tracking-widest flex items-center gap-2">
+              <h4 className="text-xs font-semibold text-zinc-900 flex items-center gap-2">
                 <Download size={16} className="text-emerald-500" />
                 Export Data
               </h4>
@@ -218,7 +218,7 @@ export const DataManager: React.FC<DataManagerProps> = ({
 
             <div className="space-y-6 pt-6 border-t border-zinc-100">
               <div className="flex items-center justify-between">
-                <h4 className="text-xs font-black text-zinc-900 uppercase tracking-widest flex items-center gap-2">
+                <h4 className="text-xs font-semibold text-zinc-900 flex items-center gap-2">
                   <Upload size={16} className="text-blue-500" />
                   Import System
                 </h4>
@@ -228,7 +228,7 @@ export const DataManager: React.FC<DataManagerProps> = ({
                       key={t}
                       onClick={() => setImportType(t)}
                       className={cn(
-                        "px-3 py-1.5 text-[9px] font-black uppercase tracking-widest rounded-lg transition-all",
+                        "px-3 py-1.5 text-[11px] font-semibold rounded-lg transition-all",
                         importType === t ? "bg-white text-zinc-900 shadow-sm" : "text-zinc-400 hover:text-zinc-600"
                       )}
                     >
@@ -239,7 +239,7 @@ export const DataManager: React.FC<DataManagerProps> = ({
               </div>
 
               <div className="space-y-4">
-                <div className="p-8 border-2 border-dashed border-zinc-100 rounded-[2rem] bg-zinc-50/50 text-center group hover:border-blue-500/30 transition-all">
+                <div className="p-8 border-2 border-dashed border-zinc-100 rounded-2xl bg-zinc-50/50 text-center group hover:border-blue-500/30 transition-all">
                   <input 
                     type="file" 
                     id="data-import" 
@@ -256,8 +256,8 @@ export const DataManager: React.FC<DataManagerProps> = ({
                       <Upload size={32} />
                     </div>
                     <div className="space-y-1">
-                      <p className="text-sm font-black text-zinc-900">Import {importType} via CSV</p>
-                      <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest">Click to upload or drag and drop</p>
+                      <p className="text-sm font-semibold text-zinc-900">Import {importType} via CSV</p>
+                      <p className="text-[11px] text-zinc-400 font-bold">Click to upload or drag and drop</p>
                     </div>
                   </label>
                 </div>
@@ -266,11 +266,11 @@ export const DataManager: React.FC<DataManagerProps> = ({
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <Zap size={14} className="text-amber-500" />
-                      <span className="text-[10px] font-black uppercase tracking-widest text-zinc-900">Key Reference Guide</span>
+                      <span className="text-[11px] font-semibold text-zinc-900">Key Reference Guide</span>
                     </div>
                     <button 
                       onClick={() => downloadTemplate(importType)}
-                      className="text-[9px] font-black text-blue-600 uppercase tracking-widest hover:underline flex items-center gap-1"
+                      className="text-[11px] font-semibold text-blue-600 hover:underline flex items-center gap-1"
                     >
                       <Download size={10} /> Download Template
                     </button>
@@ -286,7 +286,7 @@ export const DataManager: React.FC<DataManagerProps> = ({
                       { key: 'apartment_id', desc: 'Must match property ID' },
                     ].map(item => (
                       <div key={item.key} className="flex flex-col">
-                        <span className="text-[9px] font-black text-zinc-900 font-mono">{item.key}</span>
+                        <span className="text-[11px] font-semibold text-zinc-900 font-mono">{item.key}</span>
                         <span className="text-[8px] text-zinc-400 font-medium">{item.desc}</span>
                       </div>
                     ))}
@@ -297,7 +297,7 @@ export const DataManager: React.FC<DataManagerProps> = ({
                       { key: 'apartment_id', desc: 'Property link' },
                     ].map(item => (
                       <div key={item.key} className="flex flex-col">
-                        <span className="text-[9px] font-black text-zinc-900 font-mono">{item.key}</span>
+                        <span className="text-[11px] font-semibold text-zinc-900 font-mono">{item.key}</span>
                         <span className="text-[8px] text-zinc-400 font-medium">{item.desc}</span>
                       </div>
                     ))}
@@ -308,7 +308,7 @@ export const DataManager: React.FC<DataManagerProps> = ({
                       { key: 'specification', desc: 'Studio, 1BR, etc' },
                     ].map(item => (
                       <div key={item.key} className="flex flex-col">
-                        <span className="text-[9px] font-black text-zinc-900 font-mono">{item.key}</span>
+                        <span className="text-[11px] font-semibold text-zinc-900 font-mono">{item.key}</span>
                         <span className="text-[8px] text-zinc-400 font-medium">{item.desc}</span>
                       </div>
                     ))}
@@ -321,20 +321,20 @@ export const DataManager: React.FC<DataManagerProps> = ({
 
         <Card title="System Maintenance" className="h-full">
           <div className="space-y-6 mt-4">
-            <div className="p-6 bg-rose-50 rounded-[2rem] border border-rose-100">
+            <div className="p-6 bg-rose-50 rounded-2xl border border-rose-100">
               <div className="flex items-start gap-4">
                 <div className="w-10 h-10 bg-rose-100 rounded-xl flex items-center justify-center text-rose-600 shrink-0">
                   <AlertCircle size={20} />
                 </div>
                 <div className="flex-1">
-                  <p className="text-xs font-black text-rose-900 uppercase tracking-widest">Granular Data Reset</p>
+                  <p className="text-xs font-semibold text-rose-900">Granular Data Reset</p>
                   <p className="text-[11px] text-rose-700 mt-2 leading-relaxed font-medium">
                     Permanently remove records based on a specific timeline. This is useful for clearing old history or resetting a specific period.
                   </p>
                   
                   <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <label className="text-[9px] font-black text-rose-900 uppercase tracking-widest">Target Date</label>
+                      <label className="text-[11px] font-semibold text-rose-900">Target Date</label>
                       <input 
                         type="date" 
                         value={resetDate}
@@ -343,7 +343,7 @@ export const DataManager: React.FC<DataManagerProps> = ({
                       />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-[9px] font-black text-rose-900 uppercase tracking-widest">Reset Scope</label>
+                      <label className="text-[11px] font-semibold text-rose-900">Reset Scope</label>
                       <select 
                         value={resetScope}
                         onChange={(e) => setResetScope(e.target.value as any)}
@@ -351,7 +351,7 @@ export const DataManager: React.FC<DataManagerProps> = ({
                       >
                         <option value="after">All data AFTER date</option>
                         <option value="before">All data BEFORE date</option>
-                        <option value="all">WIPE EVERYTHING</option>
+                        <option value="all">Delete all data</option>
                       </select>
                     </div>
                   </div>
@@ -368,7 +368,7 @@ export const DataManager: React.FC<DataManagerProps> = ({
                         }
                       }
                     }}
-                    className="mt-6 w-full px-4 py-4 bg-rose-600 text-white text-[10px] font-black uppercase tracking-widest rounded-2xl hover:bg-rose-700 transition-all shadow-lg shadow-rose-200 active:scale-[0.98]"
+                    className="mt-6 w-full px-4 py-4 bg-rose-600 text-white text-[11px] font-semibold rounded-2xl hover:bg-rose-700 transition-all shadow-lg shadow-rose-200 active:scale-[0.98]"
                   >
                     Execute Reset Sequence
                   </button>
@@ -380,11 +380,11 @@ export const DataManager: React.FC<DataManagerProps> = ({
               <div className="flex items-start gap-3">
                 <RefreshCw className="text-zinc-400 shrink-0 mt-0.5" size={18} />
                 <div>
-                  <p className="text-xs font-bold text-zinc-900 uppercase tracking-wider">Cache Synchronization</p>
+                  <p className="text-xs font-bold text-zinc-900">Cache Synchronization</p>
                   <p className="text-[11px] text-zinc-500 mt-1 leading-relaxed">
                     If you notice discrepancies in your reports, force a recalculation of all analytics.
                   </p>
-                  <button className="mt-4 px-4 py-2 bg-zinc-900 text-white text-[10px] font-black uppercase tracking-widest rounded-lg hover:bg-zinc-800 transition-all">
+                  <button className="mt-4 px-4 py-2 bg-zinc-900 text-white text-[11px] font-semibold rounded-lg hover:bg-zinc-800 transition-all">
                     Rebuild Analytics Cache
                   </button>
                 </div>

@@ -160,7 +160,7 @@ export const Projections: React.FC = () => {
               <button 
                 key={t}
                 className={cn(
-                  "px-4 py-2 text-[10px] font-bold uppercase tracking-widest rounded-lg transition-all",
+                  "px-4 py-2 text-[11px] font-bold rounded-lg transition-all",
                   t === 'Year' ? "bg-white text-zinc-900 shadow-sm" : "text-zinc-400 hover:text-zinc-600"
                 )}
               >
@@ -175,10 +175,10 @@ export const Projections: React.FC = () => {
         {/* Left: Input Panel */}
         <div className="lg:col-span-3 space-y-6">
           <Card className="p-6 border-none shadow-xl shadow-zinc-200/50">
-            <h2 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-6">Property Details & Inputs</h2>
+            <h2 className="text-[11px] font-semibold text-zinc-400 mb-6">Property Details & Inputs</h2>
             <div className="space-y-5">
               <div className="space-y-2">
-                <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Location / Locality</label>
+                <label className="text-[11px] font-bold text-zinc-400">Location / Locality</label>
                 <div className="relative">
                   <input 
                     type="text" 
@@ -193,7 +193,7 @@ export const Projections: React.FC = () => {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Property Type</label>
+                  <label className="text-[11px] font-bold text-zinc-400">Property Type</label>
                   <select 
                     className="w-full p-3 bg-zinc-50 border border-zinc-100 rounded-xl text-sm outline-none"
                     value={inputs.bedrooms}
@@ -206,7 +206,7 @@ export const Projections: React.FC = () => {
                   </select>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Annual Rent (AED)</label>
+                  <label className="text-[11px] font-bold text-zinc-400">Annual Rent (AED)</label>
                   <input 
                     type="number" 
                     className="w-full p-3 bg-zinc-50 border border-zinc-100 rounded-xl text-sm outline-none"
@@ -218,7 +218,7 @@ export const Projections: React.FC = () => {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest text-wrap">Setup / Furnishing Cost</label>
+                  <label className="text-[11px] font-bold text-zinc-400 text-wrap">Setup / Furnishing Cost</label>
                   <input 
                     type="number" 
                     className="w-full p-3 bg-zinc-50 border border-zinc-100 rounded-xl text-sm outline-none"
@@ -227,7 +227,7 @@ export const Projections: React.FC = () => {
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest text-wrap leading-tight">Monthly OpEx (Utilities/Cleaning)</label>
+                  <label className="text-[11px] font-bold text-zinc-400 text-wrap leading-tight">Monthly OpEx (Utilities/Cleaning)</label>
                   <input 
                     type="number" 
                     className="w-full p-3 bg-zinc-50 border border-zinc-100 rounded-xl text-sm outline-none"
@@ -239,7 +239,7 @@ export const Projections: React.FC = () => {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Management Fee (%)</label>
+                  <label className="text-[11px] font-bold text-zinc-400">Management Fee (%)</label>
                   <input 
                     type="number" 
                     className="w-full p-3 bg-zinc-50 border border-zinc-100 rounded-xl text-sm outline-none"
@@ -248,7 +248,7 @@ export const Projections: React.FC = () => {
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Target Occupancy</label>
+                  <label className="text-[11px] font-bold text-zinc-400">Target Occupancy</label>
                   <select 
                     className="w-full p-3 bg-zinc-50 border border-zinc-100 rounded-xl text-sm outline-none"
                     value={inputs.targetOccupancy}
@@ -264,7 +264,7 @@ export const Projections: React.FC = () => {
               <Button 
                 onClick={handleRun} 
                 disabled={isLoading || !inputs.location}
-                className="w-full py-4 bg-zinc-900 hover:bg-zinc-800 text-white rounded-xl font-black uppercase tracking-widest text-xs flex items-center justify-center gap-2"
+                className="w-full py-4 bg-zinc-900 hover:bg-zinc-800 text-white rounded-xl font-semibold text-xs flex items-center justify-center gap-2"
               >
                 {isLoading ? <Loader2 className="animate-spin" size={16} /> : <><Sparkles size={16} /> Generate Projection</>}
               </Button>
@@ -282,12 +282,12 @@ export const Projections: React.FC = () => {
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <span className={cn("px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest", result.verdictBg, result.verdictColor)}>
+                  <span className={cn("px-3 py-1 rounded-full text-[11px] font-semibold", result.verdictBg, result.verdictColor)}>
                     {result.verdict}
                   </span>
-                  <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Feasibility Report Generated</span>
+                  <span className="text-[11px] font-bold text-zinc-400">Feasibility Report Generated</span>
                 </div>
-                <Button variant="outline" className="text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
+                <Button variant="outline" className="text-[11px] font-semibold flex items-center gap-2">
                   <Printer size={14} /> Print / Export PDF
                 </Button>
               </div>
@@ -296,12 +296,12 @@ export const Projections: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <Card className="p-6 bg-zinc-900 text-white border-none relative overflow-hidden">
                   <div className="relative z-10">
-                    <p className="text-[10px] font-black text-white/40 uppercase tracking-widest mb-4">Investment Score</p>
+                    <p className="text-[11px] font-semibold text-white/40 mb-4">Investment Score</p>
                     <div className="flex items-end gap-2 mb-4">
-                      <span className="text-6xl font-black tracking-tighter leading-none">{Math.round(result.score)}</span>
-                      <span className="text-white/20 font-black mb-2">/100</span>
+                      <span className="text-6xl font-semibold tracking-tighter leading-none">{Math.round(result.score)}</span>
+                      <span className="text-white/20 font-semibold mb-2">/100</span>
                     </div>
-                    <span className={cn("px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest", result.verdictBg, result.verdictColor)}>
+                    <span className={cn("px-3 py-1 rounded-lg text-[11px] font-semibold", result.verdictBg, result.verdictColor)}>
                       {result.verdict}
                     </span>
                   </div>
@@ -311,15 +311,15 @@ export const Projections: React.FC = () => {
                 </Card>
 
                 <Card className="p-6">
-                  <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-4">Annual Net Profit</p>
-                  <p className="text-4xl font-black text-emerald-500 tracking-tight mb-2">{formatCurrency(result.netAnnualProfit)}</p>
-                  <p className="text-[10px] font-medium text-zinc-400">Total revenue minus all costs</p>
+                  <p className="text-[11px] font-bold text-zinc-400 mb-4">Annual Net Profit</p>
+                  <p className="text-4xl font-semibold text-emerald-500 tracking-tight mb-2">{formatCurrency(result.netAnnualProfit)}</p>
+                  <p className="text-[11px] font-medium text-zinc-400">Total revenue minus all costs</p>
                 </Card>
 
                 <Card className="p-6">
-                  <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-4">ROI (Annual)</p>
-                  <p className="text-4xl font-black text-zinc-900 tracking-tight mb-2">{result.roi.toFixed(1)}%</p>
-                  <p className="text-[10px] font-medium text-zinc-400">Net Profit / Setup Cost</p>
+                  <p className="text-[11px] font-bold text-zinc-400 mb-4">ROI (Annual)</p>
+                  <p className="text-4xl font-semibold text-zinc-900 tracking-tight mb-2">{result.roi.toFixed(1)}%</p>
+                  <p className="text-[11px] font-medium text-zinc-400">Net Profit / Setup Cost</p>
                 </Card>
               </div>
 
@@ -327,18 +327,18 @@ export const Projections: React.FC = () => {
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
                 <div className="lg:col-span-4 space-y-6">
                   <Card className="p-6">
-                    <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-4">Payback Period</p>
-                    <p className="text-4xl font-black text-zinc-900 tracking-tight mb-2">{result.payback.toFixed(1)} <span className="text-lg text-zinc-400">Months</span></p>
-                    <p className="text-[10px] font-medium text-zinc-400">Time to recover setup costs</p>
+                    <p className="text-[11px] font-bold text-zinc-400 mb-4">Payback Period</p>
+                    <p className="text-4xl font-semibold text-zinc-900 tracking-tight mb-2">{result.payback.toFixed(1)} <span className="text-lg text-zinc-400">Months</span></p>
+                    <p className="text-[11px] font-medium text-zinc-400">Time to recover setup costs</p>
                   </Card>
 
                   <Card className="p-6">
-                    <h3 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-6">1-Year Financial Breakdown</h3>
+                    <h3 className="text-[11px] font-semibold text-zinc-400 mb-6">1-Year Financial Breakdown</h3>
                     <div className="space-y-6">
                       <div>
                         <div className="flex items-center justify-between mb-2">
-                          <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Revenue Allocation</span>
-                          <span className="text-[10px] font-black text-zinc-900 uppercase tracking-widest">{Math.round((result.netAnnualProfit / result.annualRevenue) * 100)}% Profit Margin</span>
+                          <span className="text-[11px] font-bold text-zinc-400">Revenue Allocation</span>
+                          <span className="text-[11px] font-semibold text-zinc-900">{Math.round((result.netAnnualProfit / result.annualRevenue) * 100)}% Profit Margin</span>
                         </div>
                         <div className="h-3 w-full bg-zinc-100 rounded-full overflow-hidden flex">
                           <div className="h-full bg-rose-500" style={{ width: `${(result.totalAnnualCost / result.annualRevenue) * 100}%` }} />
@@ -347,11 +347,11 @@ export const Projections: React.FC = () => {
                         <div className="flex items-center gap-4 mt-2">
                           <div className="flex items-center gap-1.5">
                             <div className="w-2 h-2 rounded-full bg-rose-500" />
-                            <span className="text-[9px] font-bold text-zinc-400">Costs ({Math.round((result.totalAnnualCost / result.annualRevenue) * 100)}%)</span>
+                            <span className="text-[11px] font-bold text-zinc-400">Costs ({Math.round((result.totalAnnualCost / result.annualRevenue) * 100)}%)</span>
                           </div>
                           <div className="flex items-center gap-1.5">
                             <div className="w-2 h-2 rounded-full bg-emerald-500" />
-                            <span className="text-[9px] font-bold text-zinc-400">Net Profit ({Math.round((result.netAnnualProfit / result.annualRevenue) * 100)}%)</span>
+                            <span className="text-[11px] font-bold text-zinc-400">Net Profit ({Math.round((result.netAnnualProfit / result.annualRevenue) * 100)}%)</span>
                           </div>
                         </div>
                       </div>
@@ -359,19 +359,19 @@ export const Projections: React.FC = () => {
                       <div className="space-y-4 pt-4 border-t border-zinc-50">
                         <div className="flex items-center justify-between">
                           <span className="text-xs font-medium text-zinc-500">Gross Revenue (Forecast)</span>
-                          <span className="text-sm font-black text-zinc-900">{formatCurrency(result.annualRevenue)}</span>
+                          <span className="text-sm font-semibold text-zinc-900">{formatCurrency(result.annualRevenue)}</span>
                         </div>
                         <div className="flex items-center justify-between">
                           <span className="text-xs font-medium text-zinc-500">Annual Rent (Fixed)</span>
-                          <span className="text-sm font-black text-rose-500">-{formatCurrency(result.rent)}</span>
+                          <span className="text-sm font-semibold text-rose-500">-{formatCurrency(result.rent)}</span>
                         </div>
                         <div className="flex items-center justify-between">
                           <span className="text-xs font-medium text-zinc-500">Operating Expenses (OpEx)</span>
-                          <span className="text-sm font-black text-rose-500">-{formatCurrency(result.annualOpEx + result.annualMgtFee)}</span>
+                          <span className="text-sm font-semibold text-rose-500">-{formatCurrency(result.annualOpEx + result.annualMgtFee)}</span>
                         </div>
                         <div className="flex items-center justify-between pt-4 border-t border-zinc-50 bg-zinc-50/50 -mx-6 px-6 py-3">
-                          <span className="text-xs font-bold text-zinc-900 uppercase tracking-widest">Net Annual Profit</span>
-                          <span className="text-lg font-black text-emerald-500">{formatCurrency(result.netAnnualProfit)}</span>
+                          <span className="text-xs font-bold text-zinc-900">Net Annual Profit</span>
+                          <span className="text-lg font-semibold text-emerald-500">{formatCurrency(result.netAnnualProfit)}</span>
                         </div>
                       </div>
                     </div>
@@ -380,47 +380,47 @@ export const Projections: React.FC = () => {
 
                 <div className="lg:col-span-8">
                   <Card className="p-6 h-full">
-                    <h3 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-6">Monthly Cashflow Forecast</h3>
+                    <h3 className="text-[11px] font-semibold text-zinc-400 mb-6">Monthly Cashflow Forecast</h3>
                     <div className="h-[300px] w-full">
                       <ResponsiveContainer width="100%" height="100%">
                         <ComposedChart data={result.monthlyStrategy}>
-                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f4f4f5" />
+                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eceee9" />
                           <XAxis 
                             dataKey="month" 
                             axisLine={false} 
                             tickLine={false} 
-                            tick={{ fontSize: 10, fontWeight: 600, fill: '#a1a1aa' }}
+                            tick={{ fontSize: 10, fontWeight: 600, fill: '#949d95' }}
                             dy={10}
                           />
                           <YAxis 
                             axisLine={false} 
                             tickLine={false} 
-                            tick={{ fontSize: 10, fontWeight: 600, fill: '#a1a1aa' }}
+                            tick={{ fontSize: 10, fontWeight: 600, fill: '#949d95' }}
                             tickFormatter={(val) => `AED ${val/1000}k`}
                           />
                           <RechartsTooltip 
                             contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
                             formatter={(val: number) => [formatCurrency(val), '']}
                           />
-                          <Bar dataKey="revenue" fill="#10b981" radius={[4, 4, 0, 0]} barSize={30} name="Revenue" />
-                          <Area type="monotone" dataKey="profit" fill="#10b981" fillOpacity={0.1} stroke="none" name="Profit Area" />
-                          <Line type="monotone" dataKey="expenses" stroke="#f43f5e" strokeWidth={2} dot={false} name="Expenses" />
-                          <Line type="monotone" dataKey="profit" stroke="#10b981" strokeWidth={2} dot={{ r: 4, fill: '#10b981' }} name="Net Profit" />
+                          <Bar dataKey="revenue" fill="#0e5a4a" radius={[4, 4, 0, 0]} barSize={30} name="Revenue" />
+                          <Area type="monotone" dataKey="profit" fill="#0e5a4a" fillOpacity={0.1} stroke="none" name="Profit Area" />
+                          <Line type="monotone" dataKey="expenses" stroke="#b0472f" strokeWidth={2} dot={false} name="Expenses" />
+                          <Line type="monotone" dataKey="profit" stroke="#0e5a4a" strokeWidth={2} dot={{ r: 4, fill: '#0e5a4a' }} name="Net Profit" />
                         </ComposedChart>
                       </ResponsiveContainer>
                     </div>
                     <div className="flex items-center justify-center gap-4 mt-6">
                       <div className="flex items-center gap-2">
                         <div className="w-3 h-3 rounded bg-emerald-500" />
-                        <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Revenue</span>
+                        <span className="text-[11px] font-semibold text-zinc-400">Revenue</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <div className="w-3 h-3 rounded bg-emerald-500/20" />
-                        <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Net Profit</span>
+                        <span className="text-[11px] font-semibold text-zinc-400">Net Profit</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <div className="w-3 h-1 rounded bg-rose-500" />
-                        <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Expenses</span>
+                        <span className="text-[11px] font-semibold text-zinc-400">Expenses</span>
                       </div>
                     </div>
                   </Card>
@@ -432,16 +432,16 @@ export const Projections: React.FC = () => {
                 <div className="p-6 border-b border-zinc-100 bg-white">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h3 className="text-sm font-black text-zinc-900 uppercase tracking-widest flex items-center gap-2">
+                      <h3 className="text-sm font-semibold text-zinc-900 flex items-center gap-2">
                         <TrendingUp size={18} className="text-emerald-500" />
                         12-Month Performance Strategy
                       </h3>
-                      <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest mt-1">Seasonality & Demand Adjusted Forecast</p>
+                      <p className="text-[11px] text-zinc-400 font-bold mt-1">Seasonality & Demand Adjusted Forecast</p>
                     </div>
                     <div className="flex items-center gap-2">
                       <div className="flex items-center gap-1.5 px-3 py-1 bg-emerald-50 rounded-full">
                         <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                        <span className="text-[9px] font-black text-emerald-600 uppercase tracking-widest">High Demand</span>
+                        <span className="text-[11px] font-semibold text-emerald-600">High Demand</span>
                       </div>
                     </div>
                   </div>
@@ -450,13 +450,13 @@ export const Projections: React.FC = () => {
                   <table className="w-full text-left border-collapse">
                     <thead>
                       <tr className="bg-zinc-50/50 border-b border-zinc-100">
-                        <th className="px-6 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Month</th>
-                        <th className="px-6 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Est. Occupancy</th>
-                        <th className="px-6 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Min Rate (Cost)</th>
-                        <th className="px-6 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Target Rate (Profit)</th>
-                        <th className="px-6 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Est. Revenue</th>
-                        <th className="px-6 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Est. Profit</th>
-                        <th className="px-6 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest text-right">Yield Score</th>
+                        <th className="px-6 py-4 text-[11px] font-semibold text-zinc-400">Month</th>
+                        <th className="px-6 py-4 text-[11px] font-semibold text-zinc-400">Est. Occupancy</th>
+                        <th className="px-6 py-4 text-[11px] font-semibold text-zinc-400">Min Rate (Cost)</th>
+                        <th className="px-6 py-4 text-[11px] font-semibold text-zinc-400">Target Rate (Profit)</th>
+                        <th className="px-6 py-4 text-[11px] font-semibold text-zinc-400">Est. Revenue</th>
+                        <th className="px-6 py-4 text-[11px] font-semibold text-zinc-400">Est. Profit</th>
+                        <th className="px-6 py-4 text-[11px] font-semibold text-zinc-400 text-right">Yield Score</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-zinc-50">
@@ -464,15 +464,15 @@ export const Projections: React.FC = () => {
                         <tr key={i} className="hover:bg-zinc-50/30 transition-colors group">
                           <td className="px-6 py-4">
                             <div className="flex flex-col">
-                              <span className="text-xs font-black text-zinc-900 uppercase tracking-widest">{row.month}</span>
-                              <span className="text-[8px] font-bold text-zinc-400 uppercase tracking-tighter">
+                              <span className="text-xs font-semibold text-zinc-900">{row.month}</span>
+                              <span className="text-[8px] font-bold text-zinc-400 tracking-tighter">
                                 {row.occ > 85 ? 'Peak Season' : row.occ > 70 ? 'Mid Season' : 'Low Season'}
                               </span>
                             </div>
                           </td>
                           <td className="px-6 py-4">
                             <div className="flex items-center gap-3">
-                              <span className="text-sm font-black text-zinc-900 w-10">{Math.round(row.occ)}%</span>
+                              <span className="text-sm font-semibold text-zinc-900 w-10">{Math.round(row.occ)}%</span>
                               <div className="w-20 h-1.5 bg-zinc-100 rounded-full overflow-hidden">
                                 <motion.div 
                                   initial={{ width: 0 }}
@@ -488,21 +488,21 @@ export const Projections: React.FC = () => {
                           <td className="px-6 py-4">
                             <div className="flex flex-col">
                               <span className="text-sm font-bold text-zinc-900">{formatCurrency(row.minRate)}</span>
-                              <span className="text-[8px] font-bold text-zinc-400 uppercase">Break-even</span>
+                              <span className="text-[8px] font-bold text-zinc-400">Break-even</span>
                             </div>
                           </td>
                           <td className="px-6 py-4">
                             <div className="flex flex-col">
-                              <span className="text-sm font-black text-emerald-600">{formatCurrency(row.targetRate)}</span>
-                              <span className="text-[8px] font-bold text-emerald-500/60 uppercase">Profit Goal</span>
+                              <span className="text-sm font-semibold text-emerald-600">{formatCurrency(row.targetRate)}</span>
+                              <span className="text-[8px] font-bold text-emerald-500/60">Profit Goal</span>
                             </div>
                           </td>
                           <td className="px-6 py-4">
-                            <span className="text-sm font-black text-zinc-900">{formatCurrency(row.revenue)}</span>
+                            <span className="text-sm font-semibold text-zinc-900">{formatCurrency(row.revenue)}</span>
                           </td>
                           <td className="px-6 py-4">
                             <div className={cn(
-                              "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-sm font-black",
+                              "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-sm font-semibold",
                               row.profit > 0 ? "bg-emerald-50 text-emerald-600" : "bg-rose-50 text-rose-600"
                             )}>
                               {row.profit > 0 ? <TrendingUp size={12} /> : <AlertTriangle size={12} />}
@@ -522,7 +522,7 @@ export const Projections: React.FC = () => {
                                   />
                                 ))}
                               </div>
-                              <span className="text-[8px] font-black text-zinc-400 uppercase tracking-widest mt-1">
+                              <span className="text-[8px] font-semibold text-zinc-400 mt-1">
                                 {row.profit > (inputs.targetProfit / 12) ? 'Excellent' : row.profit > 0 ? 'Good' : 'Critical'}
                               </span>
                             </div>
@@ -537,26 +537,26 @@ export const Projections: React.FC = () => {
               {/* Bottom Row */}
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                 <Card className="p-6">
-                  <h3 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-6">Rate Strategy & Feasibility</h3>
+                  <h3 className="text-[11px] font-semibold text-zinc-400 mb-6">Rate Strategy & Feasibility</h3>
                   <div className="grid grid-cols-2 gap-4 mb-8">
                     <div className="p-4 bg-zinc-50 rounded-xl">
-                      <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Min (Break-even)</p>
-                      <p className="text-xl font-black text-zinc-900">{formatCurrency(result.breakEvenADR)}</p>
+                      <p className="text-[11px] font-bold text-zinc-400 mb-1">Min (Break-even)</p>
+                      <p className="text-xl font-semibold text-zinc-900">{formatCurrency(result.breakEvenADR)}</p>
                       <p className="text-[8px] text-zinc-400 mt-1">Rate needed to cover all costs</p>
                     </div>
                     <div className="p-4 bg-emerald-50 rounded-xl">
-                      <p className="text-[9px] font-bold text-emerald-600 uppercase tracking-widest mb-1">Target Rate</p>
-                      <p className="text-xl font-black text-emerald-600">{formatCurrency(result.targetADR)}</p>
+                      <p className="text-[11px] font-bold text-emerald-600 mb-1">Target Rate</p>
+                      <p className="text-xl font-semibold text-emerald-600">{formatCurrency(result.targetADR)}</p>
                       <p className="text-[8px] text-emerald-600/60 mt-1">Rate to reach {formatCurrency(inputs.targetProfit)} profit</p>
                     </div>
                   </div>
                   <div className="space-y-4">
-                    <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Market Achievability</p>
+                    <p className="text-[11px] font-bold text-zinc-400">Market Achievability</p>
                     <div className="flex items-center justify-between p-4 border border-zinc-100 rounded-xl">
                       <span className="text-xs font-medium text-zinc-600">Current Strategy Achievable?</span>
                       <div className="flex items-center gap-2 text-emerald-500">
                         <CheckCircle2 size={16} />
-                        <span className="text-[10px] font-black uppercase tracking-widest">Yes</span>
+                        <span className="text-[11px] font-semibold">Yes</span>
                       </div>
                     </div>
                   </div>
@@ -564,23 +564,23 @@ export const Projections: React.FC = () => {
 
                 <Card className="p-0 overflow-hidden border-none bg-emerald-900 text-white">
                   <div className="p-6">
-                    <h3 className="text-[10px] font-black text-white/40 uppercase tracking-widest mb-6 flex items-center gap-2">
+                    <h3 className="text-[11px] font-semibold text-white/40 mb-6 flex items-center gap-2">
                       <Target size={14} /> Optimal Performance Strategy
                     </h3>
                     <div className="bg-emerald-800/50 p-6 rounded-2xl border border-white/10 mb-6">
                       <div className="flex items-center gap-2 mb-4">
                         <Sparkles size={16} className="text-amber-400" />
-                        <span className="text-[10px] font-black uppercase tracking-widest text-amber-400">Target Profit Blueprint</span>
+                        <span className="text-[11px] font-semibold text-amber-400">Target Profit Blueprint</span>
                       </div>
                       <div className="grid grid-cols-2 gap-4">
                         <div>
-                          <p className="text-[9px] font-bold text-white/40 uppercase tracking-widest mb-1">Recommended ADR</p>
-                          <p className="text-2xl font-black">{formatCurrency(result.targetADR)}</p>
+                          <p className="text-[11px] font-bold text-white/40 mb-1">Recommended ADR</p>
+                          <p className="text-2xl font-semibold">{formatCurrency(result.targetADR)}</p>
                           <p className="text-[8px] text-white/30 mt-1">Balanced for {inputs.targetOccupancy}% occupancy</p>
                         </div>
                         <div>
-                          <p className="text-[9px] font-bold text-white/40 uppercase tracking-widest mb-1">Target Net Profit</p>
-                          <p className="text-2xl font-black text-emerald-400">{formatCurrency(inputs.targetProfit)}</p>
+                          <p className="text-[11px] font-bold text-white/40 mb-1">Target Net Profit</p>
+                          <p className="text-2xl font-semibold text-emerald-400">{formatCurrency(inputs.targetProfit)}</p>
                           <p className="text-[8px] text-white/30 mt-1">Annual projected take-home</p>
                         </div>
                       </div>
@@ -588,20 +588,20 @@ export const Projections: React.FC = () => {
                     <div className="space-y-4">
                       <div className="flex items-center justify-between text-xs">
                         <span className="text-white/40">Optimal Monthly OpEx</span>
-                        <span className="font-black">{formatCurrency(inputs.monthlyOpEx)}</span>
+                        <span className="font-semibold">{formatCurrency(inputs.monthlyOpEx)}</span>
                       </div>
                       <div className="flex items-center justify-between text-xs">
                         <span className="text-white/40">Target Occupancy Level</span>
-                        <span className="font-black">{inputs.targetOccupancy}%</span>
+                        <span className="font-semibold">{inputs.targetOccupancy}%</span>
                       </div>
                       <div className="flex items-center justify-between pt-4 border-t border-white/10">
                         <span className="text-xs text-white/40">Market Feasibility</span>
-                        <span className="text-[10px] font-black uppercase tracking-widest text-emerald-400">Highly Achievable</span>
+                        <span className="text-[11px] font-semibold text-emerald-400">Highly Achievable</span>
                       </div>
                     </div>
                   </div>
                   <div className="bg-emerald-950 p-6">
-                    <p className="text-[10px] font-black text-white/40 uppercase tracking-widest mb-4">Action Plan</p>
+                    <p className="text-[11px] font-semibold text-white/40 mb-4">Action Plan</p>
                     <ul className="space-y-3">
                       {[
                         `Maintain OpEx below ${formatCurrency(inputs.monthlyOpEx)} through smart utility management.`,
@@ -610,7 +610,7 @@ export const Projections: React.FC = () => {
                       ].map((item, i) => (
                         <li key={i} className="flex gap-3">
                           <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0 mt-1.5" />
-                          <p className="text-[10px] font-medium text-white/70 leading-relaxed">{item}</p>
+                          <p className="text-[11px] font-medium text-white/70 leading-relaxed">{item}</p>
                         </li>
                       ))}
                     </ul>
@@ -619,7 +619,7 @@ export const Projections: React.FC = () => {
 
                 <div className="space-y-6">
                   <Card className="p-6">
-                    <h3 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-6">Optimization Suggestions</h3>
+                    <h3 className="text-[11px] font-semibold text-zinc-400 mb-6">Optimization Suggestions</h3>
                     <div className="space-y-5">
                       <div className="flex gap-4">
                         <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-500 shrink-0">
@@ -627,8 +627,8 @@ export const Projections: React.FC = () => {
                         </div>
                         <div>
                           <p className="text-xs font-bold text-zinc-900 mb-1">Occupancy Sensitivity</p>
-                          <p className="text-[10px] text-zinc-500 leading-relaxed">
-                            A 5% drop in occupancy reduces annual profit by <span className="font-black text-rose-500">{formatCurrency(result.annualRevenue * 0.05)}</span>.
+                          <p className="text-[11px] text-zinc-500 leading-relaxed">
+                            A 5% drop in occupancy reduces annual profit by <span className="font-semibold text-rose-500">{formatCurrency(result.annualRevenue * 0.05)}</span>.
                           </p>
                         </div>
                       </div>
@@ -638,8 +638,8 @@ export const Projections: React.FC = () => {
                         </div>
                         <div>
                           <p className="text-xs font-bold text-zinc-900 mb-1">Expense Control</p>
-                          <p className="text-[10px] text-zinc-500 leading-relaxed">
-                            Reducing monthly OpEx by 500 AED adds <span className="font-black text-emerald-500">6,000 AED</span> to your bottom line.
+                          <p className="text-[11px] text-zinc-500 leading-relaxed">
+                            Reducing monthly OpEx by 500 AED adds <span className="font-semibold text-emerald-500">6,000 AED</span> to your bottom line.
                           </p>
                         </div>
                       </div>
@@ -649,8 +649,8 @@ export const Projections: React.FC = () => {
                         </div>
                         <div>
                           <p className="text-xs font-bold text-zinc-900 mb-1">Break-even</p>
-                          <p className="text-[10px] text-zinc-500 leading-relaxed">
-                            You need <span className="font-black text-zinc-900">{Math.round((result.totalAnnualCost / (result.adr * 365)) * 100)}%</span> occupancy to cover all costs.
+                          <p className="text-[11px] text-zinc-500 leading-relaxed">
+                            You need <span className="font-semibold text-zinc-900">{Math.round((result.totalAnnualCost / (result.adr * 365)) * 100)}%</span> occupancy to cover all costs.
                           </p>
                         </div>
                       </div>
@@ -658,8 +658,8 @@ export const Projections: React.FC = () => {
                   </Card>
 
                   <Card className="p-6">
-                    <h3 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-4">Market Insight</h3>
-                    <p className="text-[10px] text-zinc-500 leading-relaxed italic">
+                    <h3 className="text-[11px] font-semibold text-zinc-400 mb-4">Market Insight</h3>
+                    <p className="text-[11px] text-zinc-500 leading-relaxed italic">
                       Properties in {inputs.location} with {inputs.bedrooms} bedrooms typically see a strong premium for STR over LTR. Focus on high-quality photography to justify the {formatCurrency(result.targetADR)} nightly rate.
                     </p>
                   </Card>
@@ -667,11 +667,11 @@ export const Projections: React.FC = () => {
               </div>
             </motion.div>
           ) : (
-            <div className="h-full flex flex-col items-center justify-center border-2 border-dashed border-zinc-200 rounded-[2.5rem] p-12 text-center bg-zinc-50/50">
+            <div className="h-full flex flex-col items-center justify-center border-2 border-dashed border-zinc-200 rounded-2xl p-12 text-center bg-zinc-50/50">
               <div className="w-20 h-20 bg-zinc-900/5 rounded-3xl flex items-center justify-center text-zinc-300 mb-6 border border-zinc-100">
                 <BarChart3 size={40} />
               </div>
-              <h3 className="text-xl font-black text-zinc-900 mb-3 tracking-tight">Investment Feasibility Engine</h3>
+              <h3 className="text-xl font-semibold text-zinc-900 mb-3 tracking-tight">Investment Feasibility Engine</h3>
               <p className="text-sm text-zinc-500 max-w-xs mx-auto leading-relaxed">
                 Input your potential property details to generate a comprehensive 12-month financial roadmap and investment verdict.
               </p>

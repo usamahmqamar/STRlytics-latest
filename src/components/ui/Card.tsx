@@ -15,14 +15,14 @@ export const Card: React.FC<CardProps> = ({ children, className, title, action, 
   return (
     <div 
       className={cn(
-        "bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200/80 dark:border-zinc-800 p-4 shadow-xs hover:shadow-sm transition-all duration-300",
+        "bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-5",
         className
       )} 
       {...props}
     >
       {title && (
         <div className="flex items-center justify-between mb-4">
-          <div className="text-[13px] font-semibold tracking-tight text-zinc-950 dark:text-zinc-50">
+          <div className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">
             {title}
           </div>
           {action}
