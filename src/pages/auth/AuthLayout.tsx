@@ -130,6 +130,7 @@ export function friendlyAuthError(message: string | undefined): string {
   // Same wording as a fresh sign-up, so the form cannot be used to discover who has an account.
   if (m.includes('already registered') || m.includes('already exists')) return 'If this email can be used, we have sent a confirmation link. Check your inbox, or log in instead.';
   if (m.includes('rate limit') || m.includes('too many')) return 'Too many attempts. Please wait a minute and try again.';
+  if (m.includes('failed to fetch') || m.includes('network')) return 'Could not reach the sign-in service. Check your connection and try again.';
   if (m.includes('provider is not enabled')) return 'Google sign-in is not switched on yet. Use email and password for now.';
   if (m.includes('same password')) return 'The new password must be different from the old one.';
   return message || 'Something went wrong. Please try again.';

@@ -6,4 +6,6 @@ coverage/
 *.log
 .env*
 !.env.example
+# Public dev defaults only (see the file header); secrets go in .env.local or Vercel.
+!.env
 .test-build/
