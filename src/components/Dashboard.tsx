@@ -867,11 +867,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, setData, filters, on
   return (
     <div className="space-y-10 pb-20">
       {/* Summary: the one bold element on the page */}
-      <section aria-label="Summary for the selected period" className="rounded-3xl bg-emerald-900 p-7 text-white dark:border dark:border-emerald-800/60 dark:bg-emerald-950">
+      <section aria-label="Summary for the selected period" className="rounded-3xl bg-emerald-900 p-5 sm:p-7 text-white dark:border dark:border-emerald-800/60 dark:bg-emerald-950">
         <div className="flex flex-wrap items-start justify-between gap-6">
           <div>
             <p className="text-sm text-emerald-200/80">Net profit, {format(parseISO(filters.startDate), 'd MMM')} to {format(parseISO(filters.endDate), 'd MMM yyyy')}</p>
-            <p className={cn("mt-2 text-[44px] font-semibold leading-none tracking-[-0.03em]", summary.profit < 0 && "text-rose-200")}>
+            <p className={cn("mt-2 text-[34px] sm:text-[44px] font-semibold leading-none tracking-[-0.03em]", summary.profit < 0 && "text-rose-200")}>
               {formatValue(summary.profit)}
             </p>
             <p className="mt-3 text-sm text-emerald-100/80">

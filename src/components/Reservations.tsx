@@ -223,24 +223,24 @@ export const Reservations: React.FC<ReservationsProps> = ({ data, setData, filte
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-        <div className="flex items-center gap-2 bg-zinc-100 p-1 rounded-xl border border-zinc-200">
+        <div className="flex items-center gap-0.5 bg-zinc-100 p-1 rounded-xl dark:bg-zinc-850">
           <button 
             onClick={() => setView('confirmed')}
             className={cn(
-              "px-6 py-2 rounded-lg text-xs font-bold transition-all",
-              view === 'confirmed' ? "bg-white text-zinc-900 shadow-sm border border-zinc-200" : "text-zinc-500 hover:text-zinc-900"
+              "px-4 py-1.5 rounded-lg text-xs font-medium transition-colors",
+              view === 'confirmed' ? "bg-white text-zinc-900 shadow-sm dark:bg-zinc-700 dark:text-zinc-50" : "text-zinc-500 hover:text-zinc-900"
             )}
           >
-            Active Bookings
+            Active bookings
           </button>
           <button 
             onClick={() => setView('cancelled')}
             className={cn(
-              "px-6 py-2 rounded-lg text-xs font-bold transition-all",
-              view === 'cancelled' ? "bg-white text-zinc-900 shadow-sm border border-zinc-200" : "text-zinc-500 hover:text-zinc-900"
+              "px-4 py-1.5 rounded-lg text-xs font-medium transition-colors",
+              view === 'cancelled' ? "bg-white text-zinc-900 shadow-sm dark:bg-zinc-700 dark:text-zinc-50" : "text-zinc-500 hover:text-zinc-900"
             )}
           >
-            Cancelled (Archive)
+            Cancelled
           </button>
         </div>
 

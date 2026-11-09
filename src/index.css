@@ -166,6 +166,11 @@
   }
 }
 
+/* Tables keep readable columns and scroll sideways on narrow screens instead of squashing. */
+.overflow-x-auto > table {
+  min-width: 720px;
+}
+
 /* The dotted grid read as decoration; keep the class but make it quiet. */
 .grid-pattern {
   background-image: none;

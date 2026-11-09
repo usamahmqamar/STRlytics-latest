@@ -37,7 +37,7 @@ import { Button } from './components/ui/Button';
 import { 
   TrendingUp, Globe, Bell, HelpCircle, 
   Settings as SettingsIcon, Database, 
-  AlertTriangle, Loader2, Sparkles 
+  AlertTriangle, Loader2, Sparkles, Menu 
 } from 'lucide-react';
 import { GlobalSearch } from './components/GlobalSearch';
 import { cn } from './lib/utils';
@@ -73,6 +73,7 @@ export default function App() {
   const setActiveTab = (next: string) => navigate(`/app/${next}`);
   const [prefilledExpense, setPrefilledExpense] = useState<any>(null);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
   const [filters, setFilters] = useState({
@@ -240,18 +241,29 @@ export default function App() {
         isCollapsed={isSidebarCollapsed}
         setIsCollapsed={setIsSidebarCollapsed}
         upcomingChequesCount={upcomingChequesCount}
-        onSearchClick={() => setIsSearchOpen(true)}
+        onSearchClick={() => { setIsMenuOpen(false); setIsSearchOpen(true); }}
+        mobileOpen={isMenuOpen}
+        onCloseMobile={() => setIsMenuOpen(false)}
       />
 
       <main className={cn(
         "min-h-screen transition-[padding] duration-300",
-        isSidebarCollapsed ? "pl-[72px]" : "pl-64"
+        isSidebarCollapsed ? "lg:pl-[72px]" : "lg:pl-64"
       )}>
-       <div className="mx-auto max-w-[1280px] px-8 py-7">
-        <header className="mb-6 flex items-end justify-between gap-4">
-          <h1 className="text-[28px] font-semibold leading-tight tracking-[-0.02em] text-zinc-900 dark:text-zinc-50">
-            {NAV_LABELS[activeTab] ?? 'Dashboard'}
-          </h1>
+       <div className="mx-auto max-w-[1280px] px-4 py-5 sm:px-6 lg:px-8 lg:py-7">
+        <header className="mb-6 flex items-center justify-between gap-4 lg:items-end">
+          <div className="flex min-w-0 items-center gap-3">
+            <button
+              onClick={() => setIsMenuOpen(true)}
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-zinc-200 bg-white text-zinc-700 lg:hidden dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-200"
+              aria-label="Open menu"
+            >
+              <Menu size={17} />
+            </button>
+            <h1 className="truncate text-[22px] font-semibold leading-tight tracking-[-0.02em] text-zinc-900 sm:text-[28px] dark:text-zinc-50">
+              {NAV_LABELS[activeTab] ?? 'Dashboard'}
+            </h1>
+          </div>
 
           <div className="flex items-center gap-2">
             <div
@@ -265,7 +277,7 @@ export default function App() {
               {syncStatus === 'synced' ? (
                 <>
                   <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                  <span>Saved at {format(lastSyncTime, 'HH:mm')}</span>
+                  <span className="hidden sm:inline">Saved at {format(lastSyncTime, 'HH:mm')}</span>
                 </>
               ) : syncStatus === 'syncing' ? (
                 <>

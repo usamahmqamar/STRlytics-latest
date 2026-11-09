@@ -86,7 +86,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({ filters, setFilters, apart
   return (
     <div className="flex flex-wrap items-center gap-2 mb-8 pb-6 border-b border-zinc-200 dark:border-zinc-800">
       {/* Property Selector */}
-      <div className="flex items-center gap-2.5 px-3.5 py-1.5 bg-white dark:bg-zinc-900 rounded-lg border border-zinc-200 dark:border-zinc-800 min-w-[190px] h-9">
+      <div className="flex items-center gap-2.5 px-3.5 py-1.5 bg-white dark:bg-zinc-900 rounded-lg border border-zinc-200 dark:border-zinc-800 min-w-0 flex-1 sm:min-w-[190px] sm:flex-none h-9">
         <Building2 size={14} className="text-zinc-400 dark:text-zinc-500 shrink-0" />
         <select 
           value={filters.apartmentId}
@@ -103,7 +103,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({ filters, setFilters, apart
       </div>
 
       {/* Date Presets */}
-      <div className="flex items-center gap-0.5 p-0.5 bg-zinc-100 dark:bg-zinc-850 rounded-lg h-9">
+      <div className="flex max-w-full items-center gap-0.5 overflow-x-auto p-0.5 bg-zinc-100 dark:bg-zinc-850 rounded-lg h-9">
         {presets.map(preset => {
           const range = preset.getRange();
           const isActive = filters.startDate === range.start && filters.endDate === range.end;
@@ -112,7 +112,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({ filters, setFilters, apart
               key={preset.label}
               onClick={() => handlePresetClick(preset.getRange)}
               className={cn(
-                "px-3 rounded-md text-xs font-medium transition-colors h-full flex items-center",
+                "px-3 rounded-md text-xs font-medium whitespace-nowrap transition-colors h-full flex items-center",
                 isActive 
                   ? "bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-50 shadow-sm" 
                   : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100"
@@ -145,7 +145,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({ filters, setFilters, apart
       </div>
 
       {/* Currency Selector */}
-      <div className="flex items-center gap-2.5 px-3.5 py-1.5 bg-white dark:bg-zinc-900 rounded-lg border border-zinc-200 dark:border-zinc-800 h-9 ml-auto">
+      <div className="flex items-center gap-2.5 px-3.5 py-1.5 bg-white dark:bg-zinc-900 rounded-lg border border-zinc-200 dark:border-zinc-800 h-9 sm:ml-auto">
         <DollarSign size={14} className="text-zinc-400 dark:text-zinc-500 shrink-0" />
         <select 
           value={filters.displayCurrency}

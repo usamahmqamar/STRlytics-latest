@@ -57,11 +57,11 @@ export const Settings: React.FC<SettingsProps> = ({ data, setData, workspace }) 
   };
 
   const tabs = [
-    { id: 'profile', label: 'Company Profile', icon: Building2 },
+    { id: 'profile', label: 'Company profile', icon: Building2 },
     { id: 'subscription', label: 'Subscription', icon: ShieldCheck },
-    { id: 'payments', label: 'Payment History', icon: History },
-    { id: 'display', label: 'Display Settings', icon: Monitor },
-    { id: 'dashboard', label: 'Dashboard Setup', icon: LayoutDashboard }
+    { id: 'payments', label: 'Payment history', icon: History },
+    { id: 'display', label: 'Display', icon: Monitor },
+    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard }
   ];
 
   const toggleWidget = (widgetId: string) => {
@@ -76,16 +76,16 @@ export const Settings: React.FC<SettingsProps> = ({ data, setData, workspace }) 
   return (
     <div className="space-y-8">
       {/* Tabs */}
-      <div className="flex flex-wrap gap-1 p-1 bg-zinc-100/80 dark:bg-zinc-800/65 border border-zinc-200/50 dark:border-zinc-850 rounded-2xl w-fit shadow-xs">
+      <div className="flex flex-wrap gap-1 p-1 bg-zinc-100 dark:bg-zinc-850 rounded-xl w-fit max-w-full overflow-x-auto">
         {tabs.map(tab => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id as any)}
             className={cn(
-              "flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold tracking-tight transition-all duration-200 cursor-pointer",
+              "flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors cursor-pointer",
               activeTab === tab.id 
-                ? "bg-zinc-950 dark:bg-zinc-100 text-white dark:text-zinc-950 font-semibold shadow-xs" 
-                : "text-zinc-600 dark:text-zinc-350 hover:text-zinc-950 dark:hover:text-zinc-100 hover:bg-zinc-50/70 dark:hover:bg-zinc-800/80"
+                ? "bg-white text-zinc-900 shadow-sm dark:bg-zinc-700 dark:text-zinc-50" 
+                : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
             )}
           >
             <tab.icon size={14} />

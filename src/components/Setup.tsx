@@ -528,11 +528,8 @@ export const Setup: React.FC<SetupProps> = ({ data, setData }) => {
   return (
     <div className="space-y-12">
       <section className="space-y-6">
-        <div className="flex justify-between items-center">
-          <div>
-            <h3 className="text-2xl font-semibold text-zinc-900 tracking-tight">Portfolio and Platform Setup</h3>
-            <p className="text-sm text-zinc-500 font-medium">Configure your properties, manage rental payments, and set platform-specific commission structures.</p>
-          </div>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="max-w-xl text-sm text-zinc-500">Your properties, their leases and rent cheques, and the commission each booking platform charges.</p>
           <Button onClick={() => {
             setEditingAptId(null);
             setNewApt({
