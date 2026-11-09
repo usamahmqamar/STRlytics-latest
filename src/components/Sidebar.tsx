@@ -88,7 +88,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     )}
     <aside
       className={cn(
-        'fixed left-0 top-0 bottom-0 z-50 flex w-72 flex-col border-r border-zinc-200 bg-white transition-[width,transform] duration-300 dark:border-zinc-800 dark:bg-zinc-950',
+        'fixed left-0 top-0 bottom-0 z-50 flex w-72 flex-col print:hidden border-r border-zinc-200 bg-white transition-[width,transform] duration-300 dark:border-zinc-800 dark:bg-zinc-950',
         'lg:translate-x-0',
         mobileOpen ? 'translate-x-0' : '-translate-x-full',
         isCollapsed ? 'lg:w-[72px]' : 'lg:w-64',

@@ -18,6 +18,7 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm run test:security
+      - run: npm run test:unit
       - run: npm run build
       # Fails if a secret, the Gemini endpoint or a guest bypass ends up in the browser bundle.
       - run: npm run check:bundle

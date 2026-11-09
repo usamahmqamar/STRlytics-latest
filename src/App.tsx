@@ -248,10 +248,11 @@ export default function App() {
 
       <main className={cn(
         "min-h-screen transition-[padding] duration-300",
-        isSidebarCollapsed ? "lg:pl-[72px]" : "lg:pl-64"
+        isSidebarCollapsed ? "lg:pl-[72px]" : "lg:pl-64",
+        "print:pl-0"
       )}>
        <div className="mx-auto max-w-[1280px] px-4 py-5 sm:px-6 lg:px-8 lg:py-7">
-        <header className="mb-6 flex items-center justify-between gap-4 lg:items-end">
+        <header className="mb-6 flex items-center justify-between gap-4 lg:items-end print:hidden">
           <div className="flex min-w-0 items-center gap-3">
             <button
               onClick={() => setIsMenuOpen(true)}

@@ -11,7 +11,8 @@
     "lint": "tsc --noEmit",
     "test:db": "scripts/db-test.sh",
     "test:security": "esbuild tests/security.test.ts --bundle --platform=node --format=esm --packages=external --outfile=.test-build/security.test.mjs --log-level=warning && node --test .test-build/security.test.mjs",
-    "check:bundle": "node scripts/check-bundle.mjs"
+    "check:bundle": "node scripts/check-bundle.mjs",
+    "test:unit": "esbuild tests/feasibility.test.ts --bundle --platform=node --format=esm --packages=external --outfile=.test-build/feasibility.test.mjs --log-level=warning && node --test .test-build/feasibility.test.mjs"
   },
   "dependencies": {
     "@google/genai": "^1.29.0",

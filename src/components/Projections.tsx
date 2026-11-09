@@ -1,683 +1,521 @@
 /**
- * @license
- * SPDX-License-Identifier: Apache-2.0
+ * Feasibility: should I take this unit on as a rent-to-rent holiday home?
+ * Calculates as you type (src/lib/feasibility.ts). AI market estimates are optional.
  */
-
-import React, { useState } from 'react';
-import { motion } from 'framer-motion';
-import { 
-  BarChart3, Search, Sparkles, Target, 
-  TrendingUp, ArrowUpRight, Info, Printer,
-  CheckCircle2, AlertTriangle, Loader2
-} from 'lucide-react';
-import { 
-  AreaChart, Area, XAxis, YAxis, CartesianGrid, 
-  Tooltip as RechartsTooltip, ResponsiveContainer,
-  BarChart, Bar, Cell, ComposedChart, Line
+import React, { useEffect, useMemo, useState } from 'react';
+import { Loader2, Printer, RotateCcw, Sparkles } from 'lucide-react';
+import {
+  Bar, CartesianGrid, Cell, ComposedChart, Line, ReferenceLine, ResponsiveContainer,
+  Tooltip as RechartsTooltip, XAxis, YAxis,
 } from 'recharts';
+import { format, addMonths, startOfMonth } from 'date-fns';
 import { Card } from './ui/Card';
 import { Button } from './ui/Button';
 import { getMarketIntelligence } from '../services/ai';
 import { cn } from '../lib/utils';
-import { format, addMonths, startOfMonth } from 'date-fns';
-import { convertCurrency } from '../services/analytics';
+import {
+  VERDICT_RULES, calculateFeasibility, isReady, sensitivity,
+  type FeasibilityInputs, type VerdictLevel,
+} from '../lib/feasibility';
+
+const STORAGE_KEY = 'staylytics.feasibility.v2';
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+interface FormState extends FeasibilityInputs {
+  location: string;
+  bedrooms: number;
+  useSeasonality: boolean;
+  marketNote: string;
+  estimatedAt: string | null;
+}
+
+const DEFAULTS: FormState = {
+  location: '',
+  bedrooms: 1,
+  startMonth: format(startOfMonth(addMonths(new Date(), 1)), 'yyyy-MM'),
+  nightlyRate: 0,
+  occupancy: 75,
+  seasonality: null,
+  useSeasonality: true,
+  annualRent: 0,
+  cheques: 4,
+  depositPercent: 5,
+  setupCost: 0,
+  monthlyRunningCosts: 0,
+  platformFeePercent: 15,
+  managementFeePercent: 0,
+  cleaningPerStay: 0,
+  averageStayNights: 4,
+  perNightCharges: 0,
+  yearlyLicences: 0,
+  targetProfit: 50000,
+  marketNote: '',
+  estimatedAt: null,
+};
+
+function loadSaved(): FormState {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? { ...DEFAULTS, ...JSON.parse(raw) } : DEFAULTS;
+  } catch {
+    return DEFAULTS;
+  }
+}
+
+const aed = (v: number, digits = 0) =>
+  new Intl.NumberFormat('en-AE', { style: 'currency', currency: 'AED', maximumFractionDigits: digits, minimumFractionDigits: digits }).format(v);
+const pct = (v: number | null) => (v === null || !Number.isFinite(v) ? '—' : `${Math.round(v)}%`);
+
+/* ---------- small form pieces ---------- */
+
+const Field: React.FC<{ label: string; hint?: string; children: React.ReactNode; className?: string }> = ({ label, hint, children, className }) => (
+  <label className={cn('block', className)}>
+    <span className="text-xs font-medium text-zinc-700 dark:text-zinc-300">{label}</span>
+    <div className="mt-1.5">{children}</div>
+    {hint && <span className="mt-1 block text-[11px] leading-snug text-zinc-500">{hint}</span>}
+  </label>
+);
+
+const inputClass =
+  'h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-900 outline-none transition-colors placeholder:text-zinc-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/15 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100';
+
+const NumberInput: React.FC<{
+  value: number; onChange: (v: number) => void; prefix?: string; suffix?: string; min?: number; max?: number; step?: number; placeholder?: string;
+}> = ({ value, onChange, prefix, suffix, min = 0, max, step = 1, placeholder }) => (
+  <div className="relative">
+    {prefix && <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs text-zinc-400">{prefix}</span>}
+    <input
+      type="number"
+      inputMode="decimal"
+      min={min}
+      max={max}
+      step={step}
+      placeholder={placeholder ?? '0'}
+      value={value === 0 ? '' : value}
+      onChange={e => {
+        const n = Number(e.target.value);
+        onChange(Number.isFinite(n) ? Math.max(min, max !== undefined ? Math.min(max, n) : n) : 0);
+      }}
+      className={cn(inputClass, prefix && 'pl-11', suffix && 'pr-12')}
+    />
+    {suffix && <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-zinc-400">{suffix}</span>}
+  </div>
+);
+
+const Group: React.FC<{ title: string; children: React.ReactNode }> = ({ title, children }) => (
+  <fieldset className="space-y-4 border-t border-zinc-100 pt-5 first:border-t-0 first:pt-0 dark:border-zinc-800">
+    <legend className="sr-only">{title}</legend>
+    <p aria-hidden className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">{title}</p>
+    {children}
+  </fieldset>
+);
+
+const VERDICT_STYLE: Record<VerdictLevel, { title: string; panel: string; sub: string }> = {
+  viable: { title: 'Worth pursuing', panel: 'bg-emerald-900 text-white', sub: 'text-emerald-100/80' },
+  marginal: { title: 'Marginal: proceed with care', panel: 'bg-amber-800 text-white', sub: 'text-amber-100/85' },
+  not_viable: { title: 'Not viable at these numbers', panel: 'bg-rose-700 text-white', sub: 'text-rose-100/85' },
+};
+
+/* ---------- screen ---------- */
 
 export const Projections: React.FC = () => {
-  const [inputs, setInputs] = useState({
-    location: "",
-    bedrooms: 1,
-    annualRent: 0,
-    setupCost: 0,
-    monthlyOpEx: 0,
-    managementFee: 15,
-    targetOccupancy: 85,
-    targetProfit: 50000
-  });
+  const [form, setForm] = useState<FormState>(loadSaved);
+  const [estimating, setEstimating] = useState(false);
+  const [estimateError, setEstimateError] = useState<string | null>(null);
 
-  const [result, setResult] = useState<any>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  useEffect(() => {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(form)); } catch { /* storage unavailable */ }
+  }, [form]);
 
-  const handleRun = async () => {
-    if (!inputs.location) return;
-    setIsLoading(true);
+  const set = <K extends keyof FormState>(key: K) => (value: FormState[K]) => setForm(f => ({ ...f, [key]: value }));
+
+  const inputs: FeasibilityInputs = useMemo(
+    () => ({ ...form, seasonality: form.useSeasonality ? form.seasonality : null }),
+    [form],
+  );
+  const ready = isReady(inputs);
+  const result = useMemo(() => (ready ? calculateFeasibility(inputs) : null), [inputs, ready]);
+  const grid = useMemo(() => (ready ? sensitivity(inputs) : null), [inputs, ready]);
+
+  const fillFromMarket = async () => {
+    if (!form.location.trim()) { setEstimateError('Enter the area first, for example Dubai Marina.'); return; }
+    setEstimating(true);
+    setEstimateError(null);
     try {
-      const intelligence = await getMarketIntelligence(inputs.location, inputs.bedrooms);
-      
-      const rent = inputs.annualRent || intelligence.typicalRent;
-      const setup = inputs.setupCost || intelligence.furnishingCost;
-      const opex = inputs.monthlyOpEx || intelligence.monthlyOpEx;
-      const baseADR = intelligence.adr;
-      const targetOcc = inputs.targetOccupancy;
-
-      // Core Calculations
-      const annualOpEx = opex * 12;
-      const fixedCosts = rent + annualOpEx;
-      
-      const annualRevenue = baseADR * (targetOcc / 100) * 365;
-      const annualMgtFee = annualRevenue * (inputs.managementFee / 100);
-      const totalAnnualCost = fixedCosts + annualMgtFee;
-      const netAnnualProfit = annualRevenue - totalAnnualCost;
-      
-      const roi = setup > 0 ? (netAnnualProfit / setup) * 100 : 0;
-      const monthlyProfit = netAnnualProfit / 12;
-      const payback = monthlyProfit > 0 ? setup / monthlyProfit : 0;
-
-      const breakEvenADR = fixedCosts / ((targetOcc / 100) * 365 * (1 - inputs.managementFee / 100));
-      const targetADR = (inputs.targetProfit + fixedCosts) / ((targetOcc / 100) * 365 * (1 - inputs.managementFee / 100));
-
-      // Monthly Strategy & Chart Data
-      const monthlyStrategy = intelligence.seasonality.map((s: any, idx: number) => {
-        const daysInMonth = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][idx];
-        const estOcc = Math.min(100, targetOcc * s.occMultiplier);
-        const estADR = baseADR * s.adrMultiplier;
-        
-        const monthlyRevenue = estADR * (estOcc / 100) * daysInMonth;
-        const monthlyMgtFee = monthlyRevenue * (inputs.managementFee / 100);
-        const monthlyExpense = (fixedCosts / 12) + monthlyMgtFee;
-        const monthlyProfitVal = monthlyRevenue - monthlyExpense;
-
-        // Rate Calculations
-        const monthlyFixedCost = fixedCosts / 12;
-        const mgtFeeFactor = 1 - (inputs.managementFee / 100);
-        const occupiedDays = (estOcc / 100) * daysInMonth;
-        
-        const minRate = occupiedDays > 0 ? monthlyFixedCost / (occupiedDays * mgtFeeFactor) : 0;
-        const targetRate = occupiedDays > 0 ? (monthlyFixedCost + (inputs.targetProfit / 12)) / (occupiedDays * mgtFeeFactor) : 0;
-
-        return {
-          month: s.month,
-          revenue: monthlyRevenue,
-          expenses: monthlyExpense,
-          profit: monthlyProfitVal,
-          occ: estOcc,
-          adr: estADR,
-          minRate,
-          targetRate
-        };
+      const m = await getMarketIntelligence(form.location.trim(), form.bedrooms);
+      const months = Array.isArray(m.seasonality) ? m.seasonality : [];
+      const season = MONTHS.map(name => {
+        const hit = months.find((s: any) => typeof s?.month === 'string' && s.month.toLowerCase().startsWith(name.toLowerCase()));
+        return { adr: Number(hit?.adrMultiplier) || 1, occ: Number(hit?.occMultiplier) || 1 };
       });
-
-      // Feasibility Verdict
-      let verdict = "Risky";
-      let color = "text-rose-500";
-      let bgColor = "bg-rose-500/10";
-      let score = 0;
-
-      if (roi > 25 && payback < 18) {
-        verdict = "Strong Buy";
-        color = "text-emerald-500";
-        bgColor = "bg-emerald-500/10";
-        score = 85 + Math.min(15, roi / 5);
-      } else if (roi > 12 && payback < 36) {
-        verdict = "Moderate";
-        color = "text-amber-500";
-        bgColor = "bg-amber-500/10";
-        score = 60 + Math.min(25, roi / 2);
-      } else {
-        score = Math.max(10, roi * 2);
-      }
-
-      setResult({
-        ...intelligence,
-        annualRevenue,
-        totalAnnualCost,
-        netAnnualProfit,
-        roi,
-        payback,
-        breakEvenADR,
-        targetADR,
-        monthlyStrategy,
-        verdict,
-        verdictColor: color,
-        verdictBg: bgColor,
-        score,
-        fixedCosts,
-        annualMgtFee,
-        rent,
-        annualOpEx
-      });
-    } catch (err) {
-      console.error(err);
+      setForm(f => ({
+        ...f,
+        nightlyRate: Math.round(m.adr) || f.nightlyRate,
+        occupancy: Math.round(m.occupancy) || f.occupancy,
+        annualRent: Math.round(m.typicalRent) || f.annualRent,
+        setupCost: Math.round(m.furnishingCost) || f.setupCost,
+        monthlyRunningCosts: Math.round(m.monthlyOpEx) || f.monthlyRunningCosts,
+        seasonality: months.length ? season : null,
+        marketNote: typeof m.marketInsight === 'string' ? m.marketInsight : '',
+        estimatedAt: new Date().toISOString(),
+      }));
+    } catch (err: any) {
+      setEstimateError(err?.message || 'Market estimates are not available right now. Enter the figures yourself.');
     } finally {
-      setIsLoading(false);
+      setEstimating(false);
     }
   };
 
-  const formatCurrency = (val: number) => {
-    return new Intl.NumberFormat('en-US', { 
-      style: 'currency', 
-      currency: 'AED', 
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2 
-    }).format(val);
-  };
+  const startLabel = (() => {
+    const [y, m] = form.startMonth.split('-').map(Number);
+    return y && m ? `${MONTHS[m - 1]} ${y}` : '';
+  })();
 
   return (
-    <div className="space-y-8 pb-20">
-      <div className="flex items-center justify-end mb-8">
-        <div className="flex items-center gap-4">
-          <div className="flex bg-zinc-100 p-1 rounded-xl">
-            {['Week', 'Month', 'Quarter', 'Year', 'Custom'].map((t) => (
-              <button 
-                key={t}
-                className={cn(
-                  "px-4 py-2 text-[11px] font-bold rounded-lg transition-all",
-                  t === 'Year' ? "bg-white text-zinc-900 shadow-sm" : "text-zinc-400 hover:text-zinc-600"
-                )}
-              >
-                {t}
-              </button>
-            ))}
-          </div>
-        </div>
+    <div className="grid grid-cols-1 gap-6 pb-20 lg:grid-cols-12">
+      {/* ---------------- Inputs ---------------- */}
+      <div className="lg:col-span-4 print:hidden">
+        <Card className="space-y-5 lg:sticky lg:top-6">
+          <Group title="The unit">
+            <Field label="Area">
+              <input className={inputClass} placeholder="e.g. Dubai Marina" value={form.location} onChange={e => set('location')(e.target.value.slice(0, 100))} />
+            </Field>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Size">
+                <select className={inputClass} value={form.bedrooms} onChange={e => set('bedrooms')(Number(e.target.value))}>
+                  <option value={0}>Studio</option>
+                  {[1, 2, 3, 4, 5].map(n => <option key={n} value={n}>{n} bedroom{n > 1 ? 's' : ''}</option>)}
+                </select>
+              </Field>
+              <Field label="First month of bookings">
+                <input type="month" className={inputClass} value={form.startMonth} onChange={e => e.target.value && set('startMonth')(e.target.value)} />
+              </Field>
+            </div>
+            <Button variant="secondary" className="w-full" onClick={fillFromMarket} disabled={estimating}>
+              {estimating ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />}
+              {estimating ? 'Estimating…' : 'Fill in market estimates'}
+            </Button>
+            {estimateError && <p className="text-xs text-rose-600" role="alert">{estimateError}</p>}
+            {form.estimatedAt && !estimateError && (
+              <p className="text-[11px] leading-snug text-zinc-500">
+                Rate, occupancy, rent, setup and running costs were filled from an AI estimate on {format(new Date(form.estimatedAt), 'd MMM yyyy')}. Check them against real listings and quotes.
+              </p>
+            )}
+          </Group>
+
+          <Group title="Income">
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Average nightly rate">
+                <NumberInput prefix="AED" value={form.nightlyRate} onChange={set('nightlyRate')} />
+              </Field>
+              <Field label="Expected occupancy">
+                <NumberInput suffix="%" max={100} value={form.occupancy} onChange={set('occupancy')} />
+              </Field>
+            </div>
+            {form.seasonality && (
+              <label className="flex items-start gap-2 text-xs text-zinc-600 dark:text-zinc-400">
+                <input type="checkbox" className="mt-0.5 accent-emerald-600" checked={form.useSeasonality} onChange={e => set('useSeasonality')(e.target.checked)} />
+                <span>Apply the seasonal pattern from the market estimate (busier, pricier winter months)</span>
+              </label>
+            )}
+          </Group>
+
+          <Group title="Lease">
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Annual rent">
+                <NumberInput prefix="AED" value={form.annualRent} onChange={set('annualRent')} />
+              </Field>
+              <Field label="Rent cheques">
+                <select className={inputClass} value={form.cheques} onChange={e => set('cheques')(Number(e.target.value))}>
+                  {[1, 2, 4, 6, 12].map(n => <option key={n} value={n}>{n} {n === 1 ? 'cheque' : 'cheques'}</option>)}
+                </select>
+              </Field>
+              <Field label="Furnishing and setup">
+                <NumberInput prefix="AED" value={form.setupCost} onChange={set('setupCost')} />
+              </Field>
+              <Field label="Security deposit" hint="Refundable; counted as cash tied up">
+                <NumberInput suffix="% rent" max={100} step={0.5} value={form.depositPercent} onChange={set('depositPercent')} />
+              </Field>
+            </div>
+          </Group>
+
+          <Group title="Running costs">
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Monthly running costs" hint="Utilities, internet, supplies, repairs">
+                <NumberInput prefix="AED" value={form.monthlyRunningCosts} onChange={set('monthlyRunningCosts')} />
+              </Field>
+              <Field label="Platform commission" hint="Share the booking sites keep">
+                <NumberInput suffix="%" max={50} step={0.5} value={form.platformFeePercent} onChange={set('platformFeePercent')} />
+              </Field>
+              <Field label="Cleaning per stay">
+                <NumberInput prefix="AED" value={form.cleaningPerStay} onChange={set('cleaningPerStay')} />
+              </Field>
+              <Field label="Average stay">
+                <NumberInput suffix="nights" min={1} value={form.averageStayNights} onChange={v => set('averageStayNights')(Math.max(1, v))} />
+              </Field>
+              <Field label="Per-night charges" hint="Tourism dirham and similar, per booked night">
+                <NumberInput prefix="AED" value={form.perNightCharges} onChange={set('perNightCharges')} />
+              </Field>
+              <Field label="Yearly licences" hint="Holiday-home permit and renewals">
+                <NumberInput prefix="AED" value={form.yearlyLicences} onChange={set('yearlyLicences')} />
+              </Field>
+              <Field label="Management fee" hint="Leave at 0 if you manage it yourself" className="col-span-2">
+                <NumberInput suffix="% of income" max={60} step={0.5} value={form.managementFeePercent} onChange={set('managementFeePercent')} />
+              </Field>
+            </div>
+          </Group>
+
+          <Group title="Your goal">
+            <Field label="Profit you want per year">
+              <NumberInput prefix="AED" value={form.targetProfit} onChange={set('targetProfit')} />
+            </Field>
+          </Group>
+
+          <button
+            onClick={() => { setForm({ ...DEFAULTS }); setEstimateError(null); }}
+            className="flex items-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100"
+          >
+            <RotateCcw size={12} /> Start over
+          </button>
+        </Card>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-        {/* Left: Input Panel */}
-        <div className="lg:col-span-3 space-y-6">
-          <Card className="p-6 border-none shadow-xl shadow-zinc-200/50">
-            <h2 className="text-[11px] font-semibold text-zinc-400 mb-6">Property Details & Inputs</h2>
-            <div className="space-y-5">
-              <div className="space-y-2">
-                <label className="text-[11px] font-bold text-zinc-400">Location / Locality</label>
-                <div className="relative">
-                  <input 
-                    type="text" 
-                    className="w-full p-3 pr-10 bg-zinc-50 border border-zinc-100 rounded-xl text-sm focus:ring-2 ring-emerald-500/20 outline-none transition-all"
-                    placeholder="e.g. Dubai Marina"
-                    value={inputs.location}
-                    onChange={(e) => setInputs({...inputs, location: e.target.value})}
-                  />
-                  <Sparkles className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400" size={16} />
+      {/* ---------------- Results ---------------- */}
+      <div className="space-y-6 lg:col-span-8">
+        {!result ? (
+          <div className="rounded-2xl border border-dashed border-zinc-300 p-10 text-center dark:border-zinc-700">
+            <p className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">Test a unit before you sign the lease</p>
+            <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-zinc-500">
+              Enter the nightly rate, occupancy and annual rent, or type the area and use <span className="font-medium text-zinc-700 dark:text-zinc-300">Fill in market estimates</span>.
+              You will see the cash you need up front, your yearly profit and the month your money comes back.
+            </p>
+            <ul className="mx-auto mt-6 flex max-w-md flex-wrap justify-center gap-2 text-xs">
+              {[
+                ['Nightly rate', form.nightlyRate > 0],
+                ['Occupancy', form.occupancy > 0],
+                ['Annual rent', form.annualRent > 0],
+              ].map(([label, done]) => (
+                <li key={label as string} className={cn('rounded-full px-3 py-1', done ? 'bg-emerald-50 text-emerald-800' : 'bg-zinc-100 text-zinc-500 dark:bg-zinc-800')}>
+                  {done ? '✓ ' : ''}{label}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : (
+          <>
+            {/* Verdict */}
+            <section className={cn('rounded-3xl p-6 sm:p-7', VERDICT_STYLE[result.verdict.level].panel)} aria-live="polite">
+              <div className="flex flex-wrap items-start justify-between gap-4">
+                <div>
+                  <p className={cn('text-sm', VERDICT_STYLE[result.verdict.level].sub)}>
+                    {form.bedrooms === 0 ? 'Studio' : `${form.bedrooms}-bedroom`}{form.location ? ` in ${form.location}` : ''}, from {startLabel}
+                  </p>
+                  <h2 className="mt-1 text-[28px] font-semibold leading-tight tracking-[-0.02em] sm:text-[34px]">{VERDICT_STYLE[result.verdict.level].title}</h2>
                 </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="text-[11px] font-bold text-zinc-400">Property Type</label>
-                  <select 
-                    className="w-full p-3 bg-zinc-50 border border-zinc-100 rounded-xl text-sm outline-none"
-                    value={inputs.bedrooms}
-                    onChange={(e) => setInputs({...inputs, bedrooms: Number(e.target.value)})}
-                  >
-                    <option value={0}>Studio</option>
-                    <option value={1}>1 Bedroom</option>
-                    <option value={2}>2 Bedrooms</option>
-                    <option value={3}>3 Bedrooms</option>
-                  </select>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-[11px] font-bold text-zinc-400">Annual Rent (AED)</label>
-                  <input 
-                    type="number" 
-                    className="w-full p-3 bg-zinc-50 border border-zinc-100 rounded-xl text-sm outline-none"
-                    value={inputs.annualRent || ""}
-                    onChange={(e) => setInputs({...inputs, annualRent: Number(e.target.value)})}
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="text-[11px] font-bold text-zinc-400 text-wrap">Setup / Furnishing Cost</label>
-                  <input 
-                    type="number" 
-                    className="w-full p-3 bg-zinc-50 border border-zinc-100 rounded-xl text-sm outline-none"
-                    value={inputs.setupCost || ""}
-                    onChange={(e) => setInputs({...inputs, setupCost: Number(e.target.value)})}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-[11px] font-bold text-zinc-400 text-wrap leading-tight">Monthly OpEx (Utilities/Cleaning)</label>
-                  <input 
-                    type="number" 
-                    className="w-full p-3 bg-zinc-50 border border-zinc-100 rounded-xl text-sm outline-none"
-                    value={inputs.monthlyOpEx || ""}
-                    onChange={(e) => setInputs({...inputs, monthlyOpEx: Number(e.target.value)})}
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="text-[11px] font-bold text-zinc-400">Management Fee (%)</label>
-                  <input 
-                    type="number" 
-                    className="w-full p-3 bg-zinc-50 border border-zinc-100 rounded-xl text-sm outline-none"
-                    value={inputs.managementFee}
-                    onChange={(e) => setInputs({...inputs, managementFee: Number(e.target.value)})}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-[11px] font-bold text-zinc-400">Target Occupancy</label>
-                  <select 
-                    className="w-full p-3 bg-zinc-50 border border-zinc-100 rounded-xl text-sm outline-none"
-                    value={inputs.targetOccupancy}
-                    onChange={(e) => setInputs({...inputs, targetOccupancy: Number(e.target.value)})}
-                  >
-                    <option value={70}>Low (70%)</option>
-                    <option value={85}>High (85%)</option>
-                    <option value={95}>Premium (95%)</option>
-                  </select>
-                </div>
-              </div>
-
-              <Button 
-                onClick={handleRun} 
-                disabled={isLoading || !inputs.location}
-                className="w-full py-4 bg-zinc-900 hover:bg-zinc-800 text-white rounded-xl font-semibold text-xs flex items-center justify-center gap-2"
-              >
-                {isLoading ? <Loader2 className="animate-spin" size={16} /> : <><Sparkles size={16} /> Generate Projection</>}
-              </Button>
-            </div>
-          </Card>
-        </div>
-
-        {/* Right: Results Dashboard */}
-        <div className="lg:col-span-9 space-y-6">
-          {result ? (
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="space-y-6"
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <span className={cn("px-3 py-1 rounded-full text-[11px] font-semibold", result.verdictBg, result.verdictColor)}>
-                    {result.verdict}
-                  </span>
-                  <span className="text-[11px] font-bold text-zinc-400">Feasibility Report Generated</span>
-                </div>
-                <Button variant="outline" className="text-[11px] font-semibold flex items-center gap-2">
-                  <Printer size={14} /> Print / Export PDF
+                <Button variant="ghost" size="sm" onClick={() => window.print()} className="text-white/85 hover:bg-white/10 hover:text-white print:hidden">
+                  <Printer size={14} /> Print or save as PDF
                 </Button>
               </div>
+              <ul className={cn('mt-4 space-y-1 text-sm', VERDICT_STYLE[result.verdict.level].sub)}>
+                {result.verdict.reasons.map(r => <li key={r}>{r}</li>)}
+              </ul>
+              <dl className="mt-6 grid grid-cols-2 gap-x-6 gap-y-5 border-t border-white/15 pt-5 md:grid-cols-4">
+                <div>
+                  <dt className={cn('text-xs', VERDICT_STYLE[result.verdict.level].sub)}>Profit per year</dt>
+                  <dd className="mt-1 text-xl font-semibold">{aed(result.operatingProfit)}</dd>
+                  <dd className={cn('text-xs', VERDICT_STYLE[result.verdict.level].sub)}>before setup costs</dd>
+                </div>
+                <div>
+                  <dt className={cn('text-xs', VERDICT_STYLE[result.verdict.level].sub)}>Cash needed up front</dt>
+                  <dd className="mt-1 text-xl font-semibold">{aed(result.upfrontCash)}</dd>
+                  <dd className={cn('text-xs', VERDICT_STYLE[result.verdict.level].sub)}>setup, deposit, first cheque</dd>
+                </div>
+                <div>
+                  <dt className={cn('text-xs', VERDICT_STYLE[result.verdict.level].sub)}>Return on that cash</dt>
+                  <dd className="mt-1 text-xl font-semibold">{pct(result.returnOnCash)}</dd>
+                  <dd className={cn('text-xs', VERDICT_STYLE[result.verdict.level].sub)}>per year</dd>
+                </div>
+                <div>
+                  <dt className={cn('text-xs', VERDICT_STYLE[result.verdict.level].sub)}>Cash back by</dt>
+                  <dd className="mt-1 text-xl font-semibold">{result.paybackMonth ? result.months[result.paybackMonth - 1].label : 'Not in year one'}</dd>
+                  <dd className={cn('text-xs', VERDICT_STYLE[result.verdict.level].sub)}>{result.paybackMonth ? `month ${result.paybackMonth}` : 'after rent cheques'}</dd>
+                </div>
+              </dl>
+            </section>
+            <p className="-mt-3 text-[11px] text-zinc-500">
+              "Worth pursuing" means at least {VERDICT_RULES.minReturnOnCash}% a year on the cash you put in, that cash back within {VERDICT_RULES.maxPaybackMonths} months,
+              and occupancy at least {VERDICT_RULES.minOccupancyCushion} points above break-even. Estimates only; not financial advice.
+            </p>
 
-              {/* Top Row Metrics */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <Card className="p-6 bg-zinc-900 text-white border-none relative overflow-hidden">
-                  <div className="relative z-10">
-                    <p className="text-[11px] font-semibold text-white/40 mb-4">Investment Score</p>
-                    <div className="flex items-end gap-2 mb-4">
-                      <span className="text-6xl font-semibold tracking-tighter leading-none">{Math.round(result.score)}</span>
-                      <span className="text-white/20 font-semibold mb-2">/100</span>
-                    </div>
-                    <span className={cn("px-3 py-1 rounded-lg text-[11px] font-semibold", result.verdictBg, result.verdictColor)}>
-                      {result.verdict}
-                    </span>
-                  </div>
-                  <div className="absolute -right-4 -bottom-4 opacity-10">
-                    <Target size={120} />
-                  </div>
-                </Card>
-
-                <Card className="p-6">
-                  <p className="text-[11px] font-bold text-zinc-400 mb-4">Annual Net Profit</p>
-                  <p className="text-4xl font-semibold text-emerald-500 tracking-tight mb-2">{formatCurrency(result.netAnnualProfit)}</p>
-                  <p className="text-[11px] font-medium text-zinc-400">Total revenue minus all costs</p>
-                </Card>
-
-                <Card className="p-6">
-                  <p className="text-[11px] font-bold text-zinc-400 mb-4">ROI (Annual)</p>
-                  <p className="text-4xl font-semibold text-zinc-900 tracking-tight mb-2">{result.roi.toFixed(1)}%</p>
-                  <p className="text-[11px] font-medium text-zinc-400">Net Profit / Setup Cost</p>
-                </Card>
+            {/* Cash curve */}
+            <Card title="Your cash, month by month">
+              <p className="-mt-2 mb-3 text-xs text-zinc-500">Bars show each month's cash in minus cash out, including rent cheques when they are paid. The line is your running position after the money you put in.</p>
+              <div className="h-[260px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <ComposedChart data={result.months.map(m => ({ ...m, short: m.label.split(' ')[0] }))}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eceee9" />
+                    <XAxis dataKey="short" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#6c766f' }} />
+                    <YAxis axisLine={false} tickLine={false} width={56} tick={{ fontSize: 11, fill: '#6c766f' }} tickFormatter={v => `${Math.round(v / 1000)}k`} />
+                    <RechartsTooltip formatter={(v: number, name: string) => [aed(v), name]} labelFormatter={(_, p: any) => p?.[0]?.payload?.label ?? ''} />
+                    <ReferenceLine y={0} stroke="#949d95" />
+                    <Bar dataKey="cashFlow" name="Cash this month" radius={[3, 3, 0, 0]}>
+                      {result.months.map(m => <Cell key={m.month} fill={m.cashFlow >= 0 ? '#7db4a0' : '#dc9280'} />)}
+                    </Bar>
+                    <Line type="monotone" dataKey="cumulativeCash" name="Running position" stroke="#0e5a4a" strokeWidth={2.5} dot={false} />
+                  </ComposedChart>
+                </ResponsiveContainer>
               </div>
+            </Card>
 
-              {/* Middle Row */}
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-                <div className="lg:col-span-4 space-y-6">
-                  <Card className="p-6">
-                    <p className="text-[11px] font-bold text-zinc-400 mb-4">Payback Period</p>
-                    <p className="text-4xl font-semibold text-zinc-900 tracking-tight mb-2">{result.payback.toFixed(1)} <span className="text-lg text-zinc-400">Months</span></p>
-                    <p className="text-[11px] font-medium text-zinc-400">Time to recover setup costs</p>
-                  </Card>
-
-                  <Card className="p-6">
-                    <h3 className="text-[11px] font-semibold text-zinc-400 mb-6">1-Year Financial Breakdown</h3>
-                    <div className="space-y-6">
-                      <div>
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-[11px] font-bold text-zinc-400">Revenue Allocation</span>
-                          <span className="text-[11px] font-semibold text-zinc-900">{Math.round((result.netAnnualProfit / result.annualRevenue) * 100)}% Profit Margin</span>
-                        </div>
-                        <div className="h-3 w-full bg-zinc-100 rounded-full overflow-hidden flex">
-                          <div className="h-full bg-rose-500" style={{ width: `${(result.totalAnnualCost / result.annualRevenue) * 100}%` }} />
-                          <div className="h-full bg-emerald-500" style={{ width: `${(result.netAnnualProfit / result.annualRevenue) * 100}%` }} />
-                        </div>
-                        <div className="flex items-center gap-4 mt-2">
-                          <div className="flex items-center gap-1.5">
-                            <div className="w-2 h-2 rounded-full bg-rose-500" />
-                            <span className="text-[11px] font-bold text-zinc-400">Costs ({Math.round((result.totalAnnualCost / result.annualRevenue) * 100)}%)</span>
-                          </div>
-                          <div className="flex items-center gap-1.5">
-                            <div className="w-2 h-2 rounded-full bg-emerald-500" />
-                            <span className="text-[11px] font-bold text-zinc-400">Net Profit ({Math.round((result.netAnnualProfit / result.annualRevenue) * 100)}%)</span>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="space-y-4 pt-4 border-t border-zinc-50">
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs font-medium text-zinc-500">Gross Revenue (Forecast)</span>
-                          <span className="text-sm font-semibold text-zinc-900">{formatCurrency(result.annualRevenue)}</span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs font-medium text-zinc-500">Annual Rent (Fixed)</span>
-                          <span className="text-sm font-semibold text-rose-500">-{formatCurrency(result.rent)}</span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs font-medium text-zinc-500">Operating Expenses (OpEx)</span>
-                          <span className="text-sm font-semibold text-rose-500">-{formatCurrency(result.annualOpEx + result.annualMgtFee)}</span>
-                        </div>
-                        <div className="flex items-center justify-between pt-4 border-t border-zinc-50 bg-zinc-50/50 -mx-6 px-6 py-3">
-                          <span className="text-xs font-bold text-zinc-900">Net Annual Profit</span>
-                          <span className="text-lg font-semibold text-emerald-500">{formatCurrency(result.netAnnualProfit)}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </Card>
-                </div>
-
-                <div className="lg:col-span-8">
-                  <Card className="p-6 h-full">
-                    <h3 className="text-[11px] font-semibold text-zinc-400 mb-6">Monthly Cashflow Forecast</h3>
-                    <div className="h-[300px] w-full">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <ComposedChart data={result.monthlyStrategy}>
-                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eceee9" />
-                          <XAxis 
-                            dataKey="month" 
-                            axisLine={false} 
-                            tickLine={false} 
-                            tick={{ fontSize: 10, fontWeight: 600, fill: '#949d95' }}
-                            dy={10}
-                          />
-                          <YAxis 
-                            axisLine={false} 
-                            tickLine={false} 
-                            tick={{ fontSize: 10, fontWeight: 600, fill: '#949d95' }}
-                            tickFormatter={(val) => `AED ${val/1000}k`}
-                          />
-                          <RechartsTooltip 
-                            contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
-                            formatter={(val: number) => [formatCurrency(val), '']}
-                          />
-                          <Bar dataKey="revenue" fill="#0e5a4a" radius={[4, 4, 0, 0]} barSize={30} name="Revenue" />
-                          <Area type="monotone" dataKey="profit" fill="#0e5a4a" fillOpacity={0.1} stroke="none" name="Profit Area" />
-                          <Line type="monotone" dataKey="expenses" stroke="#b0472f" strokeWidth={2} dot={false} name="Expenses" />
-                          <Line type="monotone" dataKey="profit" stroke="#0e5a4a" strokeWidth={2} dot={{ r: 4, fill: '#0e5a4a' }} name="Net Profit" />
-                        </ComposedChart>
-                      </ResponsiveContainer>
-                    </div>
-                    <div className="flex items-center justify-center gap-4 mt-6">
-                      <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 rounded bg-emerald-500" />
-                        <span className="text-[11px] font-semibold text-zinc-400">Revenue</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 rounded bg-emerald-500/20" />
-                        <span className="text-[11px] font-semibold text-zinc-400">Net Profit</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div className="w-3 h-1 rounded bg-rose-500" />
-                        <span className="text-[11px] font-semibold text-zinc-400">Expenses</span>
-                      </div>
-                    </div>
-                  </Card>
-                </div>
-              </div>
-
-              {/* Monthly Strategy Table */}
-              <Card className="p-0 overflow-hidden border-none shadow-xl shadow-zinc-200/50">
-                <div className="p-6 border-b border-zinc-100 bg-white">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="text-sm font-semibold text-zinc-900 flex items-center gap-2">
-                        <TrendingUp size={18} className="text-emerald-500" />
-                        12-Month Performance Strategy
-                      </h3>
-                      <p className="text-[11px] text-zinc-400 font-bold mt-1">Seasonality & Demand Adjusted Forecast</p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="flex items-center gap-1.5 px-3 py-1 bg-emerald-50 rounded-full">
-                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                        <span className="text-[11px] font-semibold text-emerald-600">High Demand</span>
-                      </div>
-                    </div>
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+              {/* Pricing */}
+              <Card title="Pricing you need">
+                <dl className="divide-y divide-zinc-100 dark:divide-zinc-800">
+                  <div className="flex items-baseline justify-between py-3">
+                    <dt>
+                      <span className="block text-sm text-zinc-900 dark:text-zinc-100">Break-even nightly rate</span>
+                      <span className="block text-xs text-zinc-500">at {Math.round(form.occupancy)}% occupancy</span>
+                    </dt>
+                    <dd className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">{result.breakEvenRate === null ? '—' : aed(result.breakEvenRate)}</dd>
                   </div>
-                </div>
+                  <div className="flex items-baseline justify-between py-3">
+                    <dt>
+                      <span className="block text-sm text-zinc-900 dark:text-zinc-100">Rate for your goal</span>
+                      <span className="block text-xs text-zinc-500">{aed(form.targetProfit)} profit a year</span>
+                    </dt>
+                    <dd className="text-lg font-semibold text-emerald-700 dark:text-emerald-300">{result.targetRate === null ? '—' : aed(result.targetRate)}</dd>
+                  </div>
+                  <div className="flex items-baseline justify-between py-3">
+                    <dt>
+                      <span className="block text-sm text-zinc-900 dark:text-zinc-100">Break-even occupancy</span>
+                      <span className="block text-xs text-zinc-500">at {aed(form.nightlyRate)} a night</span>
+                    </dt>
+                    <dd className={cn('text-lg font-semibold', (result.breakEvenOccupancy ?? 999) >= form.occupancy ? 'text-rose-600' : 'text-zinc-900 dark:text-zinc-50')}>
+                      {result.breakEvenOccupancy === null || result.breakEvenOccupancy > 100 ? 'Above 100%' : pct(result.breakEvenOccupancy)}
+                    </dd>
+                  </div>
+                </dl>
+              </Card>
+
+              {/* Year P&L */}
+              <Card title="First year, in full">
+                <dl className="space-y-2 text-sm">
+                  {[
+                    ['Booking income', result.revenue, `${Math.round(result.bookedNights)} nights booked`],
+                    ['Platform commission', -result.platformFees],
+                    ...(result.managementFees ? [['Management fee', -result.managementFees] as const] : []),
+                    ['Cleaning', -result.cleaning],
+                    ...(result.perNight ? [['Per-night charges', -result.perNight] as const] : []),
+                    ['Rent', -result.rent],
+                    ['Running costs', -result.running],
+                    ...(result.licences ? [['Licences', -result.licences] as const] : []),
+                  ].map(([label, value, note]) => (
+                    <div key={label as string} className="flex items-baseline justify-between">
+                      <dt className="text-zinc-600 dark:text-zinc-400">{label}{note && <span className="ml-1.5 text-xs text-zinc-400">{note}</span>}</dt>
+                      <dd className={cn((value as number) < 0 ? 'text-zinc-600 dark:text-zinc-400' : 'text-zinc-900 dark:text-zinc-100')}>{aed(value as number)}</dd>
+                    </div>
+                  ))}
+                  <div className="flex items-baseline justify-between border-t border-zinc-200 pt-2 font-semibold dark:border-zinc-700">
+                    <dt className="text-zinc-900 dark:text-zinc-50">Profit before setup</dt>
+                    <dd className={result.operatingProfit < 0 ? 'text-rose-600' : 'text-zinc-900 dark:text-zinc-50'}>{aed(result.operatingProfit)}</dd>
+                  </div>
+                  <div className="flex items-baseline justify-between text-zinc-600 dark:text-zinc-400">
+                    <dt>Setup, paid once</dt>
+                    <dd>{aed(-form.setupCost)}</dd>
+                  </div>
+                  <div className="flex items-baseline justify-between font-semibold">
+                    <dt className="text-zinc-900 dark:text-zinc-50">Profit in year one</dt>
+                    <dd className={result.firstYearProfit < 0 ? 'text-rose-600' : 'text-zinc-900 dark:text-zinc-50'}>{aed(result.firstYearProfit)}</dd>
+                  </div>
+                </dl>
+              </Card>
+            </div>
+
+            {/* What if */}
+            {grid && (
+              <Card title="What if occupancy or rates move?">
+                <p className="-mt-2 mb-3 text-xs text-zinc-500">Yearly profit before setup. The middle cell is your plan.</p>
                 <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse">
+                  <table className="w-full text-sm">
                     <thead>
-                      <tr className="bg-zinc-50/50 border-b border-zinc-100">
-                        <th className="px-6 py-4 text-[11px] font-semibold text-zinc-400">Month</th>
-                        <th className="px-6 py-4 text-[11px] font-semibold text-zinc-400">Est. Occupancy</th>
-                        <th className="px-6 py-4 text-[11px] font-semibold text-zinc-400">Min Rate (Cost)</th>
-                        <th className="px-6 py-4 text-[11px] font-semibold text-zinc-400">Target Rate (Profit)</th>
-                        <th className="px-6 py-4 text-[11px] font-semibold text-zinc-400">Est. Revenue</th>
-                        <th className="px-6 py-4 text-[11px] font-semibold text-zinc-400">Est. Profit</th>
-                        <th className="px-6 py-4 text-[11px] font-semibold text-zinc-400 text-right">Yield Score</th>
+                      <tr>
+                        <th className="py-2 pr-3 text-left text-xs font-medium text-zinc-500">Nightly rate</th>
+                        {grid[0].cells.map(c => (
+                          <th key={c.occupancyChange} className="px-2 py-2 text-right text-xs font-medium text-zinc-500">
+                            {Math.round(c.occupancy)}% occupied
+                          </th>
+                        ))}
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-zinc-50">
-                      {result.monthlyStrategy.map((row: any, i: number) => (
-                        <tr key={i} className="hover:bg-zinc-50/30 transition-colors group">
-                          <td className="px-6 py-4">
-                            <div className="flex flex-col">
-                              <span className="text-xs font-semibold text-zinc-900">{row.month}</span>
-                              <span className="text-[8px] font-bold text-zinc-400 tracking-tighter">
-                                {row.occ > 85 ? 'Peak Season' : row.occ > 70 ? 'Mid Season' : 'Low Season'}
-                              </span>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4">
-                            <div className="flex items-center gap-3">
-                              <span className="text-sm font-semibold text-zinc-900 w-10">{Math.round(row.occ)}%</span>
-                              <div className="w-20 h-1.5 bg-zinc-100 rounded-full overflow-hidden">
-                                <motion.div 
-                                  initial={{ width: 0 }}
-                                  animate={{ width: `${row.occ}%` }}
-                                  className={cn(
-                                    "h-full transition-all duration-1000",
-                                    row.occ > 80 ? "bg-emerald-500" : row.occ > 60 ? "bg-amber-500" : "bg-zinc-400"
-                                  )} 
-                                />
-                              </div>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4">
-                            <div className="flex flex-col">
-                              <span className="text-sm font-bold text-zinc-900">{formatCurrency(row.minRate)}</span>
-                              <span className="text-[8px] font-bold text-zinc-400">Break-even</span>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4">
-                            <div className="flex flex-col">
-                              <span className="text-sm font-semibold text-emerald-600">{formatCurrency(row.targetRate)}</span>
-                              <span className="text-[8px] font-bold text-emerald-500/60">Profit Goal</span>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4">
-                            <span className="text-sm font-semibold text-zinc-900">{formatCurrency(row.revenue)}</span>
-                          </td>
-                          <td className="px-6 py-4">
-                            <div className={cn(
-                              "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-sm font-semibold",
-                              row.profit > 0 ? "bg-emerald-50 text-emerald-600" : "bg-rose-50 text-rose-600"
-                            )}>
-                              {row.profit > 0 ? <TrendingUp size={12} /> : <AlertTriangle size={12} />}
-                              {formatCurrency(row.profit)}
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 text-right">
-                            <div className="flex flex-col items-end">
-                              <div className="flex items-center gap-1">
-                                {[1, 2, 3, 4, 5].map((star) => (
-                                  <div 
-                                    key={star}
-                                    className={cn(
-                                      "w-1.5 h-1.5 rounded-full",
-                                      star <= Math.ceil((row.profit / (result.netAnnualProfit / 12)) * 3) ? "bg-emerald-500" : "bg-zinc-200"
-                                    )}
-                                  />
-                                ))}
-                              </div>
-                              <span className="text-[8px] font-semibold text-zinc-400 mt-1">
-                                {row.profit > (inputs.targetProfit / 12) ? 'Excellent' : row.profit > 0 ? 'Good' : 'Critical'}
-                              </span>
-                            </div>
-                          </td>
+                    <tbody>
+                      {grid.map(row => (
+                        <tr key={row.rateChange} className="border-t border-zinc-100 dark:border-zinc-800">
+                          <th scope="row" className="py-2.5 pr-3 text-left text-xs font-medium text-zinc-700 dark:text-zinc-300">
+                            {aed(form.nightlyRate * (1 + row.rateChange / 100))}
+                            <span className="ml-1 text-zinc-400">{row.rateChange === 0 ? '(plan)' : `(${row.rateChange > 0 ? '+' : ''}${row.rateChange}%)`}</span>
+                          </th>
+                          {row.cells.map(c => (
+                            <td
+                              key={c.occupancyChange}
+                              className={cn(
+                                'px-2 py-2.5 text-right',
+                                c.profit < 0 ? 'text-rose-600' : 'text-zinc-900 dark:text-zinc-100',
+                                row.rateChange === 0 && c.occupancyChange === 0 && 'rounded-md bg-emerald-50 font-semibold dark:bg-emerald-950',
+                              )}
+                            >
+                              {aed(c.profit)}
+                            </td>
+                          ))}
                         </tr>
                       ))}
                     </tbody>
                   </table>
                 </div>
               </Card>
+            )}
 
-              {/* Bottom Row */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                <Card className="p-6">
-                  <h3 className="text-[11px] font-semibold text-zinc-400 mb-6">Rate Strategy & Feasibility</h3>
-                  <div className="grid grid-cols-2 gap-4 mb-8">
-                    <div className="p-4 bg-zinc-50 rounded-xl">
-                      <p className="text-[11px] font-bold text-zinc-400 mb-1">Min (Break-even)</p>
-                      <p className="text-xl font-semibold text-zinc-900">{formatCurrency(result.breakEvenADR)}</p>
-                      <p className="text-[8px] text-zinc-400 mt-1">Rate needed to cover all costs</p>
-                    </div>
-                    <div className="p-4 bg-emerald-50 rounded-xl">
-                      <p className="text-[11px] font-bold text-emerald-600 mb-1">Target Rate</p>
-                      <p className="text-xl font-semibold text-emerald-600">{formatCurrency(result.targetADR)}</p>
-                      <p className="text-[8px] text-emerald-600/60 mt-1">Rate to reach {formatCurrency(inputs.targetProfit)} profit</p>
-                    </div>
-                  </div>
-                  <div className="space-y-4">
-                    <p className="text-[11px] font-bold text-zinc-400">Market Achievability</p>
-                    <div className="flex items-center justify-between p-4 border border-zinc-100 rounded-xl">
-                      <span className="text-xs font-medium text-zinc-600">Current Strategy Achievable?</span>
-                      <div className="flex items-center gap-2 text-emerald-500">
-                        <CheckCircle2 size={16} />
-                        <span className="text-[11px] font-semibold">Yes</span>
-                      </div>
-                    </div>
-                  </div>
-                </Card>
-
-                <Card className="p-0 overflow-hidden border-none bg-emerald-900 text-white">
-                  <div className="p-6">
-                    <h3 className="text-[11px] font-semibold text-white/40 mb-6 flex items-center gap-2">
-                      <Target size={14} /> Optimal Performance Strategy
-                    </h3>
-                    <div className="bg-emerald-800/50 p-6 rounded-2xl border border-white/10 mb-6">
-                      <div className="flex items-center gap-2 mb-4">
-                        <Sparkles size={16} className="text-amber-400" />
-                        <span className="text-[11px] font-semibold text-amber-400">Target Profit Blueprint</span>
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <p className="text-[11px] font-bold text-white/40 mb-1">Recommended ADR</p>
-                          <p className="text-2xl font-semibold">{formatCurrency(result.targetADR)}</p>
-                          <p className="text-[8px] text-white/30 mt-1">Balanced for {inputs.targetOccupancy}% occupancy</p>
-                        </div>
-                        <div>
-                          <p className="text-[11px] font-bold text-white/40 mb-1">Target Net Profit</p>
-                          <p className="text-2xl font-semibold text-emerald-400">{formatCurrency(inputs.targetProfit)}</p>
-                          <p className="text-[8px] text-white/30 mt-1">Annual projected take-home</p>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="text-white/40">Optimal Monthly OpEx</span>
-                        <span className="font-semibold">{formatCurrency(inputs.monthlyOpEx)}</span>
-                      </div>
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="text-white/40">Target Occupancy Level</span>
-                        <span className="font-semibold">{inputs.targetOccupancy}%</span>
-                      </div>
-                      <div className="flex items-center justify-between pt-4 border-t border-white/10">
-                        <span className="text-xs text-white/40">Market Feasibility</span>
-                        <span className="text-[11px] font-semibold text-emerald-400">Highly Achievable</span>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="bg-emerald-950 p-6">
-                    <p className="text-[11px] font-semibold text-white/40 mb-4">Action Plan</p>
-                    <ul className="space-y-3">
-                      {[
-                        `Maintain OpEx below ${formatCurrency(inputs.monthlyOpEx)} through smart utility management.`,
-                        `Implement Dynamic Pricing to capture ${inputs.targetOccupancy}% occupancy during mid-season.`,
-                        `Focus on Superhost status to justify the ${formatCurrency(result.targetADR)} nightly rate.`
-                      ].map((item, i) => (
-                        <li key={i} className="flex gap-3">
-                          <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0 mt-1.5" />
-                          <p className="text-[11px] font-medium text-white/70 leading-relaxed">{item}</p>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </Card>
-
-                <div className="space-y-6">
-                  <Card className="p-6">
-                    <h3 className="text-[11px] font-semibold text-zinc-400 mb-6">Optimization Suggestions</h3>
-                    <div className="space-y-5">
-                      <div className="flex gap-4">
-                        <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-500 shrink-0">
-                          <Info size={16} />
-                        </div>
-                        <div>
-                          <p className="text-xs font-bold text-zinc-900 mb-1">Occupancy Sensitivity</p>
-                          <p className="text-[11px] text-zinc-500 leading-relaxed">
-                            A 5% drop in occupancy reduces annual profit by <span className="font-semibold text-rose-500">{formatCurrency(result.annualRevenue * 0.05)}</span>.
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex gap-4">
-                        <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-500 shrink-0">
-                          <TrendingUp size={16} />
-                        </div>
-                        <div>
-                          <p className="text-xs font-bold text-zinc-900 mb-1">Expense Control</p>
-                          <p className="text-[11px] text-zinc-500 leading-relaxed">
-                            Reducing monthly OpEx by 500 AED adds <span className="font-semibold text-emerald-500">6,000 AED</span> to your bottom line.
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex gap-4">
-                        <div className="w-8 h-8 rounded-lg bg-rose-500/10 flex items-center justify-center text-rose-500 shrink-0">
-                          <AlertTriangle size={16} />
-                        </div>
-                        <div>
-                          <p className="text-xs font-bold text-zinc-900 mb-1">Break-even</p>
-                          <p className="text-[11px] text-zinc-500 leading-relaxed">
-                            You need <span className="font-semibold text-zinc-900">{Math.round((result.totalAnnualCost / (result.adr * 365)) * 100)}%</span> occupancy to cover all costs.
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </Card>
-
-                  <Card className="p-6">
-                    <h3 className="text-[11px] font-semibold text-zinc-400 mb-4">Market Insight</h3>
-                    <p className="text-[11px] text-zinc-500 leading-relaxed italic">
-                      Properties in {inputs.location} with {inputs.bedrooms} bedrooms typically see a strong premium for STR over LTR. Focus on high-quality photography to justify the {formatCurrency(result.targetADR)} nightly rate.
-                    </p>
-                  </Card>
-                </div>
+            {/* Monthly detail */}
+            <Card title="Month by month" className="p-0">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-y border-zinc-100 text-xs text-zinc-500 dark:border-zinc-800">
+                      <th className="px-5 py-2.5 text-left font-medium">Month</th>
+                      <th className="px-3 py-2.5 text-right font-medium">Occupancy</th>
+                      <th className="px-3 py-2.5 text-right font-medium">Nightly rate</th>
+                      <th className="px-3 py-2.5 text-right font-medium">Income</th>
+                      <th className="px-3 py-2.5 text-right font-medium">Profit</th>
+                      <th className="px-3 py-2.5 text-right font-medium">Rent cheque</th>
+                      <th className="px-5 py-2.5 text-right font-medium">Cash position</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {result.months.map(m => (
+                      <tr key={m.month} className="border-b border-zinc-50 last:border-0 dark:border-zinc-800/60">
+                        <td className="px-5 py-2.5 text-zinc-900 dark:text-zinc-100">{m.label}</td>
+                        <td className="px-3 py-2.5 text-right text-zinc-600 dark:text-zinc-400">{Math.round(m.occupancy)}%</td>
+                        <td className="px-3 py-2.5 text-right text-zinc-600 dark:text-zinc-400">{aed(m.nightlyRate)}</td>
+                        <td className="px-3 py-2.5 text-right text-zinc-900 dark:text-zinc-100">{aed(m.revenue)}</td>
+                        <td className={cn('px-3 py-2.5 text-right', m.profit < 0 ? 'text-rose-600' : 'text-zinc-900 dark:text-zinc-100')}>{aed(m.profit)}</td>
+                        <td className="px-3 py-2.5 text-right text-zinc-600 dark:text-zinc-400">{m.rentPaid ? aed(m.rentPaid) : ''}</td>
+                        <td className={cn('px-5 py-2.5 text-right font-medium', m.cumulativeCash < 0 ? 'text-rose-600' : 'text-emerald-700 dark:text-emerald-300')}>{aed(m.cumulativeCash)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
-            </motion.div>
-          ) : (
-            <div className="h-full flex flex-col items-center justify-center border-2 border-dashed border-zinc-200 rounded-2xl p-12 text-center bg-zinc-50/50">
-              <div className="w-20 h-20 bg-zinc-900/5 rounded-3xl flex items-center justify-center text-zinc-300 mb-6 border border-zinc-100">
-                <BarChart3 size={40} />
-              </div>
-              <h3 className="text-xl font-semibold text-zinc-900 mb-3 tracking-tight">Investment Feasibility Engine</h3>
-              <p className="text-sm text-zinc-500 max-w-xs mx-auto leading-relaxed">
-                Input your potential property details to generate a comprehensive 12-month financial roadmap and investment verdict.
+              <p className="px-5 pb-4 pt-2 text-[11px] text-zinc-500">
+                Profit spreads rent evenly across the year; cash position follows the actual cheque dates. The deposit is assumed to come back only at the end of the lease.
               </p>
-            </div>
-          )}
-        </div>
+            </Card>
+
+            {form.marketNote && (
+              <Card title="Market notes (AI estimate)">
+                <p className="max-w-prose text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">{form.marketNote}</p>
+              </Card>
+            )}
+          </>
+        )}
       </div>
     </div>
   );
