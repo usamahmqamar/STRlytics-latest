@@ -4,7 +4,7 @@ import { MailCheck } from 'lucide-react';
 import { supabase, redirectTo } from '../../lib/supabase';
 import { useAuth } from '../../auth/AuthProvider';
 import { Button } from '../../components/ui/Button';
-import { AuthLayout, Divider, Field, FormError, GoogleButton, friendlyAuthError } from './AuthLayout';
+import { AuthLayout, Divider, Field, FormError, GoogleButton, friendlyAuthError, passwordProblem, MIN_PASSWORD_LENGTH } from './AuthLayout';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -28,7 +28,8 @@ export const SignupPage: React.FC = () => {
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (password.length < 8) { setError('Use at least 8 characters for your password.'); return; }
+    const weak = passwordProblem(password);
+    if (weak) { setError(weak); return; }
     setBusy(true); setError(null);
     const metadata: Record<string, string> = { full_name: fullName.trim() };
     if (inviteToken) metadata.invite_token = inviteToken;
@@ -77,7 +78,7 @@ export const SignupPage: React.FC = () => {
           <Field label="Company name" name="company" autoComplete="organization" maxLength={120} value={company} onChange={e => setCompany(e.target.value)} hint="Your workspace name. You can change it later." />
         )}
         <Field label="Work email" name="email" type="email" autoComplete="email" required value={email} onChange={e => setEmail(e.target.value)} />
-        <Field label="Password" name="password" type="password" autoComplete="new-password" required minLength={8} value={password} onChange={e => setPassword(e.target.value)} hint="At least 8 characters." />
+        <Field label="Password" name="password" type="password" autoComplete="new-password" required minLength={MIN_PASSWORD_LENGTH} value={password} onChange={e => setPassword(e.target.value)} hint="At least 10 characters, with letters and numbers." />
         <FormError message={error} />
         <Button type="submit" size="lg" className="w-full" disabled={busy || !fullName.trim() || !email || !password}>
           {busy ? 'Creating account…' : inviteToken ? 'Create account and join' : 'Create account'}

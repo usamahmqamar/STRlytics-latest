@@ -113,11 +113,22 @@ export const Divider: React.FC = () => (
 );
 
 /** Turns Supabase auth errors into plain sentences. */
+export const MIN_PASSWORD_LENGTH = 10;
+
+/** Client-side password rule; mirror it in Supabase → Authentication → Providers → Email. */
+export function passwordProblem(password: string): string | null {
+  if (password.length < MIN_PASSWORD_LENGTH) return `Use at least ${MIN_PASSWORD_LENGTH} characters for your password.`;
+  if (!/[a-z]/i.test(password) || !/\d/.test(password)) return 'Use both letters and numbers in your password.';
+  return null;
+}
+
 export function friendlyAuthError(message: string | undefined): string {
   const m = (message || '').toLowerCase();
   if (m.includes('invalid login credentials')) return 'Email or password is incorrect.';
   if (m.includes('email not confirmed')) return 'Please confirm your email first. Check your inbox for the link.';
-  if (m.includes('password should be') || m.includes('weak password')) return 'Choose a stronger password: at least 8 characters, mixing letters and numbers.';
+  if (m.includes('password should be') || m.includes('weak password') || m.includes('pwned') || m.includes('leaked')) return 'Choose a stronger password: at least 10 characters, mixing letters and numbers, and not one used on other sites.';
+  // Same wording as a fresh sign-up, so the form cannot be used to discover who has an account.
+  if (m.includes('already registered') || m.includes('already exists')) return 'If this email can be used, we have sent a confirmation link. Check your inbox, or log in instead.';
   if (m.includes('rate limit') || m.includes('too many')) return 'Too many attempts. Please wait a minute and try again.';
   if (m.includes('provider is not enabled')) return 'Google sign-in is not switched on yet. Use email and password for now.';
   if (m.includes('same password')) return 'The new password must be different from the old one.';

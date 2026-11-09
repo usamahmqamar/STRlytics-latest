@@ -5,19 +5,11 @@
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  signInWithPopup, 
-  onAuthStateChanged, 
-  User as FirebaseUser 
-} from 'firebase/auth';
-import { 
-  doc, 
-  onSnapshot, 
-  setDoc, 
-  getDocFromServer 
-} from 'firebase/firestore';
 import { useNavigate, useParams } from 'react-router-dom';
-import { auth, db, googleProvider } from './services/firebase';
+import { useAuth, type Workspace } from './auth/AuthProvider';
+import { canEdit, workspaceIsWritable } from './lib/permissions';
+import { loadWorkspaceData, saveChanges, TABLE_LABELS, type LoadedWorkspace } from './services/dataStore';
+import { setActiveWorkspace } from './services/ai';
 import { UserData } from './types';
 import { DEFAULT_USER_DATA } from './constants';
 import { Toaster, toast } from 'react-hot-toast';
@@ -57,10 +49,17 @@ export const APP_TABS = [
 ];
 
 export default function App() {
-  const [user, setUser] = useState<FirebaseUser | null>(null);
+  // Sign-in and the active workspace come from AuthProvider; RequireAuth and RequireWorkspace
+  // guarantee both exist before this component renders.
+  const { user, workspace: activeWorkspace, signOut } = useAuth();
+  const workspace = activeWorkspace!;
   const [loading, setLoading] = useState(true);
+  const [workspaceError, setWorkspaceError] = useState<string | null>(null);
   const [userData, setUserData] = useState<UserData>(DEFAULT_USER_DATA);
-  const lastSavedDataRef = useRef<string>(JSON.stringify(DEFAULT_USER_DATA));
+  const snapshotRef = useRef<LoadedWorkspace['snapshot'] | null>(null);
+  const loadedDataRef = useRef<UserData | null>(null);
+  const savingRef = useRef(false);
+  const pendingRef = useRef(false);
   const [syncStatus, setSyncStatus] = useState<'synced' | 'syncing' | 'error'>('synced');
   const [lastSyncTime, setLastSyncTime] = useState<Date>(new Date());
   const [syncError, setSyncError] = useState<string | null>(null);
@@ -79,143 +78,99 @@ export default function App() {
     endDate: format(endOfMonth(new Date()), 'yyyy-MM-dd'),
     displayCurrency: 'AED'
   });
+  const editable = workspace ? canEdit(workspace) : false;
+  // Latest values for the save loop (avoids saving stale data from an old render).
+  const latest = useRef({ userData, workspace, user });
+  latest.current = { userData, workspace, user };
 
-  // Auth Listener
+  const loadData = async (ws: Workspace, userId: string) => {
+    const loaded = await loadWorkspaceData(ws, userId);
+    snapshotRef.current = loaded.snapshot;
+    loadedDataRef.current = loaded.data;
+    setUserData(loaded.data);
+  };
+
+  // Load the active workspace's records; reload when the user switches workspace.
   useEffect(() => {
-    if (!auth) {
-      console.error("Firebase Auth not initialized");
-      // Use a guest user for bypass
-      setUser({ uid: 'guest_user', email: 'guest@example.com' } as any);
-      setLoading(false);
-      return;
-    }
-    const unsubscribe = onAuthStateChanged(auth, (u) => {
-      if (u) {
-        setUser(u);
-        toast.success(`Welcome back, ${u.displayName || u.email}`, { id: 'auth-success' });
-      } else {
-        // BYPASS: Set a guest user if not logged in
-        setUser({ uid: 'guest_user', email: 'guest@example.com' } as any);
-      }
-      setLoading(false);
-    });
-    return () => unsubscribe();
-  }, []);
-
-  // Data Listener
-  useEffect(() => {
-    if (!user || !db) {
-      if (!db) console.error("Firestore DB not initialized");
-      return;
-    }
-
-    const userDocRef = doc(db, 'user_data', user.uid);
-    const unsubscribe = onSnapshot(userDocRef, (snapshot) => {
-      if (snapshot.exists()) {
-        const rawData = snapshot.data();
-        if (!rawData || !rawData.data) {
-          console.warn("User document exists but 'data' field is missing. Initializing with defaults.");
-          setUserData(DEFAULT_USER_DATA);
-          setLoading(false);
-          return;
-        }
-        const data = rawData.data as UserData;
-        const dataStr = JSON.stringify(data);
-        
-        if (dataStr !== lastSavedDataRef.current) {
-          lastSavedDataRef.current = dataStr;
-          setUserData({
-            ...DEFAULT_USER_DATA,
-            ...data,
-            apartments: data.apartments || DEFAULT_USER_DATA.apartments,
-            reservations: data.reservations || [],
-            dailyExpenses: data.dailyExpenses || [],
-            vendors: data.vendors || DEFAULT_USER_DATA.vendors,
-            serviceRecords: data.serviceRecords || DEFAULT_USER_DATA.serviceRecords,
-            payments: data.payments || [],
-            invoices: data.invoices || [],
-            dashboardWidgets: data.dashboardWidgets || DEFAULT_USER_DATA.dashboardWidgets
-          });
-        }
-      } else {
-        // Initialize new user data
-        setDoc(userDocRef, {
-          uid: user.uid,
-          data: DEFAULT_USER_DATA,
-          updatedAt: new Date().toISOString()
-        });
-      }
-    }, (error) => {
-      console.error("Firestore Error:", error);
-    });
-
-    return () => unsubscribe();
-  }, [user]);
-
-  // Auto-save data
-  useEffect(() => {
-    const currentDataStr = JSON.stringify(userData);
-    if (!user || currentDataStr === lastSavedDataRef.current) return;
-    
-    setSyncStatus('syncing');
-    const timer = setTimeout(() => {
-      lastSavedDataRef.current = currentDataStr;
-      const userDocRef = doc(db, 'user_data', user.uid);
-      setDoc(userDocRef, {
-        uid: user.uid,
-        data: userData,
-        updatedAt: new Date().toISOString()
-      }, { merge: true })
-      .then(() => {
-        setSyncStatus('synced');
-        setLastSyncTime(new Date());
-        setSyncError(null);
+    if (!user || !workspace) return;
+    let cancelled = false;
+    setLoading(true);
+    setWorkspaceError(null);
+    snapshotRef.current = null;
+    loadedDataRef.current = null;
+    setUserData(DEFAULT_USER_DATA);
+    setActiveWorkspace(workspace.id);
+    loadWorkspaceData(workspace, user.id)
+      .then(loaded => {
+        if (cancelled) return;
+        snapshotRef.current = loaded.snapshot;
+        loadedDataRef.current = loaded.data;
+        setUserData(loaded.data);
       })
       .catch(err => {
-        console.error("Auto-save failed:", err);
-        setSyncStatus('error');
-        if (err.code === 'resource-exhausted') {
-          setSyncError("Daily storage quota reached. Changes will be saved locally but might not sync until tomorrow.");
-          toast.error("Database quota reached", { id: 'quota-error' });
-        } else {
-          setSyncError("Failed to sync data. Please check your connection.");
-          toast.error("Sync failed. Check connection.", { id: 'sync-error' });
-        }
-      });
-    }, 2000); // Reduced to 2 seconds to ensure changes reflect quickly
+        console.error('Workspace load failed:', (err as any)?.code || err);
+        if (!cancelled) setWorkspaceError('We could not load your workspace. Please refresh, or log out and in again.');
+      })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; setActiveWorkspace(null); };
+  }, [user?.id, workspace?.id]);
 
-    return () => clearTimeout(timer);
-  }, [userData, user]);
-
-  const [isLoggingIn, setIsLoggingIn] = useState(false);
-
-  const handleLogin = async () => {
-    if (!auth) {
-      alert("Firebase Auth is not initialized. Please check your configuration.");
-      return;
-    }
-    
-    setIsLoggingIn(true);
+  // Save only what changed, one save at a time
+  const runSave = async () => {
+    const { userData, workspace, user } = latest.current;
+    if (!workspace || !user || !snapshotRef.current || !canEdit(workspace)) return;
+    if (savingRef.current) { pendingRef.current = true; return; }
+    savingRef.current = true;
+    setSyncStatus('syncing');
     try {
-      const result = await signInWithPopup(auth, googleProvider);
-    } catch (error: any) {
-      console.error("Login Error:", error);
-      
-      let errorMessage = "An unexpected error occurred during login.";
-      if (error.code === 'auth/popup-blocked') {
-        errorMessage = "The login popup was blocked by your browser. Please allow popups for this site.";
-      } else if (error.code === 'auth/unauthorized-domain') {
-        errorMessage = `This domain (${window.location.hostname}) is not authorized in the Firebase Console. Please add it to Authentication > Settings > Authorized domains.`;
-      } else if (error.code === 'auth/operation-not-allowed') {
-        errorMessage = "Google Sign-In is not enabled in your Firebase project. Please enable it in the Firebase Console.";
-      } else if (error.message) {
-        errorMessage = error.message;
+      const result = await saveChanges(workspace, user.id, snapshotRef.current, userData);
+      snapshotRef.current = result.snapshot;
+      if (result.blocked.length) {
+        toast.error(`Your role can't change ${result.blocked.map(t => TABLE_LABELS[t] || t).join(', ')}. Those edits were undone.`, { id: 'blocked' });
+        await loadData(workspace, user.id);
       }
-      alert(`Login Failed: ${errorMessage}`);
+      if (result.failed.length) {
+        setSyncStatus('error');
+        setSyncError(`Some changes could not be saved (${result.failed.map(t => TABLE_LABELS[t] || t).join(', ')}). Check the values and try again.`);
+      } else {
+        setSyncStatus('synced');
+        setSyncError(null);
+        if (result.changed) setLastSyncTime(new Date());
+      }
+    } catch (err) {
+      console.error('Save failed:', err);
+      setSyncStatus('error');
+      setSyncError('Failed to save. Please check your connection.');
     } finally {
-      setIsLoggingIn(false);
+      savingRef.current = false;
+      if (pendingRef.current) { pendingRef.current = false; setTimeout(runSave, 0); }
     }
   };
+
+  useEffect(() => {
+    if (!workspace || !user || !snapshotRef.current || !editable || userData === loadedDataRef.current) return;
+    const timer = setTimeout(runSave, 1500);
+    return () => clearTimeout(timer);
+  }, [userData]);
+
+  // Pick up teammates' changes when returning to the tab, if nothing is waiting to save.
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState !== 'visible' || !workspace || !user || savingRef.current) return;
+      if (userData !== loadedDataRef.current && syncStatus !== 'synced') return;
+      loadData(workspace, user.id).catch(() => {});
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, [workspace, user?.id, userData, syncStatus]);
+
+  // Clearing data keeps booking platforms, the company profile and display settings.
+  const handleReset = () => setUserData(prev => ({
+    ...prev,
+    apartments: [], reservations: [], monthlyBills: [], dailyExpenses: [], vendors: [], serviceRecords: [],
+    invoices: [], payments: [], bankReconciliations: [], assets: [], documents: [], maintenanceTasks: [],
+    communicationTemplates: [],
+  }));
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -243,15 +198,20 @@ export default function App() {
     }).length;
   }, [userData]);
 
-  if (!user && loading) {
+  if (loading) {
     return (
-      <div className="min-h-screen bg-zinc-50 flex items-center justify-center">
-        <div className="w-10 h-10 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+      <div className="min-h-screen bg-zinc-50 flex flex-col items-center justify-center gap-4 p-6 text-center">
+        {workspaceError ? (
+          <>
+            <p className="text-sm text-rose-600 max-w-sm">{workspaceError}</p>
+            <Button variant="outline" onClick={async () => { await signOut(); navigate('/login', { replace: true }); }}>Log out</Button>
+          </>
+        ) : (
+          <div className="w-10 h-10 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+        )}
       </div>
     );
   }
-
-  // Sign-in is bypassed
 
   return (
     <div className={cn(
@@ -337,6 +297,15 @@ export default function App() {
           />
         )}
 
+        {!editable && (
+          <div className="mb-4 p-3 rounded-xl border border-amber-200 bg-amber-50 text-amber-800 text-xs font-medium">
+            {workspace.role === 'viewer' || workspaceIsWritable(workspace)
+              ? 'You have view-only access to this workspace. Changes you make here are not saved.'
+              : 'This workspace is read-only because its trial or subscription has ended. Your data is safe; changes are not saved.'}
+          </div>
+        )}
+
+
         {syncError && (
           <motion.div 
             initial={{ opacity: 0, y: -20 }}
@@ -403,11 +372,11 @@ export default function App() {
                 filters={filters} 
                 currentKPIs={[]} 
                 timeline={[]} 
-                handleReset={() => setUserData(DEFAULT_USER_DATA)} 
+                handleReset={handleReset} 
               />
             )}
             {activeTab === 'team' && <Team />}
-            {activeTab === 'settings' && <Settings data={userData} setData={setUserData} />}
+            {activeTab === 'settings' && <Settings data={userData} setData={setUserData} workspace={workspace} />}
           </motion.div>
         </AnimatePresence>
       </main>

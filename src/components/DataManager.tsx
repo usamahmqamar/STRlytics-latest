@@ -16,6 +16,7 @@ import { UserData } from '../types';
 import { format, parseISO, isAfter, isBefore, isEqual, addDays, differenceInDays } from 'date-fns';
 import { cn } from '../lib/utils';
 import Papa from 'papaparse';
+import { csvFileProblem, safeParseOptions, safeUnparseOptions } from '../lib/csv';
 import { calculateDailyPL, getMonthlyKPIs, getCashflowTimeline } from '../services/analytics';
 
 interface DataManagerProps {
@@ -36,7 +37,7 @@ export const DataManager: React.FC<DataManagerProps> = ({
   const [resetScope, setResetScope] = useState<'all' | 'after' | 'before'>('after');
 
   const exportToCSV = (jsonData: any[], fileName: string) => {
-    const csv = Papa.unparse(jsonData);
+    const csv = Papa.unparse(jsonData, safeUnparseOptions);
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
@@ -99,7 +100,7 @@ export const DataManager: React.FC<DataManagerProps> = ({
       sample = [['Bay Central 605', 'BC-605', 'Bay Central', 'Dubai Marina', '1BR', '850', '95000']];
     }
 
-    const csv = Papa.unparse({ fields: headers, data: sample });
+    const csv = Papa.unparse({ fields: headers, data: sample }, safeUnparseOptions);
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
@@ -110,11 +111,16 @@ export const DataManager: React.FC<DataManagerProps> = ({
   const handleDataImport = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    const problem = csvFileProblem(file);
+    if (problem) {
+      alert(problem);
+      e.target.value = '';
+      return;
+    }
 
     setIsImporting(true);
     Papa.parse(file, {
-      header: true,
-      skipEmptyLines: true,
+      ...safeParseOptions,
       complete: (results) => {
         if (importType === 'properties') {
           const importedApts: any[] = results.data.map((row: any) => ({
@@ -147,7 +153,7 @@ export const DataManager: React.FC<DataManagerProps> = ({
             check_out: row.check_out || format(addDays(new Date(), 1), 'yyyy-MM-dd'),
             total_payout_aed: Number(row.total_payout_aed) || 0,
             net_payout_aed: Number(row.total_payout_aed) || 0,
-            status: row.status || 'confirmed',
+            status: String(row.status || '').toLowerCase() === 'cancelled' ? 'cancelled' : 'confirmed',
             apartment_id: row.apartment_id || data.apartments[0]?.apartment_id || '',
             nights: differenceInDays(parseISO(row.check_out || format(addDays(new Date(), 1), 'yyyy-MM-dd')), parseISO(row.check_in || format(new Date(), 'yyyy-MM-dd')))
           }));
