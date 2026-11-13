@@ -90,13 +90,13 @@ export const DataManager: React.FC<DataManagerProps> = ({
     let sample = [];
 
     if (type === 'reservations') {
-      headers = ['reservation_code', 'guest_name', 'num_guests', 'check_in', 'check_out', 'total_payout_aed', 'status', 'apartment_id'];
+      headers = ['reservation_code', 'guest_name', 'num_guests', 'check_in', 'check_out', 'total_payout', 'status', 'apartment_id'];
       sample = [['RES-001', 'John Doe', '2', '2024-05-01', '2024-05-05', '2500', 'confirmed', 'APT-1']];
     } else if (type === 'expenses') {
-      headers = ['date', 'category', 'amount_aed', 'notes', 'apartment_id', 'vendor_id'];
+      headers = ['date', 'category', 'amount', 'notes', 'apartment_id', 'vendor_id'];
       sample = [['2024-05-01', 'Maintenance', '500', 'AC Repair', 'APT-1', 'VEND-1']];
     } else {
-      headers = ['name', 'nickname', 'building', 'address', 'specification', 'measurement_sqft', 'annual_rent_aed'];
+      headers = ['name', 'nickname', 'building', 'address', 'specification', 'measurement_sqft', 'annual_rent'];
       sample = [['Bay Central 605', 'BC-605', 'Bay Central', 'Dubai Marina', '1BR', '850', '95000']];
     }
 
@@ -132,15 +132,15 @@ export const DataManager: React.FC<DataManagerProps> = ({
             specification: row.specification || 'Studio',
             measurement_sqft: Number(row.measurement_sqft) || 0,
             start_operation_date: row.start_operation_date || format(new Date(), 'yyyy-MM-dd'),
-            annual_rent_aed: Number(row.annual_rent_aed) || 0,
-            monthly_rent_aed: Number(row.monthly_rent_aed) || Math.round((Number(row.annual_rent_aed) || 0) / 12),
+            annual_rent: Number(row.annual_rent) || 0,
+            monthly_rent: Number(row.monthly_rent) || Math.round((Number(row.annual_rent) || 0) / 12),
             num_cheques: Number(row.num_cheques) || 4,
             rent_cheques: [],
             setup_costs: [],
             currency: 'AED',
             utilities_monthly_defaults: {
-              dewa_electricity_aed: 500,
-              internet_aed: 350
+              electricity: 500,
+              internet: 350
             }
           }));
           setData(prev => ({ ...prev, apartments: [...prev.apartments, ...importedApts] }));
@@ -151,8 +151,8 @@ export const DataManager: React.FC<DataManagerProps> = ({
             num_guests: Number(row.num_guests) || 1,
             check_in: row.check_in || format(new Date(), 'yyyy-MM-dd'),
             check_out: row.check_out || format(addDays(new Date(), 1), 'yyyy-MM-dd'),
-            total_payout_aed: Number(row.total_payout_aed) || 0,
-            net_payout_aed: Number(row.total_payout_aed) || 0,
+            total_payout: Number(row.total_payout) || 0,
+            net_payout: Number(row.total_payout) || 0,
             status: String(row.status || '').toLowerCase() === 'cancelled' ? 'cancelled' : 'confirmed',
             apartment_id: row.apartment_id || data.apartments[0]?.apartment_id || '',
             nights: differenceInDays(parseISO(row.check_out || format(addDays(new Date(), 1), 'yyyy-MM-dd')), parseISO(row.check_in || format(new Date(), 'yyyy-MM-dd')))
@@ -163,7 +163,7 @@ export const DataManager: React.FC<DataManagerProps> = ({
             id: `EXP-${Math.random().toString(36).substr(2, 9)}`,
             date: row.date || format(new Date(), 'yyyy-MM-dd'),
             category: row.category || 'Maintenance',
-            amount_aed: Number(row.amount_aed) || 0,
+            amount: Number(row.amount) || 0,
             notes: row.notes || '',
             apartment_id: row.apartment_id || data.apartments[0]?.apartment_id || '',
             vendor_id: row.vendor_id || ''
@@ -282,7 +282,7 @@ export const DataManager: React.FC<DataManagerProps> = ({
                       { key: 'guest_name', desc: 'Full name of guest' },
                       { key: 'check_in', desc: 'YYYY-MM-DD' },
                       { key: 'check_out', desc: 'YYYY-MM-DD' },
-                      { key: 'total_payout_aed', desc: 'Numeric value' },
+                      { key: 'total_payout', desc: 'Numeric value' },
                       { key: 'apartment_id', desc: 'Must match property ID' },
                     ].map(item => (
                       <div key={item.key} className="flex flex-col">
@@ -293,7 +293,7 @@ export const DataManager: React.FC<DataManagerProps> = ({
                     {importType === 'expenses' && [
                       { key: 'date', desc: 'YYYY-MM-DD' },
                       { key: 'category', desc: 'Maintenance, Utilities, etc' },
-                      { key: 'amount_aed', desc: 'Numeric value' },
+                      { key: 'amount', desc: 'Numeric value' },
                       { key: 'apartment_id', desc: 'Property link' },
                     ].map(item => (
                       <div key={item.key} className="flex flex-col">
@@ -304,7 +304,7 @@ export const DataManager: React.FC<DataManagerProps> = ({
                     {importType === 'properties' && [
                       { key: 'name', desc: 'Display name' },
                       { key: 'nickname', desc: 'Short code (e.g. BC-605)' },
-                      { key: 'annual_rent_aed', desc: 'Total yearly rent' },
+                      { key: 'annual_rent', desc: 'Total yearly rent' },
                       { key: 'specification', desc: 'Studio, 1BR, etc' },
                     ].map(item => (
                       <div key={item.key} className="flex flex-col">

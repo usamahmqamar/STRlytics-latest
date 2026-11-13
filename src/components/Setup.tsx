@@ -5,6 +5,8 @@
 
 import { calculateDailyPL } from '../lib/pl';
 import React, { useState, useMemo } from 'react';
+import { formatMoney } from '../lib/money';
+import { browserTimezone, countryOptions, currencyOptions, defaultsFor, timezoneOptions } from '../lib/regions';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Building2, Plus, Edit2, Trash2, CreditCard, 
@@ -24,9 +26,27 @@ import { format, addMonths, subDays, parseISO, differenceInDays } from 'date-fns
 interface SetupProps {
   data: UserData;
   setData: React.Dispatch<React.SetStateAction<UserData>>;
+  /** Workspace currency and country: defaults for a new listing. */
+  baseCurrency?: string;
+  baseCountry?: string;
 }
 
-export const Setup: React.FC<SetupProps> = ({ data, setData }) => {
+export const Setup: React.FC<SetupProps> = ({ data, setData, baseCurrency = 'AED', baseCountry = '' }) => {
+  const countries = useMemo(() => countryOptions(), []);
+  const currencies = useMemo(() => currencyOptions(), []);
+  const zones = useMemo(() => timezoneOptions(), []);
+  const locationDefaults = () => {
+    const d = baseCountry ? defaultsFor(baseCountry) : { currency: baseCurrency, timezone: browserTimezone() };
+    return { country: baseCountry || undefined, currency: baseCurrency, timezone: d.timezone, region: '', city: '' };
+  };
+  /** A listing's currency is fixed once anything is recorded against it. */
+  const hasRecords = (id?: string | null) => !!id && (
+    data.reservations.some(r => r.apartment_id === id) || data.dailyExpenses.some(e => e.apartment_id === id)
+    || data.monthlyBills.some(b => b.apartment_id === id) || data.serviceRecords.some(x => x.apartment_id === id)
+    || data.assets.some(a => a.apartment_id === id)
+    || !!data.apartments.find(a => a.apartment_id === id)?.rent_cheques?.length
+    || !!data.apartments.find(a => a.apartment_id === id)?.setup_costs?.length);
+  const currencyOf = (id?: string | null) => data.apartments.find(a => a.apartment_id === id)?.currency || baseCurrency;
   const [isAddAptOpen, setIsAddAptOpen] = useState(false);
   const [editingAptId, setEditingAptId] = useState<string | null>(null);
   const [isAddSetupCostOpen, setIsAddSetupCostOpen] = useState<{ open: boolean, apartmentId: string }>({ open: false, apartmentId: '' });
@@ -58,15 +78,15 @@ export const Setup: React.FC<SetupProps> = ({ data, setData }) => {
     address: '',
     specification: 'Studio',
     measurement_sqft: 0,
-    annual_rent_aed: 0,
+    annual_rent: 0,
     num_cheques: 4,
-    currency: 'AED',
+    ...locationDefaults(),
     start_operation_date: format(new Date(), 'yyyy-MM-dd'),
     tenancy_end_date: format(addMonths(new Date(), 12), 'yyyy-MM-dd'),
     status: 'active',
     utilities_monthly_defaults: {
-      dewa_electricity_aed: 500,
-      internet_aed: 350
+      electricity: 500,
+      internet: 350
     }
   });
 
@@ -96,29 +116,23 @@ export const Setup: React.FC<SetupProps> = ({ data, setData }) => {
     date: format(new Date(), 'yyyy-MM-dd'),
     category: 'Furnishing',
     description: '',
-    amount_aed: 0,
+    amount: 0,
     is_refundable: false,
     payment_method: 'Bank Transfer',
     vendor: ''
   });
 
-  const formatValue = (val: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'AED',
-      minimumFractionDigits: 0
-    }).format(val);
-  };
+  const formatValue = (val: number, currency: string = baseCurrency) => formatMoney(val, currency, { compact: true });
 
   const generatedCheques = useMemo(() => {
     // If editing, we might want to keep existing cheques unless rent details change
     // For simplicity in this UI, we'll only auto-generate if it's a new property or if we explicitly reset
-    if (!newApt.annual_rent_aed || !newApt.num_cheques || !newApt.start_operation_date) return [];
+    if (!newApt.annual_rent || !newApt.num_cheques || !newApt.start_operation_date) return [];
     
     // If we are editing and have existing cheques, we might want to keep them
     // But usually changing annual rent or num_cheques implies a reset
     const cheques: RentCheque[] = [];
-    const amountPerCheque = Math.round(newApt.annual_rent_aed / newApt.num_cheques);
+    const amountPerCheque = Math.round(newApt.annual_rent / newApt.num_cheques);
     const startDate = parseISO(newApt.start_operation_date);
     const monthsInterval = 12 / newApt.num_cheques;
 
@@ -127,12 +141,12 @@ export const Setup: React.FC<SetupProps> = ({ data, setData }) => {
       cheques.push({
         cheque_id: `CHQ-${Math.random().toString(36).substr(2, 9)}`,
         due_date: format(dueDate, 'yyyy-MM-dd'),
-        amount_aed: amountPerCheque,
+        amount: amountPerCheque,
         status: 'due'
       });
     }
     return cheques;
-  }, [newApt.annual_rent_aed, newApt.num_cheques, newApt.start_operation_date]);
+  }, [newApt.annual_rent, newApt.num_cheques, newApt.start_operation_date]);
 
   const handleAddApartment = () => {
     if (!newApt.nickname || !newApt.name) return;
@@ -145,10 +159,10 @@ export const Setup: React.FC<SetupProps> = ({ data, setData }) => {
     const apartment: Apartment = {
       ...newApt as Apartment,
       apartment_id: newApt.nickname, // Nickname serves as ID
-      monthly_rent_aed: Math.round((newApt.annual_rent_aed || 0) / 12),
+      monthly_rent: Math.round((newApt.annual_rent || 0) / 12),
       rent_cheques: editingAptId ? (newApt.rent_cheques || []) : generatedCheques,
       setup_costs: newApt.setup_costs || [],
-      currency: 'AED',
+      currency: newApt.currency || baseCurrency,
       tenancy_end_date: newApt.tenancy_end_date || defaultEndStr,
       status: newApt.status || 'active',
       tenancy_history: newApt.tenancy_history || [],
@@ -181,14 +195,15 @@ export const Setup: React.FC<SetupProps> = ({ data, setData }) => {
       address: '',
       specification: 'Studio',
       measurement_sqft: 0,
-      annual_rent_aed: 0,
+      annual_rent: 0,
       num_cheques: 4,
+      ...locationDefaults(),
       start_operation_date: format(new Date(), 'yyyy-MM-dd'),
       tenancy_end_date: format(addMonths(new Date(), 12), 'yyyy-MM-dd'),
       status: 'active',
       utilities_monthly_defaults: {
-        dewa_electricity_aed: 500,
-        internet_aed: 350
+        electricity: 500,
+        internet: 350
       }
     });
   };
@@ -204,19 +219,19 @@ export const Setup: React.FC<SetupProps> = ({ data, setData }) => {
     const rows = calculateDailyPL(data, parseISO(startDate), parseISO(endDate), apartmentId);
     const matchedReservations = (data.reservations || []).filter(r =>
       r.apartment_id === apartmentId && r.status === 'confirmed' && r.check_in >= startDate && r.check_in <= endDate);
-    const totalRevenue = matchedReservations.reduce((sum, r) => sum + (Number(r.total_booking_revenue_aed) || 0), 0);
+    const totalRevenue = matchedReservations.reduce((sum, r) => sum + (Number(r.total_booking_revenue) || 0), 0);
     const num_reservations = matchedReservations.length;
-    const netPayout = Math.round(rows.reduce((t, r) => t + r.daily_revenue_aed, 0));
-    const totalExpenses = Math.round(rows.reduce((t, r) => t + r.total_daily_cost_aed, 0));
+    const netPayout = Math.round(rows.reduce((t, r) => t + r.daily_revenue, 0));
+    const totalExpenses = Math.round(rows.reduce((t, r) => t + r.total_daily_cost, 0));
     const netProfit = netPayout - totalExpenses;
     const operatingNights = rows.filter(r => r.operating).length;
     const occupancyRate = operatingNights ? Math.round((rows.filter(r => r.occupied === 'yes').length / operatingNights) * 100) : 0;
 
     return {
-      total_revenue_aed: totalRevenue,
-      total_expenses_aed: totalExpenses,
-      net_payout_aed: netPayout,
-      net_profit_aed: netProfit,
+      total_revenue: totalRevenue,
+      total_expenses: totalExpenses,
+      net_payout: netPayout,
+      net_profit: netProfit,
       occupancy_rate: occupancyRate,
       num_reservations
     };
@@ -230,7 +245,7 @@ export const Setup: React.FC<SetupProps> = ({ data, setData }) => {
       renewingApt.apartment_id,
       renewingApt.start_operation_date,
       renewingApt.tenancy_end_date || format(new Date(), 'yyyy-MM-dd'),
-      renewingApt.annual_rent_aed
+      renewingApt.annual_rent
     );
 
     // Create history record
@@ -239,8 +254,8 @@ export const Setup: React.FC<SetupProps> = ({ data, setData }) => {
       start_date: renewingApt.start_operation_date,
       end_date: renewingApt.tenancy_end_date || format(new Date(), 'yyyy-MM-dd'),
       status: 'expired',
-      annual_rent_aed: renewingApt.annual_rent_aed,
-      monthly_rent_aed: renewingApt.monthly_rent_aed,
+      annual_rent: renewingApt.annual_rent,
+      monthly_rent: renewingApt.monthly_rent,
       num_cheques: renewingApt.num_cheques,
       ...perf
     };
@@ -256,7 +271,7 @@ export const Setup: React.FC<SetupProps> = ({ data, setData }) => {
       newCheques.push({
         cheque_id: `CHQ-${Math.random().toString(36).substr(2, 9)}`,
         due_date: format(dueDate, 'yyyy-MM-dd'),
-        amount_aed: amountPerCheque,
+        amount: amountPerCheque,
         status: 'due'
       });
     }
@@ -271,8 +286,8 @@ export const Setup: React.FC<SetupProps> = ({ data, setData }) => {
           ...apt,
           start_operation_date: renewStartDate,
           tenancy_end_date: renewEndDate,
-          annual_rent_aed: renewAnnualRent,
-          monthly_rent_aed: Math.round(renewAnnualRent / 12),
+          annual_rent: renewAnnualRent,
+          monthly_rent: Math.round(renewAnnualRent / 12),
           num_cheques: renewNumCheques,
           rent_cheques: newCheques,
           status: 'active',
@@ -292,7 +307,7 @@ export const Setup: React.FC<SetupProps> = ({ data, setData }) => {
       terminatingApt.apartment_id,
       terminatingApt.start_operation_date,
       terminateDate,
-      terminatingApt.annual_rent_aed
+      terminatingApt.annual_rent
     );
 
     // Create history record
@@ -301,8 +316,8 @@ export const Setup: React.FC<SetupProps> = ({ data, setData }) => {
       start_date: terminatingApt.start_operation_date,
       end_date: terminateDate,
       status: terminateStatus,
-      annual_rent_aed: terminatingApt.annual_rent_aed,
-      monthly_rent_aed: terminatingApt.monthly_rent_aed,
+      annual_rent: terminatingApt.annual_rent,
+      monthly_rent: terminatingApt.monthly_rent,
       num_cheques: terminatingApt.num_cheques,
       ...perf
     };
@@ -358,6 +373,7 @@ export const Setup: React.FC<SetupProps> = ({ data, setData }) => {
   const handleAddSetupCost = () => {
     const cost: SetupCost = {
       ...newSetupCost as SetupCost,
+      currency: currencyOf(isAddSetupCostOpen.apartmentId),
       item_id: `COST-${Math.random().toString(36).substr(2, 9)}`
     };
 
@@ -378,7 +394,7 @@ export const Setup: React.FC<SetupProps> = ({ data, setData }) => {
           category: 'furniture',
           purchase_date: cost.date,
           condition: 'new',
-          cost_aed: cost.amount_aed,
+          cost: cost.amount,
           notes: `Automatically added from Property Setup: ${cost.vendor || 'Unknown Vendor'}`
         };
         updatedAssets = [...updatedAssets, newAsset];
@@ -396,7 +412,7 @@ export const Setup: React.FC<SetupProps> = ({ data, setData }) => {
       date: format(new Date(), 'yyyy-MM-dd'),
       category: 'Furnishing',
       description: '',
-      amount_aed: 0,
+      amount: 0,
       is_refundable: false,
       payment_method: 'Bank Transfer',
       vendor: ''
@@ -509,12 +525,13 @@ export const Setup: React.FC<SetupProps> = ({ data, setData }) => {
               address: '',
               specification: 'Studio',
               measurement_sqft: 0,
-              annual_rent_aed: 0,
+              annual_rent: 0,
               num_cheques: 4,
+              ...locationDefaults(),
               start_operation_date: format(new Date(), 'yyyy-MM-dd'),
               utilities_monthly_defaults: {
-                dewa_electricity_aed: 500,
-                internet_aed: 350
+                electricity: 500,
+                internet: 350
               }
             });
             setIsAddAptOpen(true);
@@ -608,7 +625,7 @@ export const Setup: React.FC<SetupProps> = ({ data, setData }) => {
                           setRenewingApt(apt);
                           setRenewStartDate(apt.tenancy_end_date || format(new Date(), 'yyyy-MM-dd'));
                           setRenewEndDate(format(addMonths(parseISO(apt.tenancy_end_date || format(new Date(), 'yyyy-MM-dd')), 12), 'yyyy-MM-dd'));
-                          setRenewAnnualRent(apt.annual_rent_aed);
+                          setRenewAnnualRent(apt.annual_rent);
                           setRenewNumCheques(apt.num_cheques);
                         }}
                         className="py-1 hover:border-emerald-500 hover:text-emerald-600 flex-1 min-w-[120px] h-9 text-xs"
@@ -639,7 +656,7 @@ export const Setup: React.FC<SetupProps> = ({ data, setData }) => {
                     <div className="grid grid-cols-2 gap-3">
                       <div className="p-3 bg-zinc-50 dark:bg-zinc-850/40 rounded-xl border border-zinc-100/80 dark:border-zinc-800">
                         <p className="text-[11px] font-bold text-zinc-400 mb-1">Annual Rent</p>
-                        <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-150">{formatValue(apt.annual_rent_aed)}</p>
+                        <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-150">{formatValue(apt.annual_rent, apt.currency)}</p>
                       </div>
                       <div className="p-3 bg-zinc-50 dark:bg-zinc-850/40 rounded-xl border border-zinc-100/80 dark:border-zinc-800">
                         <p className="text-[11px] font-bold text-zinc-400 mb-1">Cheques</p>
@@ -664,7 +681,7 @@ export const Setup: React.FC<SetupProps> = ({ data, setData }) => {
                           </div>
                           <div>
                             <p className="text-xs font-bold text-zinc-900">{format(parseISO(chq.due_date), 'MMM dd, yyyy')}</p>
-                            <p className="text-[11px] text-zinc-400 font-medium">{formatValue(chq.amount_aed)}</p>
+                            <p className="text-[11px] text-zinc-400 font-medium">{formatValue(chq.amount, apt.currency)}</p>
                           </div>
                         </div>
                         <select 
@@ -710,7 +727,7 @@ export const Setup: React.FC<SetupProps> = ({ data, setData }) => {
                                 <span className="text-[8px] font-semibold text-blue-500 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-100">Refundable</span>
                               )}
                             </div>
-                            <span className="text-xs font-semibold text-zinc-900">{formatValue(cost.amount_aed)}</span>
+                            <span className="text-xs font-semibold text-zinc-900">{formatValue(cost.amount, apt.currency)}</span>
                           </div>
                           <p className="text-[11px] text-zinc-600 font-medium leading-tight">{cost.description}</p>
                           <div className="flex justify-between items-center mt-2">
@@ -729,7 +746,7 @@ export const Setup: React.FC<SetupProps> = ({ data, setData }) => {
                     <div className="pt-3 border-t border-zinc-100 dark:border-zinc-805 flex justify-between items-center">
                       <span className="text-[11px] font-bold text-zinc-400">Total Setup Investment</span>
                       <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-                        {formatValue(apt.setup_costs.reduce((sum, c) => sum + c.amount_aed, 0))}
+                        {formatValue(apt.setup_costs.reduce((sum, c) => sum + c.amount, 0), apt.currency)}
                       </span>
                     </div>
                   )}
@@ -770,7 +787,7 @@ export const Setup: React.FC<SetupProps> = ({ data, setData }) => {
                                     <p className="text-xs font-bold text-zinc-800 dark:text-zinc-200">
                                       {format(parseISO(record.start_date), 'MMM dd, yyyy')} — {format(parseISO(record.end_date), 'MMM dd, yyyy')}
                                     </p>
-                                    <p className="text-[11px] text-zinc-400 font-medium mt-0.5">Rent: {formatValue(record.annual_rent_aed)}/yr ({record.num_cheques} Cheques)</p>
+                                    <p className="text-[11px] text-zinc-400 font-medium mt-0.5">Rent: {formatValue(record.annual_rent, apt.currency)}/yr ({record.num_cheques} Cheques)</p>
                                   </div>
                                   <span className={cn(
                                     "text-[11px] font-bold px-2 py-0.5 rounded-full",
@@ -783,19 +800,19 @@ export const Setup: React.FC<SetupProps> = ({ data, setData }) => {
                                 <div className="grid grid-cols-3 gap-2 text-center">
                                   <div className="bg-white dark:bg-zinc-900 p-2 rounded-xl border border-zinc-150/40 dark:border-zinc-800">
                                     <p className="text-[8px] font-bold text-zinc-405">Revenue</p>
-                                    <p className="text-xs font-semibold text-zinc-850 dark:text-zinc-200">{formatValue(record.total_revenue_aed)}</p>
+                                    <p className="text-xs font-semibold text-zinc-850 dark:text-zinc-200">{formatValue(record.total_revenue, apt.currency)}</p>
                                   </div>
                                   <div className="bg-white dark:bg-zinc-900 p-2 rounded-xl border border-zinc-150/40 dark:border-zinc-800">
                                     <p className="text-[8px] font-bold text-zinc-405">Payout</p>
-                                    <p className="text-xs font-semibold text-zinc-855 dark:text-zinc-250">{formatValue(record.net_payout_aed)}</p>
+                                    <p className="text-xs font-semibold text-zinc-855 dark:text-zinc-250">{formatValue(record.net_payout, apt.currency)}</p>
                                   </div>
                                   <div className="bg-white dark:bg-zinc-900 p-2 rounded-xl border border-zinc-150/40 dark:border-zinc-800">
                                     <p className="text-[8px] font-bold text-zinc-405">Net Profit</p>
                                     <p className={cn(
                                       "text-xs font-semibold",
-                                      record.net_profit_aed >= 0 ? "text-emerald-600 dark:text-emerald-450" : "text-rose-600 dark:text-rose-450"
+                                      record.net_profit >= 0 ? "text-emerald-600 dark:text-emerald-450" : "text-rose-600 dark:text-rose-450"
                                     )}>
-                                      {formatValue(record.net_profit_aed)}
+                                      {formatValue(record.net_profit, apt.currency)}
                                     </p>
                                   </div>
                                 </div>
@@ -922,19 +939,69 @@ export const Setup: React.FC<SetupProps> = ({ data, setData }) => {
                           />
                         </div>
                         <div className="space-y-1.5">
-                          <label className="text-[11px] font-semibold text-zinc-400 ml-1">Currency</label>
-                          <select 
+                          <label className="text-[11px] font-semibold text-zinc-400 ml-1">Country</label>
+                          <select
                             className="w-full px-4 py-3 rounded-xl border border-zinc-200 focus:border-zinc-900 focus:ring-0 transition-all text-sm font-medium appearance-none"
+                            value={newApt.country || ''}
+                            onChange={e => {
+                              const country = e.target.value || undefined;
+                              const d = country ? defaultsFor(country) : null;
+                              const locked = hasRecords(editingAptId);
+                              setNewApt({ ...newApt, country, ...(d ? { timezone: d.timezone, ...(locked ? {} : { currency: d.currency }) } : {}) });
+                            }}
+                          >
+                            <option value="">Choose a country</option>
+                            {countries.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+                          </select>
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-[11px] font-semibold text-zinc-400 ml-1">City</label>
+                          <input
+                            type="text"
+                            maxLength={100}
+                            placeholder="e.g. Dubai, Miami, Goa"
+                            className="w-full px-4 py-3 rounded-xl border border-zinc-200 focus:border-zinc-900 focus:ring-0 transition-all text-sm font-medium"
+                            value={newApt.city || ''}
+                            onChange={e => setNewApt({ ...newApt, city: e.target.value })}
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-[11px] font-semibold text-zinc-400 ml-1">State, emirate or region</label>
+                          <input
+                            type="text"
+                            maxLength={100}
+                            placeholder="e.g. Florida, Maharashtra"
+                            className="w-full px-4 py-3 rounded-xl border border-zinc-200 focus:border-zinc-900 focus:ring-0 transition-all text-sm font-medium"
+                            value={newApt.region || ''}
+                            onChange={e => setNewApt({ ...newApt, region: e.target.value })}
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-[11px] font-semibold text-zinc-400 ml-1">Time zone</label>
+                          <select
+                            className="w-full px-4 py-3 rounded-xl border border-zinc-200 focus:border-zinc-900 focus:ring-0 transition-all text-sm font-medium appearance-none"
+                            value={newApt.timezone || ''}
+                            onChange={e => setNewApt({ ...newApt, timezone: e.target.value || undefined })}
+                          >
+                            <option value="">Workspace time zone</option>
+                            {zones.map(z => <option key={z.value} value={z.value}>{z.label}</option>)}
+                          </select>
+                        </div>
+                        <div className="space-y-1.5 col-span-2">
+                          <label className="text-[11px] font-semibold text-zinc-400 ml-1">Currency</label>
+                          <select
+                            className="w-full px-4 py-3 rounded-xl border border-zinc-200 focus:border-zinc-900 focus:ring-0 transition-all text-sm font-medium appearance-none disabled:bg-zinc-50 disabled:text-zinc-500"
                             value={newApt.currency}
+                            disabled={hasRecords(editingAptId)}
                             onChange={e => setNewApt({...newApt, currency: e.target.value})}
                           >
-                            <option value="AED">AED - UAE Dirham</option>
-                            <option value="USD">USD - US Dollar</option>
-                            <option value="EUR">EUR - Euro</option>
-                            <option value="GBP">GBP - British Pound</option>
-                            <option value="SAR">SAR - Saudi Riyal</option>
-                            <option value="QAR">QAR - Qatari Riyal</option>
+                            {currencies.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
                           </select>
+                          <p className="ml-1 text-[11px] text-zinc-500">
+                            {hasRecords(editingAptId)
+                              ? 'Fixed: this property already has bookings or costs recorded in this currency.'
+                              : 'Every amount for this property is recorded in this currency. It can\'t be changed once bookings or costs are added.'}
+                          </p>
                         </div>
                         <div className="space-y-1.5 col-span-2">
                           <div className="grid grid-cols-2 gap-4">
@@ -987,15 +1054,15 @@ export const Setup: React.FC<SetupProps> = ({ data, setData }) => {
                     </div>
                     <div className="space-y-4">
                       <div className="space-y-1.5">
-                        <label className="text-[11px] font-semibold text-zinc-400 ml-1">Annual Rent (AED)</label>
+                        <label className="text-[11px] font-semibold text-zinc-400 ml-1">Annual Rent ({newApt.currency})</label>
                         <div className="relative">
-                          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 font-bold text-sm">AED</span>
+                          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 font-bold text-sm">{newApt.currency}</span>
                           <input 
                             type="number" 
                             placeholder="0"
                             className="w-full pl-12 pr-4 py-3 rounded-xl border border-zinc-200 focus:border-zinc-900 focus:ring-0 transition-all text-sm font-semibold"
-                            value={newApt.annual_rent_aed}
-                            onChange={e => setNewApt({...newApt, annual_rent_aed: Number(e.target.value)})}
+                            value={newApt.annual_rent}
+                            onChange={e => setNewApt({...newApt, annual_rent: Number(e.target.value)})}
                           />
                         </div>
                       </div>
@@ -1027,7 +1094,7 @@ export const Setup: React.FC<SetupProps> = ({ data, setData }) => {
                                 <span className="text-[11px] font-semibold text-zinc-400">#{i + 1}</span>
                                 <span className="text-xs font-bold text-zinc-900">{format(parseISO(chq.due_date), 'MMM dd, yyyy')}</span>
                               </div>
-                              <span className="text-xs font-semibold text-zinc-900">{formatValue(chq.amount_aed)}</span>
+                              <span className="text-xs font-semibold text-zinc-900">{formatValue(chq.amount, newApt.currency)}</span>
                             </div>
                           ))}
                         </div>
@@ -1156,12 +1223,12 @@ export const Setup: React.FC<SetupProps> = ({ data, setData }) => {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <label className="text-[11px] font-semibold text-zinc-400 ml-1">Amount (AED)</label>
+                    <label className="text-[11px] font-semibold text-zinc-400 ml-1">Amount ({currencyOf(isAddSetupCostOpen.apartmentId)})</label>
                     <input 
                       type="number" 
                       className="w-full px-4 py-3 rounded-xl border border-zinc-200 focus:border-zinc-900 focus:ring-0 transition-all text-sm font-semibold"
-                      value={newSetupCost.amount_aed}
-                      onChange={e => setNewSetupCost({...newSetupCost, amount_aed: Number(e.target.value)})}
+                      value={newSetupCost.amount}
+                      onChange={e => setNewSetupCost({...newSetupCost, amount: Number(e.target.value)})}
                     />
                   </div>
                   <div className="space-y-1.5">
@@ -1597,9 +1664,9 @@ export const Setup: React.FC<SetupProps> = ({ data, setData }) => {
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-[11px] font-semibold text-zinc-400 dark:text-zinc-400 ml-1">New Annual Rent (AED)</label>
+                  <label className="text-[11px] font-semibold text-zinc-400 dark:text-zinc-400 ml-1">New Annual Rent ({renewingApt?.currency || baseCurrency})</label>
                   <div className="relative">
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 font-bold text-sm">AED</span>
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 font-bold text-sm">{renewingApt?.currency || baseCurrency}</span>
                     <input 
                       type="number" 
                       className="w-full pl-12 pr-4 py-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-zinc-900 dark:focus:border-zinc-50 focus:ring-0 transition-all text-sm font-semibold"

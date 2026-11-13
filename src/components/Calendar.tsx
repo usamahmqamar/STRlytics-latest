@@ -19,7 +19,7 @@ import {
   addDays, subDays, differenceInDays, isToday
 } from 'date-fns';
 import { cn } from '../lib/utils';
-import { convertCurrency } from '../services/analytics';
+
 
 interface CalendarProps {
   data: UserData;
@@ -41,7 +41,7 @@ export const Calendar: React.FC<CalendarProps> = ({ data, filters }) => {
   }, [currentMonth]);
 
   const formatValue = (val: number) => {
-    const converted = convertCurrency(val, 'AED', filters.displayCurrency);
+    const converted = val;
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: filters.displayCurrency,
@@ -191,7 +191,7 @@ export const Calendar: React.FC<CalendarProps> = ({ data, filters }) => {
                                 </div>
                                 <div className="flex items-center gap-1">
                                   <CreditCard size={10} />
-                                  <span className="text-[11px] font-bold">{formatValue(res.net_payout_aed)}</span>
+                                  <span className="text-[11px] font-bold">{formatValue(res.net_payout)}</span>
                                 </div>
                               </div>
                             </motion.div>
@@ -288,7 +288,7 @@ export const Calendar: React.FC<CalendarProps> = ({ data, filters }) => {
                     <p className="text-[11px] font-semibold text-emerald-600">Final Net Payout</p>
                     <span className="px-2 py-0.5 bg-emerald-500 text-white text-[8px] font-semibold rounded">Confirmed</span>
                   </div>
-                  <p className="text-xl font-semibold text-emerald-700">{formatValue(selectedReservation.net_payout_aed)}</p>
+                  <p className="text-xl font-semibold text-emerald-700">{formatValue(selectedReservation.net_payout)}</p>
                   <p className="text-[11px] text-emerald-600/70 font-medium mt-1">Platform: {selectedReservation.channel}</p>
                 </div>
               </div>

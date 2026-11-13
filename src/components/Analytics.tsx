@@ -19,7 +19,7 @@ import {
 import { Card } from './ui/Card';
 import { UserData } from '../types';
 import { format, parseISO, subMonths, differenceInDays } from 'date-fns';
-import { calculateDailyPL, getMonthlyKPIs, convertCurrency } from '../services/analytics';
+import { calculateDailyPL, getMonthlyKPIs } from '../services/analytics';
 import { cn } from '../lib/utils';
 
 interface AnalyticsProps {
@@ -34,7 +34,7 @@ interface AnalyticsProps {
 
 export const Analytics: React.FC<AnalyticsProps> = ({ data, filters }) => {
   const formatValue = (val: number) => {
-    const converted = convertCurrency(val, 'AED', filters.displayCurrency);
+    const converted = val;
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: filters.displayCurrency,
@@ -62,7 +62,7 @@ export const Analytics: React.FC<AnalyticsProps> = ({ data, filters }) => {
     const channels: Record<string, number> = {};
     data.reservations.forEach(res => {
       if (res.status === 'cancelled') return;
-      channels[res.channel] = (channels[res.channel] || 0) + res.total_booking_revenue_aed;
+      channels[res.channel] = (channels[res.channel] || 0) + res.total_booking_revenue;
     });
     return Object.entries(channels).map(([name, value]) => ({ name, value }));
   }, [data.reservations]);
@@ -71,7 +71,7 @@ export const Analytics: React.FC<AnalyticsProps> = ({ data, filters }) => {
 
   const roiData = useMemo(() => {
     return data.apartments.map(apt => {
-      const setupInvestment = apt.setup_costs.reduce((sum, cost) => sum + cost.amount_aed, 0);
+      const setupInvestment = apt.setup_costs.reduce((sum, cost) => sum + cost.amount, 0);
       
       // Calculate total profit to date for this apartment
       // For simplicity, we'll use historical monthly KPIs we already have
@@ -87,8 +87,8 @@ export const Analytics: React.FC<AnalyticsProps> = ({ data, filters }) => {
         const monthKPIs = getMonthlyKPIs(data, month);
         const aptKPI = monthKPIs.find(s => s.entity === apt.name);
         if (aptKPI) {
-          totalRevenue += aptKPI.revenue_aed;
-          totalCost += aptKPI.total_cost_aed;
+          totalRevenue += aptKPI.revenue;
+          totalCost += aptKPI.total_cost;
         }
       }
       
@@ -180,8 +180,8 @@ export const Analytics: React.FC<AnalyticsProps> = ({ data, filters }) => {
                   contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
                   formatter={(val: number) => [formatValue(val), ""]}
                 />
-                <Bar dataKey="revenue_aed" fill="#1a2420" radius={[4, 4, 0, 0]} barSize={40} name="Revenue" />
-                <Line type="monotone" dataKey="net_profit_aed" stroke="#0e5a4a" strokeWidth={3} dot={{ r: 4, fill: '#0e5a4a' }} name="Net Profit" />
+                <Bar dataKey="revenue" fill="#1a2420" radius={[4, 4, 0, 0]} barSize={40} name="Revenue" />
+                <Line type="monotone" dataKey="net_profit" stroke="#0e5a4a" strokeWidth={3} dot={{ r: 4, fill: '#0e5a4a' }} name="Net Profit" />
               </ComposedChart>
             </ResponsiveContainer>
           </div>
@@ -273,15 +273,15 @@ export const Analytics: React.FC<AnalyticsProps> = ({ data, filters }) => {
                 {monthlyStats.slice().reverse().map((s, i) => (
                   <tr key={i} className="hover:bg-zinc-50 transition-colors">
                     <td className="py-4 font-bold text-zinc-900">{s.month}</td>
-                    <td className="py-4 font-mono">{formatValue(s.revenue_aed)}</td>
+                    <td className="py-4 font-mono">{formatValue(s.revenue)}</td>
                     <td className="py-4">{Math.round(s.occupancy_rate * 100)}%</td>
-                    <td className="py-4 font-mono">{formatValue(s.ADR_aed)}</td>
+                    <td className="py-4 font-mono">{formatValue(s.ADR)}</td>
                     <td className="py-4">
                       <span className={cn(
                         "font-bold",
-                        s.net_profit_aed >= 0 ? "text-emerald-600" : "text-rose-600"
+                        s.net_profit >= 0 ? "text-emerald-600" : "text-rose-600"
                       )}>
-                        {formatValue(s.net_profit_aed)}
+                        {formatValue(s.net_profit)}
                       </span>
                     </td>
                   </tr>

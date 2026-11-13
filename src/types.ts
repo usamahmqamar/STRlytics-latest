@@ -8,13 +8,13 @@ export interface TenancyHistoryRecord {
   start_date: string;
   end_date: string;
   status: 'expired' | 'terminated';
-  annual_rent_aed: number;
-  monthly_rent_aed: number;
+  annual_rent: number;
+  monthly_rent: number;
   num_cheques: number;
-  total_revenue_aed: number;
-  total_expenses_aed: number;
-  net_payout_aed: number;
-  net_profit_aed: number;
+  total_revenue: number;
+  total_expenses: number;
+  net_payout: number;
+  net_profit: number;
   occupancy_rate: number;
   num_reservations: number;
 }
@@ -28,18 +28,23 @@ export interface Apartment {
   specification: 'Studio' | '1BR' | '2BR' | '3BR' | '4BR' | 'Penthouse' | 'Villa';
   measurement_sqft: number;
   start_operation_date: string;
-  annual_rent_aed: number;
-  monthly_rent_aed: number;
+  annual_rent: number;
+  monthly_rent: number;
   num_cheques: number;
   rent_cheques: RentCheque[];
   utilities_monthly_defaults: {
-    dewa_electricity_aed: number;
-    internet_aed: number;
-    dewa_electricity_native?: number;
-    internet_native?: number;
+    electricity: number;
+    internet: number;
   };
   setup_costs: SetupCost[];
+  /** ISO 4217 code. Every amount for this listing is recorded in it; fixed once records exist. */
   currency: string;
+  /** ISO 3166-1 alpha-2 country code, e.g. AE, US, GB. Decides which rules apply. */
+  country?: string;
+  region?: string;
+  city?: string;
+  /** IANA time zone, e.g. Asia/Dubai. */
+  timezone?: string;
   platform_settings?: PropertyPlatformSetting[];
   tenancy_end_date?: string;
   status?: 'active' | 'expired' | 'terminated';
@@ -50,8 +55,8 @@ export interface RentCheque {
   cheque_id: string;
   cheque_number?: string;
   due_date: string;
-  amount_aed: number;
-  amount_native?: number;
+  amount: number;
+  currency?: string;
   status: 'due' | 'paid' | 'postponed' | 'bounced';
 }
 
@@ -60,7 +65,8 @@ export interface SetupCost {
   date: string;
   category: 'Furnishing' | 'Licensing' | 'Ejari' | 'Repairs' | 'Transport' | 'AC' | 'Insurance' | 'Miscellaneous' | 'Deposit';
   description: string;
-  amount_aed: number;
+  amount: number;
+  currency?: string;
   is_refundable: boolean;
   payment_method: string;
   vendor: string;
@@ -84,10 +90,12 @@ export interface Reservation {
   check_out_time?: string;
   num_guests: number;
   nights: number;
-  total_booking_revenue_aed: number;
-  net_payout_aed: number;
+  total_booking_revenue: number;
+  net_payout: number;
   payout_date?: string;
-  cleaning_cost_aed: number;
+  cleaning_cost: number;
+  /** The listing's currency (filled from the listing when not set). */
+  currency?: string;
   status: 'confirmed' | 'cancelled';
   cancellation_policy: 'non-refundable' | 'refundable' | '14-day-flexible' | '7-day-flexible';
   booking_date: string;
@@ -97,7 +105,7 @@ export interface Reservation {
   damages_incurred?: string;
   other_booking_costs?: {
     description: string;
-    amount_aed: number;
+    amount: number;
     date?: string;
   }[];
   /** The OTA PDF this booking was imported from, if any. */
@@ -136,6 +144,7 @@ export interface ServiceRecord {
   quantity: number;
   unit_cost: number;
   total_cost: number;
+  currency?: string;
   status: 'unbilled' | 'billed' | 'paid';
   invoice_id?: string;
 }
@@ -145,6 +154,7 @@ export interface Invoice {
   vendor_id: string;
   record_ids: string[];
   total_amount: number;
+  currency?: string;
   date: string;
   status: 'pending' | 'paid' | 'partial';
 }
@@ -154,6 +164,7 @@ export interface Payment {
   date: string;
   vendor_id: string;
   amount_paid: number;
+  currency?: string;
   type: 'advance' | 'invoice_payment' | 'partial_payment';
   invoice_id?: string;
   notes?: string;
@@ -164,7 +175,8 @@ export interface DailyExpense {
   apartment_id: string; // "PORTFOLIO" for shared
   date: string;
   category: string;
-  amount_aed: number;
+  amount: number;
+  currency?: string;
   notes?: string;
 }
 
@@ -173,7 +185,8 @@ export interface MonthlyBill {
   apartment_id: string;
   month: string; // YYYY-MM
   bill_type: 'electricity' | 'internet' | 'water' | 'gas' | 'other';
-  amount_aed: number;
+  amount: number;
+  currency?: string;
   status: 'pending' | 'paid';
   paid_date?: string;
 }
@@ -195,7 +208,8 @@ export interface Asset {
   condition: 'new' | 'good' | 'fair' | 'poor';
   last_serviced_date?: string;
   next_service_due?: string;
-  cost_aed: number;
+  cost: number;
+  currency?: string;
   notes?: string;
 }
 
@@ -259,7 +273,7 @@ export interface UserData {
   };
   subscription: {
     plan: string;
-    monthly_payment_aed: number;
+    monthly_payment: number;
     next_charge_date: string;
     card_details: {
       last4: string;
@@ -271,7 +285,7 @@ export interface UserData {
   paymentHistory: {
     payment_id: string;
     date: string;
-    amount_aed: number;
+    amount: number;
     plan: string;
     status: string;
   }[];

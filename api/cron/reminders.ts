@@ -7,36 +7,14 @@
  * Needs: CRON_SECRET (same value whose SHA-256 is stored in private.app_settings),
  * RESEND_API_KEY, EMAIL_FROM (e.g. "Staylytics <reminders@yourdomain.com>"), APP_URL.
  */
-import { timingSafeEqual } from 'node:crypto';
-import { HttpError, handle, json, supabaseConfig } from '../_lib/security.js';
+import { HttpError, handle, json } from '../_lib/security.js';
+import { authorised, rpc } from '../_lib/cron.js';
 import { buildEmail, type DueReminder } from '../_lib/reminderEmail.js';
 
 export const maxDuration = 60;
 
-function authorised(request: Request): string {
-  const secret = process.env.CRON_SECRET || '';
-  const got = (request.headers.get('authorization') || '').replace(/^Bearer\s+/i, '');
-  if (secret.length < 32) throw new HttpError(503, 'Reminders are not configured.');
-  const a = Buffer.from(got);
-  const b = Buffer.from(secret);
-  if (a.length !== b.length || !timingSafeEqual(a, b)) throw new HttpError(401, 'Not allowed.');
-  return secret;
-}
-
-async function rpc(name: string, body: unknown) {
-  const { url, key } = supabaseConfig();
-  const res = await fetch(`${url}/rest/v1/rpc/${name}`, {
-    method: 'POST',
-    headers: { apikey: key, 'content-type': 'application/json' },
-    body: JSON.stringify(body),
-    signal: AbortSignal.timeout(10000),
-  });
-  if (!res.ok) throw new HttpError(502, 'Could not reach the database.');
-  return res.json();
-}
-
 export const GET = handle(async request => {
-  const token = authorised(request);
+  const token = authorised(request, 'Reminders');
   const apiKey = process.env.RESEND_API_KEY;
   const from = process.env.EMAIL_FROM;
   const appUrl = process.env.APP_URL || (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : '');

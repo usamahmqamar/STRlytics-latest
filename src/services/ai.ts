@@ -34,5 +34,5 @@ export const readDocument = (documentId: string) =>
 export const extractReceiptData = (base64Image: string) =>
   callAi<any>({ action: 'receipt', image: base64Image });
 
-export const getMarketIntelligence = (location: string, bedrooms: number) =>
-  callAi<any>({ action: 'market', location, bedrooms });
+export const getMarketIntelligence = (location: string, bedrooms: number, currency: string) =>
+  callAi<any>({ action: 'market', location, bedrooms, currency });

@@ -24,17 +24,17 @@ export interface DailyPLRow {
   operating: boolean;
   occupied: 'yes' | 'no';
   occupied_nights_count: number;
-  daily_revenue_aed: number;
-  retained_revenue_aed: number;
-  lost_revenue_aed: number;
-  daily_rent_aed: number;
-  daily_electricity_aed: number;
-  daily_internet_aed: number;
-  cleaning_allocated_aed: number;
-  other_costs_allocated_aed: number;
-  real_time_expenses_aed: number;
-  total_daily_cost_aed: number;
-  daily_profit_aed: number;
+  daily_revenue: number;
+  retained_revenue: number;
+  lost_revenue: number;
+  daily_rent: number;
+  daily_electricity: number;
+  daily_internet: number;
+  cleaning_allocated: number;
+  other_costs_allocated: number;
+  real_time_expenses: number;
+  total_daily_cost: number;
+  daily_profit: number;
 }
 
 export interface Tenancy { start: string; end: string | null; annualRent: number }
@@ -46,10 +46,10 @@ const nightsOf = (r: Reservation) => Math.max(1, differenceInCalendarDays(parseI
 export function tenanciesOf(apt: Apartment): Tenancy[] {
   const history = (apt.tenancy_history || [])
     .filter(h => h.start_date)
-    .map(h => ({ start: h.start_date, end: h.end_date || null, annualRent: Number(h.annual_rent_aed) || 0 }));
+    .map(h => ({ start: h.start_date, end: h.end_date || null, annualRent: Number(h.annual_rent) || 0 }));
   const finished = apt.status === 'terminated' || apt.status === 'expired';
-  const currentRent = Number(apt.annual_rent_aed) || (apt.rent_cheques || []).reduce((t, c) => t + (Number(c.amount_aed) || 0), 0)
-    || (Number(apt.monthly_rent_aed) || 0) * 12;
+  const currentRent = Number(apt.annual_rent) || (apt.rent_cheques || []).reduce((t, c) => t + (Number(c.amount) || 0), 0)
+    || (Number(apt.monthly_rent) || 0) * 12;
   const list = [...history];
   if (!finished && apt.start_operation_date && !history.some(h => h.start === apt.start_operation_date)) {
     list.push({ start: apt.start_operation_date, end: apt.tenancy_end_date || null, annualRent: currentRent });
@@ -92,7 +92,7 @@ export function calculateDailyPL(data: UserData, startDate: Date, endDate: Date,
   for (const r of data.reservations) {
     if (!r.check_in || !r.check_out) continue;
     const nights = nightsOf(r);
-    const perNight = (Number(r.net_payout_aed) || 0) / nights;
+    const perNight = (Number(r.net_payout) || 0) / nights;
     for (let i = 0; i < nights; i++) {
       const d = dayStr(addDays(parseISO(r.check_in), i));
       if (d < from || d > to) continue;
@@ -108,7 +108,7 @@ export function calculateDailyPL(data: UserData, startDate: Date, endDate: Date,
         const d = (c.date || r.check_out).slice(0, 10);
         if (d < from || d > to) continue;
         const key = `${r.apartment_id}|${d}`;
-        cost.set(key, (cost.get(key) ?? 0) + (Number(c.amount_aed) || 0));
+        cost.set(key, (cost.get(key) ?? 0) + (Number(c.amount) || 0));
       }
     }
   }
@@ -117,10 +117,10 @@ export function calculateDailyPL(data: UserData, startDate: Date, endDate: Date,
     const d = (e.date || '').slice(0, 10);
     if (d < from || d > to) continue;
     const key = `${e.apartment_id}|${d}`;
-    expenses.set(key, (expenses.get(key) ?? 0) + (Number(e.amount_aed) || 0));
+    expenses.set(key, (expenses.get(key) ?? 0) + (Number(e.amount) || 0));
   }
   const bills = new Map<string, number>();
-  for (const b of data.monthlyBills) bills.set(`${b.apartment_id}|${b.month}|${b.bill_type}`, Number(b.amount_aed) || 0);
+  for (const b of data.monthlyBills) bills.set(`${b.apartment_id}|${b.month}|${b.bill_type}`, Number(b.amount) || 0);
 
   const totalUnits = data.apartments.length;
   const rows: DailyPLRow[] = [];
@@ -140,12 +140,12 @@ export function calculateDailyPL(data: UserData, startDate: Date, endDate: Date,
 
       const elecBill = bills.get(`${apt.apartment_id}|${month}|electricity`);
       const netBill = bills.get(`${apt.apartment_id}|${month}|internet`);
-      const elecMonthly = elecBill ?? (operating ? Number(apt.utilities_monthly_defaults?.dewa_electricity_aed) || 0 : 0);
-      const netMonthly = netBill ?? (operating ? Number(apt.utilities_monthly_defaults?.internet_aed) || 0 : 0);
+      const elecMonthly = elecBill ?? (operating ? Number(apt.utilities_monthly_defaults?.electricity) || 0 : 0);
+      const netMonthly = netBill ?? (operating ? Number(apt.utilities_monthly_defaults?.internet) || 0 : 0);
 
-      const revenue = booked ? (Number(booked.net_payout_aed) || 0) / nightsOf(booked) : 0;
+      const revenue = booked ? (Number(booked.net_payout) || 0) / nightsOf(booked) : 0;
       const retained = night?.retained ?? 0;
-      const cleaning = booked ? (Number(booked.cleaning_cost_aed) || 0) / nightsOf(booked) : 0;
+      const cleaning = booked ? (Number(booked.cleaning_cost) || 0) / nightsOf(booked) : 0;
       const other = cost.get(key) ?? 0;
       const direct = (expenses.get(key) ?? 0) + shared;
       const dailyRent = rent ?? 0;
@@ -158,17 +158,17 @@ export function calculateDailyPL(data: UserData, startDate: Date, endDate: Date,
         operating,
         occupied: booked ? 'yes' : 'no',
         occupied_nights_count: booked ? 1 : 0,
-        daily_revenue_aed: revenue + retained,
-        retained_revenue_aed: retained,
-        lost_revenue_aed: night?.lost ?? 0,
-        daily_rent_aed: dailyRent,
-        daily_electricity_aed: elecMonthly / daysInMonth,
-        daily_internet_aed: netMonthly / daysInMonth,
-        cleaning_allocated_aed: cleaning,
-        other_costs_allocated_aed: other,
-        real_time_expenses_aed: direct,
-        total_daily_cost_aed: total,
-        daily_profit_aed: revenue + retained - total,
+        daily_revenue: revenue + retained,
+        retained_revenue: retained,
+        lost_revenue: night?.lost ?? 0,
+        daily_rent: dailyRent,
+        daily_electricity: elecMonthly / daysInMonth,
+        daily_internet: netMonthly / daysInMonth,
+        cleaning_allocated: cleaning,
+        other_costs_allocated: other,
+        real_time_expenses: direct,
+        total_daily_cost: total,
+        daily_profit: revenue + retained - total,
       });
     }
   }

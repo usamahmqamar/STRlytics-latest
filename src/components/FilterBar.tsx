@@ -40,9 +40,15 @@ interface FilterBarProps {
     displayCurrency: string;
   }>>;
   apartments: Apartment[];
+  /** The currency amounts are shown in: the selected listing's, or the workspace's. */
+  viewCurrency: string;
+  /** Currencies that have no rate yet, so their amounts are shown unconverted. */
+  missingRates?: string[];
 }
 
-export const FilterBar: React.FC<FilterBarProps> = ({ filters, setFilters, apartments }) => {
+export const FilterBar: React.FC<FilterBarProps> = ({ filters, setFilters, apartments, viewCurrency, missingRates = [] }) => {
+  const single = filters.apartmentId !== 'ALL';
+  const mixed = new Set(apartments.map(a => a.currency)).size > 1;
   const presets = [
     { 
       label: 'This week', 
@@ -144,19 +150,23 @@ export const FilterBar: React.FC<FilterBarProps> = ({ filters, setFilters, apart
         </div>
       </div>
 
-      {/* Currency Selector */}
-      <div className="flex items-center gap-2.5 px-3.5 py-1.5 bg-white dark:bg-zinc-900 rounded-lg border border-zinc-200 dark:border-zinc-800 h-9 sm:ml-auto">
+      {/* Currency shown: not a switch. Each listing keeps its own currency; totals use the workspace's. */}
+      <div
+        className="flex items-center gap-2 px-3.5 py-1.5 bg-white dark:bg-zinc-900 rounded-lg border border-zinc-200 dark:border-zinc-800 h-9 sm:ml-auto"
+        title={single
+          ? 'Amounts in this listing\'s own currency.'
+          : mixed
+            ? 'Listings in other currencies are converted at the daily rate for each amount\'s date. Change the workspace currency in Settings.'
+            : 'Workspace currency. Change it in Settings.'}
+      >
         <DollarSign size={14} className="text-zinc-400 dark:text-zinc-500 shrink-0" />
-        <select 
-          value={filters.displayCurrency}
-          onChange={(e) => setFilters(prev => ({ ...prev, displayCurrency: e.target.value }))}
-          className="bg-transparent border-none text-xs font-semibold text-zinc-700 dark:text-zinc-300 focus:ring-0 cursor-pointer p-0 select-none leading-tight"
-        >
-          <option value="AED">AED</option>
-          <option value="USD">USD</option>
-          <option value="EUR">EUR</option>
-          <option value="GBP">GBP</option>
-        </select>
+        <span className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">{viewCurrency}</span>
+        {!single && mixed && <span className="text-[11px] text-zinc-500">converted</span>}
+        {missingRates.length > 0 && (
+          <span className="text-[11px] font-medium text-amber-700" title={`No exchange rate yet for ${missingRates.join(', ')}; those amounts are not converted.`}>
+            · rate missing
+          </span>
+        )}
       </div>
     </div>
   );

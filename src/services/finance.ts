@@ -138,17 +138,17 @@ export async function loadFinance(orgId: string): Promise<FinanceData> {
     all<Allocation & { id: string }>('payout_allocations', orgId, 'created_at'),
     all<Adjustment & { id: string; created_at: string }>('payout_adjustments', orgId, 'created_at'),
   ]);
-  return { payouts: payouts.map(p => ({ ...p, amount_aed: Number(p.amount_aed) })),
-    allocations: allocations.map(a => ({ ...a, amount_aed: Number(a.amount_aed) })),
-    adjustments: adjustments.map(a => ({ ...a, amount_aed: Number(a.amount_aed) })) };
+  return { payouts: payouts.map(p => ({ ...p, amount: Number(p.amount) })),
+    allocations: allocations.map(a => ({ ...a, amount: Number(a.amount), booking_amount: a.booking_amount == null ? null : Number(a.booking_amount) })),
+    adjustments: adjustments.map(a => ({ ...a, amount: Number(a.amount) })) };
 }
 
 export interface NewPayout {
   platform_id: string | null;
   received_date: string;
-  amount_aed: number;
-  original_amount?: number | null;
-  original_currency?: string | null;
+  amount: number;
+  /** The currency the money arrived in. */
+  currency: string;
   reference?: string | null;
   description?: string | null;
   notes?: string | null;
@@ -164,7 +164,7 @@ export async function addPayouts(orgId: string, rows: NewPayout[]): Promise<{ ad
     const { data, error } = await supabase.from('payouts').insert({ org_id: orgId, ...r }).select('*').single();
     if (error?.code === '23505') { duplicates++; continue; }
     if (error) fail(error, 'Could not save the payout.');
-    added.push({ ...(data as Payout), amount_aed: Number((data as Payout).amount_aed) });
+    added.push({ ...(data as Payout), amount: Number((data as Payout).amount) });
   }
   return { added, duplicates };
 }
@@ -174,7 +174,7 @@ export async function deletePayout(orgId: string, id: string) {
   if (error) fail(error, 'Could not delete the payout.');
 }
 
-export async function addAllocations(orgId: string, payoutId: string, rows: { reservation_id: string; amount_aed: number }[]) {
+export async function addAllocations(orgId: string, payoutId: string, rows: { reservation_id: string; amount: number; booking_amount?: number | null }[]) {
   if (!rows.length) return;
   const { error } = await supabase.from('payout_allocations').insert(rows.map(r => ({ org_id: orgId, payout_id: payoutId, ...r })));
   if (error) fail(error, error.code === '23514' ? 'Those matches add up to more than the payout.' : 'Could not save the match.');

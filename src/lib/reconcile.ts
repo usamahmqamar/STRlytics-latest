@@ -1,6 +1,8 @@
 /**
  * Payout reconciliation: what each booking should pay out, what was received, and why they differ.
- * Pure functions, tested in tests/reconcile.test.ts. All amounts in AED.
+ * Pure functions, tested in tests/reconcile.test.ts. A booking's amounts are in its listing's
+ * currency; a payout's in its own. When they differ, each match records the amount it covers in
+ * the booking's currency (booking_amount), which is what the booking's status uses.
  *
  *   difference  = received - expected
  *   explained   = sum of adjustments that are accepted, disputed or written off
@@ -12,7 +14,7 @@
 import { addDays, differenceInCalendarDays, format, getDay, parseISO, subDays } from 'date-fns';
 import type { Platform, Reservation } from '../types';
 
-export const TOLERANCE = 1; // AED rounding allowance
+export const TOLERANCE = 1; // rounding allowance, in the amount's own currency
 
 export type AdjustmentReason =
   | 'commission' | 'vat' | 'payment_fee' | 'exchange_rate' | 'refund' | 'guest_change'
@@ -36,17 +38,27 @@ export interface Payout {
   id: string;
   platform_id: string | null;
   received_date: string;
-  amount_aed: number;
+  amount: number;
+  /** ISO code of the payout; missing means the same as the bookings. */
+  currency?: string | null;
   reference?: string | null;
   description?: string | null;
   source: 'bank_statement' | 'payout_report' | 'manual';
 }
-export interface Allocation { id?: string; payout_id: string; reservation_id: string; amount_aed: number }
+export interface Allocation {
+  id?: string; payout_id: string; reservation_id: string;
+  /** In the payout's currency. */
+  amount: number;
+  /** In the booking's currency, when the payout is in a different one. */
+  booking_amount?: number | null;
+}
 export interface Adjustment {
   id?: string;
   reservation_id: string | null;
   payout_id: string | null;
-  amount_aed: number;
+  /** The booking's currency (or the payout's, when not tied to a booking). */
+  currency?: string | null;
+  amount: number;
   reason: AdjustmentReason;
   note?: string | null;
   resolution: Resolution;
@@ -74,7 +86,7 @@ export function findPlatform(res: Pick<Reservation, 'platform_id' | 'channel'>, 
  * entered by hand) that figure is used; the platform's rates explain the gap from the guest total.
  */
 export function expectedPayout(res: Reservation, platform: Platform | null): ExpectedPayout {
-  const gross = round2(Number(res.total_booking_revenue_aed) || 0);
+  const gross = round2(Number(res.total_booking_revenue) || 0);
   const commission = round2(gross * pct(platform?.commission_percent));
   const vat = round2(commission * pct(platform?.vat_percent));
   const payment = round2(gross * pct(platform?.payment_charge_percent));
@@ -86,7 +98,7 @@ export function expectedPayout(res: Reservation, platform: Platform | null): Exp
     { label: 'Other platform charges', amount: -other },
   ].filter(l => Math.abs(l.amount) >= 0.01);
 
-  const stated = Number(res.net_payout_aed) || 0;
+  const stated = Number(res.net_payout) || 0;
   if (stated > 0) {
     const explainedByRates = lines.reduce((t, l) => t + l.amount, 0);
     const rest = round2(stated - gross - explainedByRates);
@@ -158,13 +170,13 @@ export function bookingRecon(
   const expectedDate = expectedPayoutDate(res, platform);
   const mine = allocations.filter(a => a.reservation_id === res.reservation_code);
   const adj = adjustments.filter(a => a.reservation_id === res.reservation_code);
-  const received = round2(mine.reduce((t, a) => t + a.amount_aed, 0));
+  const received = round2(mine.reduce((t, a) => t + (a.booking_amount ?? a.amount), 0));
   const expected = res.status === 'cancelled' ? 0 : exp.expected;
   const difference = round2(received - expected);
   const counted = adj.filter(a => a.resolution !== 'recovered');
-  const explained = round2(counted.reduce((t, a) => t + a.amount_aed, 0));
+  const explained = round2(counted.reduce((t, a) => t + a.amount, 0));
   const unexplained = round2(difference - explained);
-  const openDisputes = round2(adj.filter(a => a.resolution === 'disputed').reduce((t, a) => t + a.amount_aed, 0));
+  const openDisputes = round2(adj.filter(a => a.resolution === 'disputed').reduce((t, a) => t + a.amount, 0));
 
   let status: BookingStatus;
   if (expected === 0 && received === 0 && counted.length === 0) status = 'not_due';
@@ -180,8 +192,8 @@ export function bookingRecon(
 export type PayoutStatus = 'unmatched' | 'partly_matched' | 'matched';
 
 export function payoutRecon(payout: Payout, allocations: Allocation[]) {
-  const allocated = round2(allocations.filter(a => a.payout_id === payout.id).reduce((t, a) => t + a.amount_aed, 0));
-  const remaining = round2(payout.amount_aed - allocated);
+  const allocated = round2(allocations.filter(a => a.payout_id === payout.id).reduce((t, a) => t + a.amount, 0));
+  const remaining = round2(payout.amount - allocated);
   const status: PayoutStatus = allocated === 0 ? 'unmatched' : Math.abs(remaining) <= TOLERANCE ? 'matched' : 'partly_matched';
   return { allocated, remaining, status };
 }
@@ -194,11 +206,12 @@ export interface Candidate {
   platform_id: string | null;
   expected_date: string;
   outstanding: number; // expected minus already received
+  currency?: string | null;
 }
 
 export interface Suggestion {
   kind: 'reference' | 'exact' | 'combination' | 'close';
-  allocations: { reservation_id: string; amount_aed: number }[];
+  allocations: { reservation_id: string; amount: number }[];
   difference: number; // payout amount minus what the bookings expected
   explanation: string;
 }
@@ -218,7 +231,7 @@ export function suggestMatches(
   candidates: Candidate[],
   listedCodes: { reservation_code: string; amount: number | null }[] = [],
 ): Suggestion[] {
-  const amount = payout.amount_aed;
+  const amount = payout.amount;
   const tol = Math.max(TOLERANCE, Math.abs(amount) * 0.001);
   const out: Suggestion[] = [];
 
@@ -228,9 +241,9 @@ export function suggestMatches(
     if (found.length) {
       const allocations = found.map(l => ({
         reservation_id: l.reservation_code,
-        amount_aed: round2(l.amount ?? byCode.get(l.reservation_code)!.outstanding),
+        amount: round2(l.amount ?? byCode.get(l.reservation_code)!.outstanding),
       }));
-      const total = allocations.reduce((t, a) => t + a.amount_aed, 0);
+      const total = allocations.reduce((t, a) => t + a.amount, 0);
       const expectedTotal = found.reduce((t, l) => t + byCode.get(l.reservation_code)!.outstanding, 0);
       fitToAmount(allocations, amount);
       out.push({
@@ -246,6 +259,8 @@ export function suggestMatches(
 
   const pool = candidates
     .filter(c => c.outstanding > 0 && (!payout.platform_id || !c.platform_id || c.platform_id === payout.platform_id))
+    // Amounts can only be compared in the same currency; other bookings are matched by hand.
+    .filter(c => !payout.currency || !c.currency || c.currency === payout.currency)
     .map(c => ({ c, gap: differenceInCalendarDays(parseISO(payout.received_date), parseISO(c.expected_date)) }))
     .filter(x => x.gap >= -WINDOW_BEFORE && x.gap <= WINDOW_AFTER)
     .sort((a, b) => Math.abs(a.gap) - Math.abs(b.gap));
@@ -255,7 +270,7 @@ export function suggestMatches(
     const best = exact[0].c;
     out.push({
       kind: 'exact',
-      allocations: [{ reservation_id: best.reservation_id, amount_aed: round2(amount) }],
+      allocations: [{ reservation_id: best.reservation_id, amount: round2(amount) }],
       difference: round2(amount - best.outstanding),
       explanation: exact.length > 1
         ? `${exact.length} bookings expect this amount; the one due closest to the payout date is suggested`
@@ -265,8 +280,8 @@ export function suggestMatches(
 
   const combo = findCombination(pool.slice(0, 18).map(x => x.c), amount, tol);
   if (combo && combo.length > 1) {
-    const allocations = combo.map(c => ({ reservation_id: c.reservation_id, amount_aed: round2(c.outstanding) }));
-    const expectedTotal = allocations.reduce((t, a) => t + a.amount_aed, 0);
+    const allocations = combo.map(c => ({ reservation_id: c.reservation_id, amount: round2(c.outstanding) }));
+    const expectedTotal = allocations.reduce((t, a) => t + a.amount, 0);
     fitToAmount(allocations, amount);
     out.push({
       kind: 'combination',
@@ -282,9 +297,9 @@ export function suggestMatches(
     if (Math.abs(diff) <= Math.max(50, nearest.outstanding * 0.25)) {
       out.push({
         kind: 'close',
-        allocations: [{ reservation_id: nearest.reservation_id, amount_aed: round2(amount) }],
+        allocations: [{ reservation_id: nearest.reservation_id, amount: round2(amount) }],
         difference: diff,
-        explanation: `Closest booking: AED ${Math.abs(diff).toFixed(2)} ${diff < 0 ? 'less' : 'more'} than expected`,
+        explanation: `Closest booking: ${payout.currency ? `${payout.currency} ` : ''}${Math.abs(diff).toFixed(2)} ${diff < 0 ? 'less' : 'more'} than expected`,
       });
     }
   }
@@ -292,11 +307,11 @@ export function suggestMatches(
 }
 
 /** Spread a small rounding gap onto the last allocation so allocations equal the payout exactly. */
-function fitToAmount(allocations: { amount_aed: number }[], amount: number) {
-  const total = allocations.reduce((t, a) => t + a.amount_aed, 0);
+function fitToAmount(allocations: { amount: number }[], amount: number) {
+  const total = allocations.reduce((t, a) => t + a.amount, 0);
   const gap = round2(amount - total);
   if (allocations.length && Math.abs(gap) <= Math.max(TOLERANCE, Math.abs(amount) * 0.001)) {
-    allocations[allocations.length - 1].amount_aed = round2(allocations[allocations.length - 1].amount_aed + gap);
+    allocations[allocations.length - 1].amount = round2(allocations[allocations.length - 1].amount + gap);
   }
 }
 

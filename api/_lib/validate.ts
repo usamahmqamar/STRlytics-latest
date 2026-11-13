@@ -27,12 +27,14 @@ export function validateReceiptImage(body: any): { mime: string; data: string } 
 }
 
 /** Validates market-analysis input: a short place name and 0-10 bedrooms. */
-export function validateMarketInput(body: any): { location: string; bedrooms: number } {
+export function validateMarketInput(body: any): { location: string; bedrooms: number; currency: string } {
   const location = typeof body?.location === 'string'
     ? body.location.replace(/[\u0000-\u001f\u007f]/g, ' ').trim().slice(0, 100)
     : '';
   const bedrooms = typeof body?.bedrooms === "number" ? body.bedrooms : NaN;
   if (!location) throw new HttpError(400, 'Enter a location.');
   if (!Number.isInteger(bedrooms) || bedrooms < 0 || bedrooms > 10) throw new HttpError(400, 'Bedrooms must be 0–10.');
-  return { location, bedrooms };
+  // A 3-letter code only; anything else falls back to US dollars.
+  const currency = typeof body?.currency === 'string' && /^[A-Z]{3}$/.test(body.currency) ? body.currency : 'USD';
+  return { location, bedrooms, currency };
 }

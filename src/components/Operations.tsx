@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { toast } from 'react-hot-toast';
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -18,7 +19,7 @@ import { Tooltip } from './ui/Tooltip';
 import { UserData, Vendor, ServiceRecord, Invoice, Payment, DailyExpense, MaintenanceTask } from '../types';
 import { format, parseISO, isSameMonth, subDays } from 'date-fns';
 import { cn } from '../lib/utils';
-import { convertCurrency } from '../services/analytics';
+import { formatMoney } from '../lib/money';
 
 interface OperationsProps {
   data: UserData;
@@ -31,6 +32,10 @@ interface OperationsProps {
   };
   prefilledExpense?: any;
   onClearPrefill?: () => void;
+  /** The same data with every amount in filters.displayCurrency; used for totals only. */
+  view?: UserData;
+  /** Workspace currency, for records not tied to a listing. */
+  baseCurrency?: string;
 }
 
 interface AddTaskModalProps {
@@ -148,8 +153,12 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({
 };
 
 export const Operations: React.FC<OperationsProps> = ({ 
-  data, setData, filters, prefilledExpense, onClearPrefill 
+  data, setData, filters, prefilledExpense, onClearPrefill, view: viewProp, baseCurrency = 'AED'
 }) => {
+  // Totals add up amounts from listings in different currencies, so they use the converted view.
+  // Rows and edits use the stored data, each amount in its own currency.
+  const view = viewProp ?? data;
+  const currencyOfListing = (id?: string) => data.apartments.find(a => a.apartment_id === id)?.currency || baseCurrency;
   const [activeTab, setActiveTab] = useState<'dashboard' | 'vendors' | 'records' | 'invoices' | 'payments' | 'expenses' | 'maintenance'>('dashboard');
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive' | 'unbilled' | 'billed' | 'paid' | 'pending' | 'in_progress' | 'completed'>('all');
@@ -228,6 +237,7 @@ export const Operations: React.FC<OperationsProps> = ({
       quantity: newRecord.quantity || 1,
       unit_cost: newRecord.unit_cost,
       total_cost: (newRecord.quantity || 1) * newRecord.unit_cost,
+      currency: currencyOfListing(newRecord.apartment_id),
       status: 'unbilled'
     };
     setData(prev => ({ ...prev, serviceRecords: [...prev.serviceRecords, record] }));
@@ -239,12 +249,18 @@ export const Operations: React.FC<OperationsProps> = ({
     if (!newInvoice.vendor_id || newInvoice.record_ids.length === 0) return;
     const selectedRecords = data.serviceRecords.filter(r => newInvoice.record_ids.includes(r.record_id));
     const total = selectedRecords.reduce((sum, r) => sum + r.total_cost, 0);
+    const recordCurrencies = [...new Set(selectedRecords.map(r => r.currency || currencyOfListing(r.apartment_id)))];
+    if (recordCurrencies.length > 1) {
+      toast.error(`These jobs are in different currencies (${recordCurrencies.join(', ')}). Raise one invoice per currency.`);
+      return;
+    }
     
     const invoice: Invoice = {
       invoice_id: `INV-${Date.now()}`,
       vendor_id: newInvoice.vendor_id,
       record_ids: newInvoice.record_ids,
       total_amount: total,
+      currency: recordCurrencies[0] || baseCurrency,
       date: format(new Date(), 'yyyy-MM-dd'),
       status: 'pending'
     };
@@ -267,6 +283,7 @@ export const Operations: React.FC<OperationsProps> = ({
       date: newPayment.date!,
       vendor_id: newPayment.vendor_id,
       amount_paid: newPayment.amount_paid,
+      currency: data.invoices.find(i => i.invoice_id === newPayment.invoice_id)?.currency || newPayment.currency || baseCurrency,
       type: newPayment.type as any,
       invoice_id: newPayment.invoice_id,
       notes: newPayment.notes
@@ -303,13 +320,14 @@ export const Operations: React.FC<OperationsProps> = ({
   };
 
   const handleAddExpense = () => {
-    if (!newExpense.amount_aed || !newExpense.category) return;
+    if (!newExpense.amount || !newExpense.category) return;
     const expense: DailyExpense = {
       expense_id: `EXP-${Date.now()}`,
       apartment_id: newExpense.apartment_id || 'PORTFOLIO',
       date: newExpense.date!,
       category: newExpense.category,
-      amount_aed: newExpense.amount_aed,
+      amount: newExpense.amount,
+      currency: currencyOfListing(newExpense.apartment_id),
       notes: newExpense.notes
     };
     setData(prev => ({ ...prev, dailyExpenses: [...prev.dailyExpenses, expense] }));
@@ -317,17 +335,11 @@ export const Operations: React.FC<OperationsProps> = ({
     setNewExpense({ date: format(new Date(), 'yyyy-MM-dd'), apartment_id: 'PORTFOLIO' });
   };
 
-  const formatValue = (val: number) => {
-    const converted = convertCurrency(val, 'AED', filters.displayCurrency);
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: filters.displayCurrency,
-      minimumFractionDigits: 0
-    }).format(converted);
-  };
+  /** Totals are already in the display currency; a row passes its own currency. */
+  const formatValue = (val: number, currency: string = filters.displayCurrency) => formatMoney(val, currency);
 
   const vendorStats = useMemo(() => {
-    return data.vendors
+    return view.vendors
       .filter(v => {
         const matchesSearch = v.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
                              v.service_type.toLowerCase().includes(searchQuery.toLowerCase());
@@ -335,8 +347,8 @@ export const Operations: React.FC<OperationsProps> = ({
         return matchesSearch && matchesStatus;
       })
       .map(vendor => {
-        const records = data.serviceRecords.filter(r => r.vendor_id === vendor.vendor_id);
-        const payments = data.payments.filter(p => p.vendor_id === vendor.vendor_id);
+        const records = view.serviceRecords.filter(r => r.vendor_id === vendor.vendor_id);
+        const payments = view.payments.filter(p => p.vendor_id === vendor.vendor_id);
         
         const totalWorkDone = records.reduce((sum, r) => sum + r.total_cost, 0);
         const totalPaid = payments.reduce((sum, p) => sum + p.amount_paid, 0);
@@ -351,7 +363,7 @@ export const Operations: React.FC<OperationsProps> = ({
           unbilledWork: records.filter(r => r.status === 'unbilled').reduce((sum, r) => sum + r.total_cost, 0)
         };
       });
-  }, [data.vendors, data.serviceRecords, data.payments, searchQuery, statusFilter]);
+  }, [view.vendors, view.serviceRecords, view.payments, searchQuery, statusFilter]);
 
   const filteredRecords = useMemo(() => {
     return data.serviceRecords.filter(r => {
@@ -407,12 +419,12 @@ export const Operations: React.FC<OperationsProps> = ({
 
   const totals = useMemo(() => {
     const thirtyDaysAgo = subDays(new Date(), 30);
-    const recentPayments = data.payments.filter(p => parseISO(p.date) >= thirtyDaysAgo);
+    const recentPayments = view.payments.filter(p => parseISO(p.date) >= thirtyDaysAgo);
     
-    const billedUnpaid = data.invoices
+    const billedUnpaid = view.invoices
       .filter(inv => inv.status !== 'paid')
       .reduce((sum, inv) => {
-        const paidForInv = data.payments
+        const paidForInv = view.payments
           .filter(p => p.invoice_id === inv.invoice_id)
           .reduce((pSum, p) => pSum + p.amount_paid, 0);
         return sum + (inv.total_amount - paidForInv);
@@ -423,18 +435,18 @@ export const Operations: React.FC<OperationsProps> = ({
       advances: vendorStats.reduce((sum, v) => sum + v.advanceBalance, 0),
       unbilled: vendorStats.reduce((sum, v) => sum + v.unbilledWork, 0),
       billedUnpaid,
-      totalPaidOut: data.payments.reduce((sum, p) => sum + p.amount_paid, 0),
+      totalPaidOut: view.payments.reduce((sum, p) => sum + p.amount_paid, 0),
       last30DaysPaid: recentPayments.reduce((sum, p) => sum + p.amount_paid, 0),
-      paymentCount: data.payments.length,
-      activeVendors: data.vendors.filter(v => v.status === 'active').length,
-      pendingInvoices: data.invoices.filter(i => i.status !== 'paid').length,
-      totalInvoiced: data.invoices.reduce((sum, i) => sum + i.total_amount, 0),
-      paidInvoices: data.invoices.filter(i => i.status === 'paid').length,
-      totalExpenses: data.dailyExpenses.reduce((sum, e) => sum + e.amount_aed, 0),
-      thisMonthExpenses: data.dailyExpenses.filter(e => isSameMonth(parseISO(e.date), new Date())).reduce((sum, e) => sum + e.amount_aed, 0),
-      expenseCategories: new Set(data.dailyExpenses.map(e => e.category)).size
+      paymentCount: view.payments.length,
+      activeVendors: view.vendors.filter(v => v.status === 'active').length,
+      pendingInvoices: view.invoices.filter(i => i.status !== 'paid').length,
+      totalInvoiced: view.invoices.reduce((sum, i) => sum + i.total_amount, 0),
+      paidInvoices: view.invoices.filter(i => i.status === 'paid').length,
+      totalExpenses: view.dailyExpenses.reduce((sum, e) => sum + e.amount, 0),
+      thisMonthExpenses: view.dailyExpenses.filter(e => isSameMonth(parseISO(e.date), new Date())).reduce((sum, e) => sum + e.amount, 0),
+      expenseCategories: new Set(view.dailyExpenses.map(e => e.category)).size
     };
-  }, [vendorStats, data.payments, data.invoices, data.vendors, data.dailyExpenses]);
+  }, [vendorStats, view.payments, view.invoices, view.vendors, view.dailyExpenses]);
 
   const renderDashboard = () => (
     <div className="space-y-6">
@@ -502,7 +514,7 @@ export const Operations: React.FC<OperationsProps> = ({
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="text-xs font-mono font-bold text-zinc-900">{formatValue(record.total_cost)}</p>
+                    <p className="text-xs font-mono font-bold text-zinc-900">{formatValue(record.total_cost, record.currency)}</p>
                     <p className="text-[11px] text-zinc-400">{format(parseISO(record.date), 'MMM dd')}</p>
                   </div>
                 </div>
@@ -527,7 +539,7 @@ export const Operations: React.FC<OperationsProps> = ({
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="text-xs font-mono font-bold text-emerald-600">{formatValue(payment.amount_paid)}</p>
+                    <p className="text-xs font-mono font-bold text-emerald-600">{formatValue(payment.amount_paid, payment.currency)}</p>
                     <p className="text-[11px] text-zinc-400">{format(parseISO(payment.date), 'MMM dd')}</p>
                   </div>
                 </div>
@@ -775,7 +787,7 @@ export const Operations: React.FC<OperationsProps> = ({
                           <td className="py-4 text-xs font-medium text-zinc-400">{apt?.name}</td>
                           <td className="py-4 text-xs text-zinc-900 font-bold">{vendor?.name}</td>
                           <td className="py-4 text-xs text-zinc-400">{r.description}</td>
-                          <td className="py-4 text-right font-mono text-sm font-bold text-zinc-900">{formatValue(r.total_cost)}</td>
+                          <td className="py-4 text-right font-mono text-sm font-bold text-zinc-900">{formatValue(r.total_cost, r.currency)}</td>
                           <td className="py-4">
                             <span className={cn(
                               "px-2 py-0.5 rounded-full text-[11px] font-semibold border",
@@ -856,7 +868,7 @@ export const Operations: React.FC<OperationsProps> = ({
                             <td className="py-4 text-xs font-bold text-zinc-900">{format(parseISO(invoice.date), 'MMM dd, yyyy')}</td>
                             <td className="py-4 text-xs font-bold text-zinc-900">{vendor?.name}</td>
                             <td className="py-4 text-xs text-zinc-400">{invoice.record_ids.length} records</td>
-                            <td className="py-4 text-right font-mono text-sm font-bold text-zinc-900">{formatValue(invoice.total_amount)}</td>
+                            <td className="py-4 text-right font-mono text-sm font-bold text-zinc-900">{formatValue(invoice.total_amount, invoice.currency)}</td>
                             <td className="py-4 text-right">
                               <span className={cn(
                                 "px-2 py-0.5 rounded-full text-[11px] font-semibold border",
@@ -931,7 +943,7 @@ export const Operations: React.FC<OperationsProps> = ({
                           <td className="py-4 text-xs font-bold text-zinc-900">{format(parseISO(p.date), 'MMM dd, yyyy')}</td>
                           <td className="py-4 text-xs font-medium text-zinc-900">{vendor?.name}</td>
                           <td className="py-4 text-[11px] text-zinc-400 font-semibold">{p.type.replace('_', ' ')}</td>
-                          <td className="py-4 text-right font-mono text-sm text-emerald-600 font-bold">{formatValue(p.amount_paid)}</td>
+                          <td className="py-4 text-right font-mono text-sm text-emerald-600 font-bold">{formatValue(p.amount_paid, p.currency)}</td>
                           <td className="py-4 text-xs text-zinc-500">{p.notes}</td>
                           <td className="py-4 text-right">
                             <button className="p-2 hover:bg-zinc-100 rounded-lg text-zinc-400 transition-colors">
@@ -1007,7 +1019,7 @@ export const Operations: React.FC<OperationsProps> = ({
                           <td className="py-4 text-xs font-medium text-zinc-400">{e.apartment_id === 'PORTFOLIO' ? 'Shared' : apt?.name}</td>
                           <td className="py-4 text-[11px] text-zinc-400 font-semibold">{e.category}</td>
                           <td className="py-4 text-xs text-zinc-500">{e.notes}</td>
-                          <td className="py-4 text-right font-mono text-sm text-rose-600 font-bold">{formatValue(e.amount_aed)}</td>
+                          <td className="py-4 text-right font-mono text-sm text-rose-600 font-bold">{formatValue(e.amount, e.currency)}</td>
                           <td className="py-4 text-right">
                             <button className="p-2 hover:bg-zinc-100 rounded-lg text-zinc-400 transition-colors">
                               <Edit2 size={14} />
@@ -1421,7 +1433,7 @@ export const Operations: React.FC<OperationsProps> = ({
                             />
                             <div className="flex-1">
                               <p className="text-xs font-bold text-zinc-900">{r.description}</p>
-                              <p className="text-[11px] text-zinc-400">{format(parseISO(r.date), 'MMM dd, yyyy')} • {formatValue(r.total_cost)}</p>
+                              <p className="text-[11px] text-zinc-400">{format(parseISO(r.date), 'MMM dd, yyyy')} • {formatValue(r.total_cost, r.currency)}</p>
                             </div>
                           </label>
                         ))
@@ -1498,7 +1510,7 @@ export const Operations: React.FC<OperationsProps> = ({
                       <option value="">No Specific Invoice</option>
                       {data.invoices
                         .filter(i => i.vendor_id === newPayment.vendor_id && i.status === 'pending')
-                        .map(i => <option key={i.invoice_id} value={i.invoice_id}>#{i.invoice_id} - {formatValue(i.total_amount)}</option>)
+                        .map(i => <option key={i.invoice_id} value={i.invoice_id}>#{i.invoice_id} - {formatValue(i.total_amount, i.currency)}</option>)
                       }
                     </select>
                   </div>
@@ -1584,12 +1596,12 @@ export const Operations: React.FC<OperationsProps> = ({
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <label className="text-[11px] font-semibold text-zinc-400 ml-1">Amount (AED)</label>
+                    <label className="text-[11px] font-semibold text-zinc-400 ml-1">Amount ({currencyOfListing(newExpense.apartment_id)})</label>
                     <input 
                       type="number" 
                       className="w-full px-4 py-3 rounded-xl border border-zinc-200 focus:border-zinc-900 focus:ring-0 transition-all text-sm font-medium"
-                      value={newExpense.amount_aed || ''}
-                      onChange={e => setNewExpense({...newExpense, amount_aed: Number(e.target.value)})}
+                      value={newExpense.amount || ''}
+                      onChange={e => setNewExpense({...newExpense, amount: Number(e.target.value)})}
                     />
                   </div>
                   <div className="space-y-1.5">
@@ -1614,7 +1626,7 @@ export const Operations: React.FC<OperationsProps> = ({
               </div>
               <div className="p-6 border-t border-zinc-100 bg-zinc-50/50 flex justify-end gap-3">
                 <Button variant="outline" size="sm" onClick={() => setIsAddExpenseOpen(false)}>Cancel</Button>
-                <Button size="sm" onClick={handleAddExpense} disabled={!newExpense.amount_aed || !newExpense.category}>Add Expense</Button>
+                <Button size="sm" onClick={handleAddExpense} disabled={!newExpense.amount || !newExpense.category}>Add Expense</Button>
               </div>
             </motion.div>
           </div>

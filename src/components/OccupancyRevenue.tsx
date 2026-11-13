@@ -14,7 +14,7 @@ import {
 import { Card } from './ui/Card';
 import { UserData, Apartment } from '../types';
 import { format, parseISO } from 'date-fns';
-import { getQuarterlyPerformance, convertCurrency } from '../services/analytics';
+import { getQuarterlyPerformance } from '../services/analytics';
 import { cn } from '../lib/utils';
 
 interface OccupancyRevenueProps {
@@ -310,7 +310,7 @@ export const OccupancyRevenue: React.FC<OccupancyRevenueProps> = ({ data, filter
   const [expandedAptId, setExpandedAptId] = useState<string | null>(null);
 
   const formatValue = (val: number) => {
-    const converted = convertCurrency(val, 'AED', filters.displayCurrency);
+    const converted = val;
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: filters.displayCurrency,

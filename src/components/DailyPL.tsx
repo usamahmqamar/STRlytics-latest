@@ -31,7 +31,7 @@ import {
 } from 'recharts';
 import { format, subDays, startOfMonth, endOfMonth, parseISO, isSameDay } from 'date-fns';
 import { UserData } from '../types';
-import { calculateDailyPL, convertCurrency } from '../services/analytics';
+import { calculateDailyPL } from '../services/analytics';
 import { Card } from './ui/Card';
 import { Button } from './ui/Button';
 import { cn } from '../lib/utils';
@@ -71,24 +71,24 @@ export const DailyPL: React.FC<DailyPLProps> = ({ data, filters }) => {
           profit: 0
         };
       }
-      grouped[d.date].revenue += d.daily_revenue_aed;
-      grouped[d.date].cost += d.total_daily_cost_aed;
-      grouped[d.date].profit += d.daily_profit_aed;
+      grouped[d.date].revenue += d.daily_revenue;
+      grouped[d.date].cost += d.total_daily_cost;
+      grouped[d.date].profit += d.daily_profit;
     });
     return Object.values(grouped).sort((a, b) => a.date.localeCompare(b.date));
   }, [dailyData]);
 
   const totals = useMemo(() => {
     return dailyData.reduce((acc, curr) => ({
-      revenue: acc.revenue + curr.daily_revenue_aed,
-      cost: acc.cost + curr.total_daily_cost_aed,
-      profit: acc.profit + curr.daily_profit_aed,
-      lost: acc.lost + curr.lost_revenue_aed
+      revenue: acc.revenue + curr.daily_revenue,
+      cost: acc.cost + curr.total_daily_cost,
+      profit: acc.profit + curr.daily_profit,
+      lost: acc.lost + curr.lost_revenue
     }), { revenue: 0, cost: 0, profit: 0, lost: 0 });
   }, [dailyData]);
 
   const formatCurrency = (val: number) => {
-    const converted = convertCurrency(val, 'AED', filters.displayCurrency);
+    const converted = val;
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: filters.displayCurrency,
@@ -121,14 +121,14 @@ export const DailyPL: React.FC<DailyPLProps> = ({ data, filters }) => {
           properties: []
         };
       }
-      grouped[d.date].total.revenue += d.daily_revenue_aed;
-      grouped[d.date].total.lost += d.lost_revenue_aed;
-      grouped[d.date].total.rent += d.daily_rent_aed;
-      grouped[d.date].total.utilities += (d.daily_electricity_aed + d.daily_internet_aed);
-      grouped[d.date].total.cleaning += d.cleaning_allocated_aed;
-      grouped[d.date].total.expenses += (d.other_costs_allocated_aed + d.real_time_expenses_aed);
-      grouped[d.date].total.totalCost += d.total_daily_cost_aed;
-      grouped[d.date].total.profit += d.daily_profit_aed;
+      grouped[d.date].total.revenue += d.daily_revenue;
+      grouped[d.date].total.lost += d.lost_revenue;
+      grouped[d.date].total.rent += d.daily_rent;
+      grouped[d.date].total.utilities += (d.daily_electricity + d.daily_internet);
+      grouped[d.date].total.cleaning += d.cleaning_allocated;
+      grouped[d.date].total.expenses += (d.other_costs_allocated + d.real_time_expenses);
+      grouped[d.date].total.totalCost += d.total_daily_cost;
+      grouped[d.date].total.profit += d.daily_profit;
       
       grouped[d.date].properties.push(d);
     });
@@ -220,7 +220,7 @@ export const DailyPL: React.FC<DailyPLProps> = ({ data, filters }) => {
                 axisLine={false}
                 tickLine={false}
                 tick={{ fontSize: 10, fontWeight: 700, fill: '#6c766f' }}
-                tickFormatter={(val) => `AED ${val}`}
+                tickFormatter={(val) => `${filters.displayCurrency} ${val}`}
               />
               <RechartsTooltip 
                 content={({ active, payload, label }) => {
@@ -346,18 +346,18 @@ export const DailyPL: React.FC<DailyPLProps> = ({ data, filters }) => {
                           {prop.occupied === 'yes' ? 'Occupied' : 'Vacant'}
                         </span>
                       </td>
-                      <td className="py-2 text-right font-mono text-[11px] text-zinc-500">{formatCurrency(prop.daily_revenue_aed)}</td>
-                      <td className="py-2 text-right font-mono text-[11px] text-rose-400">{formatCurrency(prop.lost_revenue_aed)}</td>
-                      <td className="py-2 text-right font-mono text-[11px] text-zinc-500">{formatCurrency(prop.daily_rent_aed)}</td>
-                      <td className="py-2 text-right font-mono text-[11px] text-zinc-500">{formatCurrency(prop.daily_electricity_aed + prop.daily_internet_aed)}</td>
-                      <td className="py-2 text-right font-mono text-[11px] text-zinc-500">{formatCurrency(prop.cleaning_allocated_aed)}</td>
-                      <td className="py-2 text-right font-mono text-[11px] text-zinc-500">{formatCurrency(prop.other_costs_allocated_aed + prop.real_time_expenses_aed)}</td>
-                      <td className="py-2 text-right font-mono text-[11px] text-zinc-500">{formatCurrency(prop.total_daily_cost_aed)}</td>
+                      <td className="py-2 text-right font-mono text-[11px] text-zinc-500">{formatCurrency(prop.daily_revenue)}</td>
+                      <td className="py-2 text-right font-mono text-[11px] text-rose-400">{formatCurrency(prop.lost_revenue)}</td>
+                      <td className="py-2 text-right font-mono text-[11px] text-zinc-500">{formatCurrency(prop.daily_rent)}</td>
+                      <td className="py-2 text-right font-mono text-[11px] text-zinc-500">{formatCurrency(prop.daily_electricity + prop.daily_internet)}</td>
+                      <td className="py-2 text-right font-mono text-[11px] text-zinc-500">{formatCurrency(prop.cleaning_allocated)}</td>
+                      <td className="py-2 text-right font-mono text-[11px] text-zinc-500">{formatCurrency(prop.other_costs_allocated + prop.real_time_expenses)}</td>
+                      <td className="py-2 text-right font-mono text-[11px] text-zinc-500">{formatCurrency(prop.total_daily_cost)}</td>
                       <td className={cn(
                         "py-2 text-right font-mono text-[11px] font-bold",
-                        prop.daily_profit_aed >= 0 ? "text-emerald-500" : "text-rose-500"
+                        prop.daily_profit >= 0 ? "text-emerald-500" : "text-rose-500"
                       )}>
-                        {formatCurrency(prop.daily_profit_aed)}
+                        {formatCurrency(prop.daily_profit)}
                       </td>
                     </tr>
                   ))}

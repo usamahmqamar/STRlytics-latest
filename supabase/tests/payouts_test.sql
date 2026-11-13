@@ -55,20 +55,20 @@ select tests.denied(format('insert into public.source_documents (org_id, kind, f
 select tests.denied(format('insert into public.source_documents (org_id, kind, file_path, file_name) values (%L, %L, %L, %L)',
   (select org_a from ids), 'bookings', (select org_x from ids) || '/bookings/a.pdf', 'a.pdf'), 'document path pointing at another workspace');
 
-insert into public.reservations (org_id, id, status, net_payout_aed, source_document_id)
+insert into public.reservations (org_id, id, status, net_payout, source_document_id)
   select org_a, 'R1', 'confirmed', 1000, 'e0000000-0000-0000-0000-000000000001' from ids;
-insert into public.reservations (org_id, id, status, net_payout_aed) select org_a, 'R2', 'confirmed', 500 from ids;
-insert into public.payouts (org_id, id, received_date, amount_aed, source)
+insert into public.reservations (org_id, id, status, net_payout) select org_a, 'R2', 'confirmed', 500 from ids;
+insert into public.payouts (org_id, id, received_date, amount, source)
   select org_a, 'f0000000-0000-0000-0000-000000000001', '2026-11-01', 1450, 'manual' from ids;
-insert into public.payout_allocations (org_id, payout_id, reservation_id, amount_aed)
+insert into public.payout_allocations (org_id, payout_id, reservation_id, amount)
   select org_a, 'f0000000-0000-0000-0000-000000000001', 'R1', 980 from ids;
-select tests.denied(format('insert into public.payout_allocations (org_id, payout_id, reservation_id, amount_aed) values (%L, %L, %L, 600)',
+select tests.denied(format('insert into public.payout_allocations (org_id, payout_id, reservation_id, amount) values (%L, %L, %L, 600)',
   (select org_a from ids), 'f0000000-0000-0000-0000-000000000001', 'R2'), 'allocating more than the payout amount');
-insert into public.payout_allocations (org_id, payout_id, reservation_id, amount_aed)
+insert into public.payout_allocations (org_id, payout_id, reservation_id, amount)
   select org_a, 'f0000000-0000-0000-0000-000000000001', 'R2', 470 from ids;
-insert into public.payout_adjustments (org_id, reservation_id, amount_aed, reason, resolution)
+insert into public.payout_adjustments (org_id, reservation_id, amount, reason, resolution)
   select org_a, 'R1', -20, 'payment_fee', 'accepted' from ids;
-select tests.denied(format('insert into public.payout_adjustments (org_id, reservation_id, amount_aed, reason) values (%L, %L, -5, %L)',
+select tests.denied(format('insert into public.payout_adjustments (org_id, reservation_id, amount, reason) values (%L, %L, -5, %L)',
   (select org_a from ids), 'R2', 'made_up_reason'), 'unknown difference reason');
 select tests.denied(format('update public.payouts set org_id = %L', (select org_x from ids)), 'moving a payout to another workspace');
 select public.consume_ai_quota((select org_a from ids), 'document');
@@ -96,7 +96,7 @@ select tests.denied(format('insert into public.source_documents (org_id, kind, f
 select tests.ok((select count(*) from storage.objects where name like '%/finance/%') = 0, 'staff cannot see finance files');
 select tests.ok((select count(*) from public.payouts) = 0, 'staff cannot see payouts');
 select tests.ok((select count(*) from public.payout_adjustments) = 0, 'staff cannot see adjustments');
-select tests.denied(format('insert into public.payouts (org_id, received_date, amount_aed, source) values (%L, %L, 10, %L)',
+select tests.denied(format('insert into public.payouts (org_id, received_date, amount, source) values (%L, %L, 10, %L)',
   (select org_a from ids), '2026-11-02', 'manual'), 'staff records a payout');
 delete from storage.objects where name like '%/bookings/a.pdf';
 reset role;
@@ -121,7 +121,7 @@ set local role authenticated;
 select tests.ok((select count(*) from storage.objects) = 0, 'stranger sees no files');
 select tests.ok((select count(*) from public.source_documents) = 0, 'stranger sees no documents');
 select tests.ok((select count(*) from public.payouts) = 0, 'stranger sees no payouts');
-select tests.denied(format('insert into public.payout_allocations (org_id, payout_id, reservation_id, amount_aed) values (%L, %L, %L, 1)',
+select tests.denied(format('insert into public.payout_allocations (org_id, payout_id, reservation_id, amount) values (%L, %L, %L, 1)',
   (select org_a from ids), 'f0000000-0000-0000-0000-000000000001', 'R1'), 'stranger links a payout');
 select tests.denied(format('select public.consume_ai_quota(%L, %L)', (select org_a from ids), 'document'), 'stranger uses workspace AI quota');
 reset role;
@@ -133,7 +133,7 @@ update public.organizations set status = 'read_only' where id = (select org_a fr
 select tests.login('d0000000-0000-0000-0000-00000000000a');
 set local role authenticated;
 select tests.denied(format('insert into storage.objects (bucket_id, name) values (%L, %L)', 'workspace-files', (select org_a from ids) || '/bookings/late.pdf'), 'upload to read-only workspace');
-select tests.denied(format('insert into public.payouts (org_id, received_date, amount_aed, source) values (%L, %L, 10, %L)',
+select tests.denied(format('insert into public.payouts (org_id, received_date, amount, source) values (%L, %L, 10, %L)',
   (select org_a from ids), '2026-11-03', 'manual'), 'payout in read-only workspace');
 reset role;
 update public.organizations set status = 'active' where id = (select org_a from ids);

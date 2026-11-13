@@ -21,9 +21,9 @@ export const POST = handle(async request => {
       return json(200, await extractReceiptData(mime, data));
     }
     case 'market': {
-      const { location, bedrooms } = validateMarketInput(body);
+      const { location, bedrooms, currency } = validateMarketInput(body);
       await consumeAiQuota(caller, 'market');
-      return json(200, await getMarketIntelligence(location, bedrooms));
+      return json(200, await getMarketIntelligence(location, bedrooms, currency));
     }
     case 'document': {
       // Reads a file the caller uploaded to this workspace. Access is checked by the database

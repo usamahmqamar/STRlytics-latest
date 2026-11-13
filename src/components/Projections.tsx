@@ -3,6 +3,7 @@
  * Calculates as you type (src/lib/feasibility.ts). AI market estimates are optional.
  */
 import React, { useEffect, useMemo, useState } from 'react';
+import { SUPPORTED_CURRENCIES, isSupportedCurrency } from '../lib/money';
 import { Building2, Loader2, Printer, RotateCcw, Save, Sparkles, Trash2 } from 'lucide-react';
 import {
   Bar, CartesianGrid, Cell, ComposedChart, Line, ReferenceLine, ResponsiveContainer,
@@ -25,6 +26,8 @@ const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', '
 
 interface FormState extends FeasibilityInputs {
   location: string;
+  /** Currency every amount in this unit is entered in; becomes the property's currency. */
+  currency?: string;
   bedrooms: number;
   useSeasonality: boolean;
   marketNote: string;
@@ -64,8 +67,11 @@ function loadSaved(): FormState {
   }
 }
 
-const aed = (v: number, digits = 0) =>
-  new Intl.NumberFormat('en-AE', { style: 'currency', currency: 'AED', maximumFractionDigits: digits, minimumFractionDigits: digits }).format(v);
+const moneyIn = (currency: string) => (v: number, digits = 0) => {
+  try {
+    return new Intl.NumberFormat(undefined, { style: 'currency', currency, currencyDisplay: 'code', maximumFractionDigits: digits, minimumFractionDigits: digits }).format(v).replace(/\u00a0/g, ' ');
+  } catch { return `${currency} ${v.toFixed(digits)}`; }
+};
 const pct = (v: number | null) => (v === null || !Number.isFinite(v) ? '—' : `${Math.round(v)}%`);
 
 /* ---------- small form pieces ---------- */
@@ -128,6 +134,7 @@ interface ProjectionsProps {
   /** Owners and managers can add properties. */
   canAddProperty: boolean;
   onOpenProperty: () => void;
+  baseCurrency?: string;
 }
 
 const VERDICT_SHORT: Record<VerdictLevel, string> = { viable: 'Worth pursuing', marginal: 'Marginal', not_viable: 'Not viable' };
@@ -138,8 +145,10 @@ const resultFor = (f: Partial<FormState>) => {
   return isReady(i) ? calculateFeasibility(i) : null;
 };
 
-export const Projections: React.FC<ProjectionsProps> = ({ orgId, data, setData, canWrite, canAddProperty, onOpenProperty }) => {
-  const [form, setForm] = useState<FormState>(loadSaved);
+export const Projections: React.FC<ProjectionsProps> = ({ orgId, data, setData, canWrite, canAddProperty, onOpenProperty, baseCurrency = 'AED' }) => {
+  const [form, setForm] = useState<FormState>(() => { const f = loadSaved(); return { ...f, currency: isSupportedCurrency(f.currency) ? f.currency : baseCurrency }; });
+  const cur = form.currency || baseCurrency;
+  const aed = moneyIn(cur);
   const [estimating, setEstimating] = useState(false);
   const [estimateError, setEstimateError] = useState<string | null>(null);
   const [scenarios, setScenarios] = useState<Scenario[]>([]);
@@ -210,11 +219,11 @@ export const Projections: React.FC<ProjectionsProps> = ({ orgId, data, setData, 
   const grid = useMemo(() => (ready ? sensitivity(inputs) : null), [inputs, ready]);
 
   const fillFromMarket = async () => {
-    if (!form.location.trim()) { setEstimateError('Enter the area first, for example Dubai Marina.'); return; }
+    if (!form.location.trim()) { setEstimateError('Enter the area first, for example Dubai Marina or Miami Beach.'); return; }
     setEstimating(true);
     setEstimateError(null);
     try {
-      const m = await getMarketIntelligence(form.location.trim(), form.bedrooms);
+      const m = await getMarketIntelligence(form.location.trim(), form.bedrooms, cur);
       const months = Array.isArray(m.seasonality) ? m.seasonality : [];
       const season = MONTHS.map(name => {
         const hit = months.find((s: any) => typeof s?.month === 'string' && s.month.toLowerCase().startsWith(name.toLowerCase()));
@@ -250,7 +259,12 @@ export const Projections: React.FC<ProjectionsProps> = ({ orgId, data, setData, 
         <Card className="space-y-5 lg:sticky lg:top-6">
           <Group title="The unit">
             <Field label="Area">
-              <input className={inputClass} placeholder="e.g. Dubai Marina" value={form.location} onChange={e => set('location')(e.target.value.slice(0, 100))} />
+              <input className={inputClass} placeholder="e.g. Dubai Marina, Miami Beach, Goa" value={form.location} onChange={e => set('location')(e.target.value.slice(0, 100))} />
+            </Field>
+            <Field label="Currency" hint="All amounts below, and the property if you add it">
+              <select className={inputClass} value={cur} onChange={e => set('currency')(e.target.value)}>
+                {SUPPORTED_CURRENCIES.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
             </Field>
             <div className="grid grid-cols-2 gap-3">
               <Field label="Size">
@@ -278,7 +292,7 @@ export const Projections: React.FC<ProjectionsProps> = ({ orgId, data, setData, 
           <Group title="Income">
             <div className="grid grid-cols-2 gap-3">
               <Field label="Average nightly rate">
-                <NumberInput prefix="AED" value={form.nightlyRate} onChange={set('nightlyRate')} />
+                <NumberInput prefix={cur} value={form.nightlyRate} onChange={set('nightlyRate')} />
               </Field>
               <Field label="Expected occupancy">
                 <NumberInput suffix="%" max={100} value={form.occupancy} onChange={set('occupancy')} />
@@ -295,7 +309,7 @@ export const Projections: React.FC<ProjectionsProps> = ({ orgId, data, setData, 
           <Group title="Lease">
             <div className="grid grid-cols-2 gap-3">
               <Field label="Annual rent">
-                <NumberInput prefix="AED" value={form.annualRent} onChange={set('annualRent')} />
+                <NumberInput prefix={cur} value={form.annualRent} onChange={set('annualRent')} />
               </Field>
               <Field label="Rent cheques">
                 <select className={inputClass} value={form.cheques} onChange={e => set('cheques')(Number(e.target.value))}>
@@ -303,7 +317,7 @@ export const Projections: React.FC<ProjectionsProps> = ({ orgId, data, setData, 
                 </select>
               </Field>
               <Field label="Furnishing and setup">
-                <NumberInput prefix="AED" value={form.setupCost} onChange={set('setupCost')} />
+                <NumberInput prefix={cur} value={form.setupCost} onChange={set('setupCost')} />
               </Field>
               <Field label="Security deposit" hint="Refundable; counted as cash tied up">
                 <NumberInput suffix="% rent" max={100} step={0.5} value={form.depositPercent} onChange={set('depositPercent')} />
@@ -314,22 +328,22 @@ export const Projections: React.FC<ProjectionsProps> = ({ orgId, data, setData, 
           <Group title="Running costs">
             <div className="grid grid-cols-2 gap-3">
               <Field label="Monthly running costs" hint="Utilities, internet, supplies, repairs">
-                <NumberInput prefix="AED" value={form.monthlyRunningCosts} onChange={set('monthlyRunningCosts')} />
+                <NumberInput prefix={cur} value={form.monthlyRunningCosts} onChange={set('monthlyRunningCosts')} />
               </Field>
               <Field label="Platform commission" hint="Share the booking sites keep">
                 <NumberInput suffix="%" max={50} step={0.5} value={form.platformFeePercent} onChange={set('platformFeePercent')} />
               </Field>
               <Field label="Cleaning per stay">
-                <NumberInput prefix="AED" value={form.cleaningPerStay} onChange={set('cleaningPerStay')} />
+                <NumberInput prefix={cur} value={form.cleaningPerStay} onChange={set('cleaningPerStay')} />
               </Field>
               <Field label="Average stay">
                 <NumberInput suffix="nights" min={1} value={form.averageStayNights} onChange={v => set('averageStayNights')(Math.max(1, v))} />
               </Field>
-              <Field label="Per-night charges" hint="Tourism dirham and similar, per booked night">
-                <NumberInput prefix="AED" value={form.perNightCharges} onChange={set('perNightCharges')} />
+              <Field label="Per-night charges" hint="Tourism or occupancy taxes you pay per booked night">
+                <NumberInput prefix={cur} value={form.perNightCharges} onChange={set('perNightCharges')} />
               </Field>
               <Field label="Yearly licences" hint="Holiday-home permit and renewals">
-                <NumberInput prefix="AED" value={form.yearlyLicences} onChange={set('yearlyLicences')} />
+                <NumberInput prefix={cur} value={form.yearlyLicences} onChange={set('yearlyLicences')} />
               </Field>
               <Field label="Management fee" hint="Leave at 0 if you manage it yourself" className="col-span-2">
                 <NumberInput suffix="% of income" max={60} step={0.5} value={form.managementFeePercent} onChange={set('managementFeePercent')} />
@@ -339,7 +353,7 @@ export const Projections: React.FC<ProjectionsProps> = ({ orgId, data, setData, 
 
           <Group title="Your goal">
             <Field label="Profit you want per year">
-              <NumberInput prefix="AED" value={form.targetProfit} onChange={set('targetProfit')} />
+              <NumberInput prefix={cur} value={form.targetProfit} onChange={set('targetProfit')} />
             </Field>
           </Group>
 
@@ -389,7 +403,7 @@ export const Projections: React.FC<ProjectionsProps> = ({ orgId, data, setData, 
                       <span className="block truncate text-sm font-medium text-zinc-900 hover:underline dark:text-zinc-100">{sc.name}</span>
                       <span className="flex items-center gap-1.5 text-xs text-zinc-500">
                         {r && <span className={cn('h-1.5 w-1.5 rounded-full', VERDICT_DOT[r.verdict.level])} aria-hidden />}
-                        {r ? `${VERDICT_SHORT[r.verdict.level]}, ${aed(r.operatingProfit)} a year` : 'Incomplete'}
+                        {r ? `${VERDICT_SHORT[r.verdict.level]}, ${moneyIn((sc.inputs as any).currency || baseCurrency)(r.operatingProfit)} a year` : 'Incomplete'}
                         {sc.converted_apartment_id && ', added as a property'}
                       </span>
                     </button>
@@ -404,15 +418,16 @@ export const Projections: React.FC<ProjectionsProps> = ({ orgId, data, setData, 
         )}
 
         {compare.length >= 2 && (() => {
+          const curOf = (sc: { inputs: Record<string, any> }) => (isSupportedCurrency(sc.inputs.currency) ? sc.inputs.currency : baseCurrency);
           const cols = compare.map(id => scenarios.find(x => x.id === id)).filter(Boolean).map(sc => ({ sc: sc!, r: resultFor(sc!.inputs as Partial<FormState>) }));
-          const rows: { label: string; get: (r: NonNullable<ReturnType<typeof resultFor>>, f: any) => number | null; fmt: (v: number | null) => string; better: 'high' | 'low' }[] = [
-            { label: 'Profit per year', get: r => r.operatingProfit, fmt: v => (v === null ? '—' : aed(v)), better: 'high' },
-            { label: 'Cash needed up front', get: r => r.upfrontCash, fmt: v => (v === null ? '—' : aed(v)), better: 'low' },
+          const rows: { label: string; get: (r: NonNullable<ReturnType<typeof resultFor>>, f: any) => number | null; fmt: (v: number | null, money: (v: number) => string) => string; better: 'high' | 'low' }[] = [
+            { label: 'Profit per year', get: r => r.operatingProfit, fmt: (v, money) => (v === null ? '—' : money(v)), better: 'high' },
+            { label: 'Cash needed up front', get: r => r.upfrontCash, fmt: (v, money) => (v === null ? '—' : money(v)), better: 'low' },
             { label: 'Return on that cash', get: r => r.returnOnCash, fmt: v => pct(v), better: 'high' },
             { label: 'Cash back by month', get: r => r.paybackMonth, fmt: v => (v === null ? 'Not in year one' : `Month ${v}`), better: 'low' },
             { label: 'Break-even occupancy', get: r => r.breakEvenOccupancy, fmt: v => (v === null || v > 100 ? 'Above 100%' : pct(v)), better: 'low' },
-            { label: 'Break-even nightly rate', get: r => r.breakEvenRate, fmt: v => (v === null ? '—' : aed(v)), better: 'low' },
-            { label: 'Annual rent', get: (_r, f) => Number(f.annualRent) || 0, fmt: v => (v === null ? '—' : aed(v)), better: 'low' },
+            { label: 'Break-even nightly rate', get: r => r.breakEvenRate, fmt: (v, money) => (v === null ? '—' : money(v)), better: 'low' },
+            { label: 'Annual rent', get: (_r, f) => Number(f.annualRent) || 0, fmt: (v, money) => (v === null ? '—' : money(v)), better: 'low' },
             { label: 'Nightly rate and occupancy', get: () => null, fmt: () => '', better: 'high' },
           ];
           return (
@@ -438,7 +453,7 @@ export const Projections: React.FC<ProjectionsProps> = ({ orgId, data, setData, 
                             <th scope="row" className="px-5 py-2.5 text-left text-xs font-medium text-zinc-600 dark:text-zinc-400">{row.label}</th>
                             {cols.map(({ sc }) => (
                               <td key={sc.id} className="px-4 py-2.5 text-right text-zinc-600 dark:text-zinc-400">
-                                {aed(Number(sc.inputs.nightlyRate) || 0)}, {Math.round(Number(sc.inputs.occupancy) || 0)}%
+                                {moneyIn(curOf(sc))(Number(sc.inputs.nightlyRate) || 0)}, {Math.round(Number(sc.inputs.occupancy) || 0)}%
                               </td>
                             ))}
                           </tr>
@@ -446,13 +461,14 @@ export const Projections: React.FC<ProjectionsProps> = ({ orgId, data, setData, 
                       }
                       const values = cols.map(({ sc, r }) => (r ? row.get(r, sc.inputs) : null));
                       const valid = values.filter((v): v is number => v !== null);
-                      const best = valid.length > 1 ? (row.better === 'high' ? Math.max(...valid) : Math.min(...valid)) : null;
+                      const mixed = new Set(cols.map(c => curOf(c.sc))).size > 1;
+                      const best = !mixed && valid.length > 1 ? (row.better === 'high' ? Math.max(...valid) : Math.min(...valid)) : null;
                       return (
                         <tr key={row.label} className="border-b border-zinc-50 dark:border-zinc-800/60">
                           <th scope="row" className="px-5 py-2.5 text-left text-xs font-medium text-zinc-600 dark:text-zinc-400">{row.label}</th>
                           {values.map((v, k) => (
                             <td key={cols[k].sc.id} className={cn('px-4 py-2.5 text-right', v !== null && v === best ? 'font-semibold text-emerald-700 dark:text-emerald-300' : 'text-zinc-900 dark:text-zinc-100')}>
-                              {row.fmt(v)}
+                              {row.fmt(v, moneyIn(curOf(cols[k].sc)))}
                             </td>
                           ))}
                         </tr>

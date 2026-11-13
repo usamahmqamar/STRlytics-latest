@@ -30,7 +30,7 @@ import { cn } from '../lib/utils';
 import { 
   calculateDailyPL, 
   getMonthlyKPIs, 
-  convertCurrency,
+
   getRevenueForecast,
   getMarketBenchmarks,
   getRiskAssessment,
@@ -57,6 +57,8 @@ interface DashboardProps {
   };
   onTabChange: (tab: string) => void;
   onImportPdfs?: () => void;
+  /** Stored data (each amount in its own currency), for reminders that quote a specific amount. */
+  rawData?: UserData;
 }
 
 const StatCard: React.FC<{
@@ -98,11 +100,13 @@ const StatCard: React.FC<{
   </div>
 );
 
-export const Dashboard: React.FC<DashboardProps> = ({ data, setData, filters, onTabChange, onImportPdfs }) => {
+export const Dashboard: React.FC<DashboardProps> = ({ data, setData, filters, onTabChange, onImportPdfs, rawData }) => {
+  // Reminders quote a cheque or invoice as written, in its own currency, not converted.
+  const source = rawData ?? data;
   const [isCustomizing, setIsCustomizing] = React.useState(false);
 
   const formatValue = (val: number) => {
-    const converted = convertCurrency(val, 'AED', filters.displayCurrency);
+    const converted = val;
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: filters.displayCurrency,
@@ -127,9 +131,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, setData, filters, on
 
   // Period totals for the summary panel, from the same daily P&L the charts use.
   const summary = useMemo(() => {
-    const revenue = dailyPL.reduce((t, d) => t + d.daily_revenue_aed, 0);
-    const costs = dailyPL.reduce((t, d) => t + d.total_daily_cost_aed, 0);
-    const profit = dailyPL.reduce((t, d) => t + d.daily_profit_aed, 0);
+    const revenue = dailyPL.reduce((t, d) => t + d.daily_revenue, 0);
+    const costs = dailyPL.reduce((t, d) => t + d.total_daily_cost, 0);
+    const profit = dailyPL.reduce((t, d) => t + d.daily_profit, 0);
     const nights = dailyPL.filter((d: any) => d.operating !== false).length;
     const booked = dailyPL.filter(d => d.occupied === 'yes').length;
     const nightlyRate = booked ? revenue / booked : 0;
@@ -154,13 +158,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, setData, filters, on
       const m = format(addDays(startOfMonth(today), i * 31), 'yyyy-MM');
       return {
         label: format(parseISO(`${m}-01`), 'MMM'),
-        rent: all.filter(c => !isPaid(c) && c.due_date?.startsWith(m)).reduce((t, c) => t + (c.amount_aed || 0), 0),
-        revenue: data.reservations.filter(r => r.status === 'confirmed' && r.check_in?.startsWith(m)).reduce((t, r) => t + (r.net_payout_aed || 0), 0),
+        rent: all.filter(c => !isPaid(c) && c.due_date?.startsWith(m)).reduce((t, c) => t + (c.amount || 0), 0),
+        revenue: data.reservations.filter(r => r.status === 'confirmed' && r.check_in?.startsWith(m)).reduce((t, r) => t + (r.net_payout || 0), 0),
       };
     });
     return {
-      total: all.reduce((t, c) => t + (c.amount_aed || 0), 0),
-      paid: all.filter(isPaid).reduce((t, c) => t + (c.amount_aed || 0), 0),
+      total: all.reduce((t, c) => t + (c.amount || 0), 0),
+      paid: all.filter(isPaid).reduce((t, c) => t + (c.amount || 0), 0),
       overdueCount: all.filter(c => !isPaid(c) && c.due_date && c.due_date < todayStr).length,
       upcomingCount: all.filter(c => !isPaid(c) && c.due_date && c.due_date >= todayStr && c.due_date <= in90).length,
       months,
@@ -169,8 +173,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, setData, filters, on
   const benchmarks = useMemo(() => getMarketBenchmarks(), []);
   const risk = useMemo(() => getRiskAssessment(data), [data]);
   const exposure = useMemo(() => getCancellationExposure(data), [data]);
-  const upcomingTasks = useMemo(() => getUpcomingTasks(data), [data]);
-  const actionReminders = useMemo(() => getActionReminders(data), [data]);
+  const upcomingTasks = useMemo(() => getUpcomingTasks(source), [source]);
+  const actionReminders = useMemo(() => getActionReminders(source), [source]);
   // One list of things that cost money if ignored; overdue first, then soonest.
   const attention = useMemo(() => {
     const today = new Date().toISOString().slice(0, 10);
@@ -238,10 +242,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, setData, filters, on
                   const date = curr.date;
                   const existing = acc.find(a => a.date === date);
                   if (existing) {
-                    existing.profit += curr.daily_profit_aed;
-                    existing.opex += curr.total_daily_cost_aed;
+                    existing.profit += curr.daily_profit;
+                    existing.opex += curr.total_daily_cost;
                   } else {
-                    acc.push({ date, profit: curr.daily_profit_aed, opex: curr.total_daily_cost_aed });
+                    acc.push({ date, profit: curr.daily_profit, opex: curr.total_daily_cost });
                   }
                   return acc;
                 }, []).sort((a, b) => a.date.localeCompare(b.date))}>
@@ -410,14 +414,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, setData, filters, on
         <Card className="col-span-1">
           <StatCard 
             label="Total Revenue" 
-            value={formatValue(currentKPIs?.revenue_aed || 0)} 
+            value={formatValue(currentKPIs?.revenue || 0)} 
             subValue="Net Payout"
           />
         </Card>
         <Card className="col-span-1">
           <StatCard 
             label="Lost Revenue" 
-            value={formatValue(currentKPIs?.lost_revenue_aed || 0)} 
+            value={formatValue(currentKPIs?.lost_revenue || 0)} 
             subValue="Cancelled Bookings"
             trend="down"
           />
@@ -433,16 +437,16 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, setData, filters, on
         <Card className="col-span-1">
           <StatCard 
             label="ADR" 
-            value={formatValue(currentKPIs?.ADR_aed || 0)} 
+            value={formatValue(currentKPIs?.ADR || 0)} 
             subValue="Average Daily Rate"
           />
         </Card>
         <Card className="col-span-1">
           <StatCard 
             label="Net Profit" 
-            value={formatValue(currentKPIs?.net_profit_aed || 0)} 
+            value={formatValue(currentKPIs?.net_profit || 0)} 
             subValue={`${Math.round((currentKPIs?.profit_margin || 0) * 100)}% Margin`}
-            trend={(currentKPIs?.net_profit_aed || 0) > 0 ? 'up' : 'down'}
+            trend={(currentKPIs?.net_profit || 0) > 0 ? 'up' : 'down'}
           />
         </Card>
       </div>
@@ -580,7 +584,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, setData, filters, on
               />
               <Area 
                 type="monotone" 
-                dataKey="daily_revenue_aed" 
+                dataKey="daily_revenue" 
                 stroke="#1a2420" 
                 strokeWidth={2} 
                 fillOpacity={1} 
@@ -589,7 +593,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, setData, filters, on
               />
               <Area 
                 type="monotone" 
-                dataKey="daily_profit_aed" 
+                dataKey="daily_profit" 
                 stroke="#0e5a4a" 
                 strokeWidth={2} 
                 fillOpacity={1} 
@@ -609,8 +613,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, setData, filters, on
               const kpi = getMonthlyKPIs(data, format(new Date(), 'yyyy-MM')).find(k => k.entity === apt.name);
               return {
                 name: apt.nickname || apt.name,
-                revenue: kpi?.revenue_aed || 0,
-                profit: kpi?.net_profit_aed || 0
+                revenue: kpi?.revenue || 0,
+                profit: kpi?.net_profit || 0
               };
             })} layout="vertical">
               <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#eceee9" />
@@ -646,15 +650,15 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, setData, filters, on
                 )}>
                   <td className="py-4 text-xs font-bold text-zinc-900">{kpi.entity}</td>
                   <td className="py-4 text-xs text-zinc-600 text-right">{Math.round(kpi.occupancy_rate * 100)}%</td>
-                  <td className="py-4 text-xs text-zinc-600 text-right">{formatValue(kpi.revenue_aed)}</td>
-                  <td className="py-4 text-xs text-zinc-600 text-right">{formatValue(kpi.ADR_aed)}</td>
-                  <td className="py-4 text-xs text-zinc-600 text-right">{formatValue(kpi.RevPAR_aed)}</td>
+                  <td className="py-4 text-xs text-zinc-600 text-right">{formatValue(kpi.revenue)}</td>
+                  <td className="py-4 text-xs text-zinc-600 text-right">{formatValue(kpi.ADR)}</td>
+                  <td className="py-4 text-xs text-zinc-600 text-right">{formatValue(kpi.RevPAR)}</td>
                   <td className="py-4 text-[11px] font-bold text-zinc-300 text-right italic">N/A</td>
                   <td className={cn(
                     "py-4 text-xs text-right font-bold",
-                    kpi.net_profit_aed >= 0 ? "text-emerald-600" : "text-rose-600"
+                    kpi.net_profit >= 0 ? "text-emerald-600" : "text-rose-600"
                   )}>
-                    {formatValue(kpi.net_profit_aed)}
+                    {formatValue(kpi.net_profit)}
                   </td>
                 </tr>
               ))}

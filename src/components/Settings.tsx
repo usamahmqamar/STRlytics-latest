@@ -3,7 +3,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import type { Workspace } from '../auth/AuthProvider';
+import { useAuth, type Workspace } from '../auth/AuthProvider';
+import { supabase } from '../lib/supabase';
+import { SUPPORTED_CURRENCIES } from '../lib/money';
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -291,6 +293,7 @@ export const Settings: React.FC<SettingsProps> = ({ data, setData, workspace }) 
           {activeTab === 'display' && (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
               <div className="lg:col-span-2 space-y-4">
+                <WorkspaceCurrency workspace={workspace} />
                 {(workspace.role === 'owner' || workspace.role === 'manager') && (
                   <Card title="Reminder emails">
                     <label className="mt-1 flex items-start gap-3 text-sm text-zinc-700 dark:text-zinc-300">
@@ -302,7 +305,7 @@ export const Settings: React.FC<SettingsProps> = ({ data, setData, workspace }) 
                       />
                       <span>
                         Email me about rent cheques (7 days before, on the day, and 3 days after if still unpaid) and when the free trial is ending.
-                        <span className="mt-1 block text-xs text-zinc-500">Sent once a day at about 7:30 in the morning, Dubai time. This setting is only for you; teammates choose for themselves.</span>
+                        <span className="mt-1 block text-xs text-zinc-500">Checked once a day; the dates follow each property's own time zone. This setting is only for you; teammates choose for themselves.</span>
                       </span>
                     </label>
                   </Card>
@@ -485,5 +488,42 @@ export const Settings: React.FC<SettingsProps> = ({ data, setData, workspace }) 
         )}
       </AnimatePresence>
     </div>
+  );
+};
+
+/** The currency totals across all properties are shown in. Owners and managers change it. */
+const WorkspaceCurrency: React.FC<{ workspace: Workspace }> = ({ workspace }) => {
+  const { refreshWorkspaces } = useAuth();
+  const [value, setValue] = useState(workspace.base_currency);
+  const [state, setState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const isOwner = workspace.role === 'owner' || workspace.role === 'manager';
+  const save = async (code: string) => {
+    setValue(code); setState('saving');
+    const { error } = await supabase.from('organizations').update({ base_currency: code }).eq('id', workspace.id);
+    if (error) { setState('error'); setValue(workspace.base_currency); return; }
+    await refreshWorkspaces();
+    setState('saved');
+  };
+  return (
+    <Card title="Workspace currency">
+      <p className="max-w-prose text-sm text-zinc-600 dark:text-zinc-400">
+        Totals across all your properties are shown in this currency. Each property keeps its own currency,
+        and its amounts are converted at the daily exchange rate for each amount's date. Nothing stored changes.
+      </p>
+      <div className="mt-4 flex items-center gap-3">
+        <select
+          aria-label="Workspace currency"
+          className="h-9 rounded-lg border border-zinc-200 bg-white px-3 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+          value={value}
+          disabled={!isOwner || state === 'saving'}
+          onChange={e => save(e.target.value)}
+        >
+          {SUPPORTED_CURRENCIES.map(c => <option key={c} value={c}>{c}</option>)}
+        </select>
+        <span className="text-xs text-zinc-500" role="status">
+          {!isOwner ? 'Only owners and managers can change this.' : state === 'saving' ? 'Saving…' : state === 'saved' ? 'Saved.' : state === 'error' ? 'Could not save. Please try again.' : ''}
+        </span>
+      </div>
+    </Card>
   );
 };

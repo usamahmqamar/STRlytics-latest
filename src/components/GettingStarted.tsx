@@ -44,7 +44,7 @@ export function setupSteps(data: UserData, go: (tab: string) => void, importPdfs
       title: 'Record running costs',
       detail: 'Electricity and internet defaults, or this month’s bills and expenses.',
       done: data.monthlyBills.length > 0 || data.dailyExpenses.length > 0
-        || data.apartments.some(a => (a.utilities_monthly_defaults?.dewa_electricity_aed || 0) + (a.utilities_monthly_defaults?.internet_aed || 0) > 0),
+        || data.apartments.some(a => (a.utilities_monthly_defaults?.electricity || 0) + (a.utilities_monthly_defaults?.internet || 0) > 0),
       action: 'Add costs',
       onClick: () => go('operations'),
     },

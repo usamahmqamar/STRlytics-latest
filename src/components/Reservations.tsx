@@ -17,7 +17,7 @@ import { Tooltip } from './ui/Tooltip';
 import { UserData, Reservation, Platform } from '../types';
 import { format, parseISO, addDays, differenceInDays, isAfter, subDays } from 'date-fns';
 import { cn } from '../lib/utils';
-import { convertCurrency } from '../services/analytics';
+import { formatMoney } from '../lib/money';
 import Papa from 'papaparse';
 import { csvFileProblem, safeParseOptions } from '../lib/csv';
 
@@ -47,8 +47,8 @@ export const Reservations: React.FC<ReservationsProps> = ({ data, setData, filte
     guest_name: '',
     check_in: format(new Date(), 'yyyy-MM-dd'),
     check_out: format(addDays(new Date(), 1), 'yyyy-MM-dd'),
-    total_booking_revenue_aed: 0,
-    cleaning_cost_aed: 0,
+    total_booking_revenue: 0,
+    cleaning_cost: 0,
     status: 'confirmed',
     cancellation_policy: 'non-refundable',
     booking_date: format(new Date(), 'yyyy-MM-dd'),
@@ -88,7 +88,7 @@ export const Reservations: React.FC<ReservationsProps> = ({ data, setData, filte
       check_out: format(checkOutDate, 'yyyy-MM-dd'),
       nights,
       channel: platform?.name || 'Unknown',
-      net_payout_aed: calculateNetPayout(newRes.total_booking_revenue_aed || 0, newRes.platform_id!)
+      net_payout: calculateNetPayout(newRes.total_booking_revenue || 0, newRes.platform_id!)
     };
 
     setData(prev => {
@@ -113,8 +113,8 @@ export const Reservations: React.FC<ReservationsProps> = ({ data, setData, filte
       guest_name: '',
       check_in: format(new Date(), 'yyyy-MM-dd'),
       check_out: format(addDays(new Date(), 1), 'yyyy-MM-dd'),
-      total_booking_revenue_aed: 0,
-      cleaning_cost_aed: 0,
+      total_booking_revenue: 0,
+      cleaning_cost: 0,
       status: 'confirmed',
       cancellation_policy: 'non-refundable',
       booking_date: format(new Date(), 'yyyy-MM-dd'),
@@ -136,7 +136,7 @@ export const Reservations: React.FC<ReservationsProps> = ({ data, setData, filte
       ...safeParseOptions,
       complete: (results) => {
         const imported = results.data.map((row: any) => {
-          const gross = parseFloat(row.total_booking_revenue_aed) || 0;
+          const gross = parseFloat(row.total_booking_revenue) || 0;
           const platformId = row.platform_id || data.platforms.find(p => p.name === row.channel)?.platform_id || 'direct';
           
           // Ensure dates are parsed and re-formatted to strip any time/timezone info
@@ -156,9 +156,9 @@ export const Reservations: React.FC<ReservationsProps> = ({ data, setData, filte
             check_out: checkOut,
             num_guests: parseInt(row.num_guests) || 2,
             nights,
-            total_booking_revenue_aed: gross,
-            net_payout_aed: calculateNetPayout(gross, platformId),
-            cleaning_cost_aed: parseFloat(row.cleaning_cost_aed) || 0,
+            total_booking_revenue: gross,
+            net_payout: calculateNetPayout(gross, platformId),
+            cleaning_cost: parseFloat(row.cleaning_cost) || 0,
             status: (row.status?.toLowerCase() === 'cancelled' ? 'cancelled' : 'confirmed') as any,
             cancellation_policy: (row.cancellation_policy || 'non-refundable') as any,
             booking_date: row.booking_date || format(new Date(), 'yyyy-MM-dd'),
@@ -181,14 +181,10 @@ export const Reservations: React.FC<ReservationsProps> = ({ data, setData, filte
     });
   };
 
-  const formatValue = (val: number) => {
-    const converted = convertCurrency(val, 'AED', filters.displayCurrency);
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: filters.displayCurrency,
-      minimumFractionDigits: 0
-    }).format(converted);
-  };
+  /** Each booking is shown in its own listing's currency. */
+  const currencyOf = (r: Partial<Reservation>) =>
+    r.currency || data.apartments.find(a => a.apartment_id === r.apartment_id)?.currency || filters.displayCurrency;
+  const formatValue = (val: number, currency: string = filters.displayCurrency) => formatMoney(val, currency);
 
   const filteredReservations = useMemo(() => {
     return data.reservations.filter(res => {
@@ -272,8 +268,8 @@ export const Reservations: React.FC<ReservationsProps> = ({ data, setData, filte
               guest_name: '',
               check_in: format(new Date(), 'yyyy-MM-dd'),
               check_out: format(addDays(new Date(), 1), 'yyyy-MM-dd'),
-              total_booking_revenue_aed: 0,
-              cleaning_cost_aed: 0,
+              total_booking_revenue: 0,
+              cleaning_cost: 0,
               num_guests: 2,
               status: 'confirmed',
               cancellation_policy: 'non-refundable',
@@ -323,8 +319,8 @@ export const Reservations: React.FC<ReservationsProps> = ({ data, setData, filte
                     <p className="text-xs font-medium text-zinc-900">{res.check_in} to {res.check_out}</p>
                     <p className="text-[11px] text-zinc-400">{res.nights} nights</p>
                   </td>
-                  <td className="py-2 text-right font-medium text-zinc-900">{formatValue(res.total_booking_revenue_aed)}</td>
-                  <td className="py-2 text-right font-bold text-emerald-600">{formatValue(res.net_payout_aed)}</td>
+                  <td className="py-2 text-right font-medium text-zinc-900">{formatValue(res.total_booking_revenue, currencyOf(res))}</td>
+                  <td className="py-2 text-right font-bold text-emerald-600">{formatValue(res.net_payout, currencyOf(res))}</td>
                   <td className="py-2 text-center">
                     <span className={cn(
                       "px-2 py-1 rounded-lg text-[11px] font-bold",
@@ -527,21 +523,21 @@ export const Reservations: React.FC<ReservationsProps> = ({ data, setData, filte
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1.5">
-                      <label className="text-[11px] font-semibold text-zinc-400 ml-1">Gross Revenue (AED)</label>
+                      <label className="text-[11px] font-semibold text-zinc-400 ml-1">Gross Revenue ({currencyOf(newRes)})</label>
                       <input 
                         type="number" 
                         className="w-full px-4 py-3 rounded-xl border border-zinc-200 focus:border-zinc-900 focus:ring-0 transition-all text-sm font-semibold"
-                        value={newRes.total_booking_revenue_aed}
-                        onChange={e => setNewRes({...newRes, total_booking_revenue_aed: Number(e.target.value)})}
+                        value={newRes.total_booking_revenue}
+                        onChange={e => setNewRes({...newRes, total_booking_revenue: Number(e.target.value)})}
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <label className="text-[11px] font-semibold text-zinc-400 ml-1">Cleaning Cost (AED)</label>
+                      <label className="text-[11px] font-semibold text-zinc-400 ml-1">Cleaning Cost ({currencyOf(newRes)})</label>
                       <input 
                         type="number" 
                         className="w-full px-4 py-3 rounded-xl border border-zinc-200 focus:border-zinc-900 focus:ring-0 transition-all text-sm font-semibold"
-                        value={newRes.cleaning_cost_aed}
-                        onChange={e => setNewRes({...newRes, cleaning_cost_aed: Number(e.target.value)})}
+                        value={newRes.cleaning_cost}
+                        onChange={e => setNewRes({...newRes, cleaning_cost: Number(e.target.value)})}
                       />
                     </div>
                   </div>
@@ -549,7 +545,7 @@ export const Reservations: React.FC<ReservationsProps> = ({ data, setData, filte
                   <div className="p-4 bg-emerald-50 rounded-2xl border border-emerald-100">
                     <p className="text-[11px] font-semibold text-emerald-600 mb-1">Estimated Net Payout</p>
                     <p className="text-xl font-semibold text-emerald-700">
-                      {formatValue(calculateNetPayout(newRes.total_booking_revenue_aed || 0, newRes.platform_id || ''))}
+                      {formatValue(calculateNetPayout(newRes.total_booking_revenue || 0, newRes.platform_id || ''), currencyOf(newRes))}
                     </p>
                     <p className="text-[11px] text-emerald-600/70 font-medium">Auto-calculated based on platform commission & charges</p>
                   </div>

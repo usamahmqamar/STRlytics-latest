@@ -20,30 +20,7 @@ import {
 } from 'date-fns';
 import { UserData, Reservation, DailyExpense, MonthlyBill, Apartment, Platform } from '../types';
 
-// Currency conversion (Mock rates - in production fetch from API)
-export const EXCHANGE_RATES: Record<string, number> = {
-  AED: 1,
-  USD: 0.27,
-  EUR: 0.25,
-  GBP: 0.21,
-  SAR: 1.02,
-  QAR: 0.99,
-  OMR: 0.10,
-  KWD: 0.08,
-  BHD: 0.10,
-  INR: 22.50
-};
-
-export function convertCurrency(amount: number, from: string, to: string): number {
-  if (from === to) return amount;
-  const amountInAED = amount / (EXCHANGE_RATES[from] || 1);
-  return amountInAED * (EXCHANGE_RATES[to] || 1);
-}
-
-export function getExchangeRate(from: string, to: string): number {
-  if (from === to) return 1;
-  return (EXCHANGE_RATES[to] || 1) / (EXCHANGE_RATES[from] || 1);
-}
+// Amounts are in each listing's own currency; conversion across currencies lives in src/lib/money.ts.
 
 // Daily P&L lives in src/lib/pl.ts (tested); re-exported here for existing screens.
 export { calculateDailyPL } from '../lib/pl';
@@ -62,9 +39,9 @@ export function getMonthlyKPIs(data: UserData, monthStr: string) {
     // Only nights the unit was operating (inside a tenancy) count as available.
     const availableNights = aptDaily.filter(d => d.operating).length;
     const occupiedNights = aptDaily.reduce((sum, d) => sum + d.occupied_nights_count, 0);
-    const revenue = aptDaily.reduce((sum, d) => sum + d.daily_revenue_aed, 0);
-    const lostRevenue = aptDaily.reduce((sum, d) => sum + d.lost_revenue_aed, 0);
-    const totalCost = aptDaily.reduce((sum, d) => sum + d.total_daily_cost_aed, 0);
+    const revenue = aptDaily.reduce((sum, d) => sum + d.daily_revenue, 0);
+    const lostRevenue = aptDaily.reduce((sum, d) => sum + d.lost_revenue, 0);
+    const totalCost = aptDaily.reduce((sum, d) => sum + d.total_daily_cost, 0);
     const netProfit = revenue - totalCost;
 
     stats.push({
@@ -73,12 +50,12 @@ export function getMonthlyKPIs(data: UserData, monthStr: string) {
       available_nights: availableNights,
       occupied_nights: occupiedNights,
       occupancy_rate: availableNights > 0 ? occupiedNights / availableNights : 0,
-      revenue_aed: revenue,
-      lost_revenue_aed: lostRevenue,
-      ADR_aed: occupiedNights > 0 ? revenue / occupiedNights : 0,
-      RevPAR_aed: availableNights > 0 ? revenue / availableNights : 0,
-      total_cost_aed: totalCost,
-      net_profit_aed: netProfit,
+      revenue: revenue,
+      lost_revenue: lostRevenue,
+      ADR: occupiedNights > 0 ? revenue / occupiedNights : 0,
+      RevPAR: availableNights > 0 ? revenue / availableNights : 0,
+      total_cost: totalCost,
+      net_profit: netProfit,
       profit_margin: revenue > 0 ? netProfit / revenue : 0
     });
   }
@@ -86,9 +63,9 @@ export function getMonthlyKPIs(data: UserData, monthStr: string) {
   // Portfolio level
   const totalAvailable = stats.reduce((sum, s) => sum + s.available_nights, 0);
   const totalOccupied = stats.reduce((sum, s) => sum + s.occupied_nights, 0);
-  const totalRevenue = stats.reduce((sum, s) => sum + s.revenue_aed, 0);
-  const totalLost = stats.reduce((sum, s) => sum + s.lost_revenue_aed, 0);
-  const totalCost = stats.reduce((sum, s) => sum + s.total_cost_aed, 0);
+  const totalRevenue = stats.reduce((sum, s) => sum + s.revenue, 0);
+  const totalLost = stats.reduce((sum, s) => sum + s.lost_revenue, 0);
+  const totalCost = stats.reduce((sum, s) => sum + s.total_cost, 0);
   const totalNetProfit = totalRevenue - totalCost;
 
   stats.push({
@@ -97,12 +74,12 @@ export function getMonthlyKPIs(data: UserData, monthStr: string) {
     available_nights: totalAvailable,
     occupied_nights: totalOccupied,
     occupancy_rate: totalAvailable > 0 ? totalOccupied / totalAvailable : 0,
-    revenue_aed: totalRevenue,
-    lost_revenue_aed: totalLost,
-    ADR_aed: totalOccupied > 0 ? totalRevenue / totalOccupied : 0,
-    RevPAR_aed: totalAvailable > 0 ? totalRevenue / totalAvailable : 0,
-    total_cost_aed: totalCost,
-    net_profit_aed: totalNetProfit,
+    revenue: totalRevenue,
+    lost_revenue: totalLost,
+    ADR: totalOccupied > 0 ? totalRevenue / totalOccupied : 0,
+    RevPAR: totalAvailable > 0 ? totalRevenue / totalAvailable : 0,
+    total_cost: totalCost,
+    net_profit: totalNetProfit,
     profit_margin: totalRevenue > 0 ? totalNetProfit / totalRevenue : 0
   });
 
@@ -171,7 +148,7 @@ export function getCashflowTimeline(data: UserData, options?: { apartmentId?: st
       type: 'IN',
       category: 'Reservation Payout',
       description: `${res.channel} - ${res.guest_name || 'Guest'}`,
-      amount: res.net_payout_aed,
+      amount: res.net_payout,
       apartmentName: apt?.name || 'Unknown',
       apartment_id: res.apartment_id
     });
@@ -189,7 +166,7 @@ export function getCashflowTimeline(data: UserData, options?: { apartmentId?: st
       type: 'OUT',
       category: 'Expense',
       description: `${exp.category}: ${exp.notes || ''}`,
-      amount: -exp.amount_aed,
+      amount: -exp.amount,
       apartmentName: exp.apartment_id === 'PORTFOLIO' ? 'Portfolio' : (apt?.name || 'Unknown'),
       apartment_id: exp.apartment_id
     });
@@ -209,7 +186,7 @@ export function getCashflowTimeline(data: UserData, options?: { apartmentId?: st
       type: 'OUT',
       category: 'Bill',
       description: `${bill.bill_type} for ${bill.month}`,
-      amount: -bill.amount_aed,
+      amount: -bill.amount,
       apartmentName: apt?.name || 'Unknown',
       apartment_id: bill.apartment_id
     });
@@ -228,7 +205,7 @@ export function getCashflowTimeline(data: UserData, options?: { apartmentId?: st
         type: 'OUT',
         category: 'Rent Cheque',
         description: `Cheque for ${apt.name}`,
-        amount: -chq.amount_aed,
+        amount: -chq.amount,
         apartmentName: apt.name,
         apartment_id: apt.apartment_id
       });
@@ -243,7 +220,7 @@ export function getCashflowTimeline(data: UserData, options?: { apartmentId?: st
         type: 'OUT',
         category: 'Setup Cost',
         description: `${cost.category}: ${cost.description}`,
-        amount: -cost.amount_aed,
+        amount: -cost.amount,
         apartmentName: apt.name,
         apartment_id: apt.apartment_id
       });
@@ -286,7 +263,7 @@ export function getRevenueForecast(data: UserData, months: number = 3) {
     // Confirmed revenue from existing bookings
     const confirmedRevenue = data.reservations
       .filter(r => r.status === 'confirmed' && isSameMonth(parseISO(r.check_in), targetMonth))
-      .reduce((sum, r) => sum + r.net_payout_aed, 0);
+      .reduce((sum, r) => sum + r.net_payout, 0);
       
     // Projected revenue based on historical occupancy (mock logic)
     const historicalAvg = 15000; // Mock average
@@ -322,12 +299,12 @@ export function getRiskAssessment(data: UserData) {
   // 1. Cancellation Exposure (Confirmed bookings that are still in refundable window)
   const refundableRevenue = data.reservations
     .filter(r => r.status === 'confirmed' && r.cancellation_policy !== 'non-refundable')
-    .reduce((sum, r) => sum + r.net_payout_aed, 0);
+    .reduce((sum, r) => sum + r.net_payout, 0);
     
   // 2. Upcoming Liabilities (Rent cheques and unpaid invoices)
   const upcomingCheques = data.apartments.flatMap(a => a.rent_cheques)
     .filter(c => c.status === 'due' && isWithinInterval(parseISO(c.due_date), { start: today, end: next30Days }))
-    .reduce((sum, c) => sum + c.amount_aed, 0);
+    .reduce((sum, c) => sum + c.amount, 0);
     
   const unpaidInvoices = data.invoices
     .filter(i => i.status === 'pending')
@@ -366,10 +343,10 @@ export function getCancellationExposure(data: UserData) {
 
     if (isRefundable) {
       refundableCount++;
-      refundableAmount += res.net_payout_aed;
+      refundableAmount += res.net_payout;
     } else {
       nonRefundableCount++;
-      nonRefundableAmount += res.net_payout_aed;
+      nonRefundableAmount += res.net_payout;
     }
   });
 
@@ -394,10 +371,10 @@ export function getUpcomingTasks(data: UserData) {
           type: 'cheque',
           title: daysDiff < 0 ? `Rent cheque overdue: ${apt.name}` : `Rent cheque due: ${apt.name}`,
           description: daysDiff < 0
-            ? `AED ${chq.amount_aed.toLocaleString()}, ${Math.abs(daysDiff)} ${Math.abs(daysDiff) === 1 ? 'day' : 'days'} overdue`
+            ? `${chq.currency || apt.currency || ''} ${chq.amount.toLocaleString()}, ${Math.abs(daysDiff)} ${Math.abs(daysDiff) === 1 ? 'day' : 'days'} overdue`
             : daysDiff === 0
-              ? `AED ${chq.amount_aed.toLocaleString()} due today`
-              : `AED ${chq.amount_aed.toLocaleString()} due in ${daysDiff} ${daysDiff === 1 ? 'day' : 'days'}`,
+              ? `${chq.currency || apt.currency || ''} ${chq.amount.toLocaleString()} due today`
+              : `${chq.currency || apt.currency || ''} ${chq.amount.toLocaleString()} due in ${daysDiff} ${daysDiff === 1 ? 'day' : 'days'}`,
           date: chq.due_date,
           urgent: daysDiff <= 0
         });
@@ -448,7 +425,7 @@ export function getActionReminders(data: UserData) {
       title: 'Subscription Renewal',
       description: `Plan: ${data.subscription.plan.toUpperCase()}`,
       date: data.subscription.next_charge_date,
-      amount: data.subscription.monthly_payment_aed,
+      amount: data.subscription.monthly_payment,
       status: 'soon'
     });
   }
@@ -464,7 +441,7 @@ export function getActionReminders(data: UserData) {
           title: `Rent Cheque Due: ${apt.nickname || apt.name}`,
           description: `Cheque #${chq.cheque_number || 'N/A'} for ${apt.name}`,
           date: chq.due_date,
-          amount: chq.amount_aed,
+          amount: chq.amount,
           status: 'overdue'
         });
       }
@@ -515,7 +492,7 @@ export function getRevenueByChannel(data: UserData) {
   const channels: Record<string, number> = {};
   data.reservations.forEach(res => {
     if (res.status === 'cancelled') return;
-    channels[res.channel] = (channels[res.channel] || 0) + res.net_payout_aed;
+    channels[res.channel] = (channels[res.channel] || 0) + res.net_payout;
   });
   
   return Object.entries(channels).map(([name, value]) => ({ name, value }));
@@ -566,7 +543,7 @@ export function getADRTrendByProperty(data: UserData, months: number = 6) {
     const dataPoint: any = { month: monthStr };
     properties.forEach(prop => {
       const aptKPI = kpis.find(k => k.entity === prop);
-      dataPoint[prop] = aptKPI ? Math.round(aptKPI.ADR_aed) : 0;
+      dataPoint[prop] = aptKPI ? Math.round(aptKPI.ADR) : 0;
     });
     trend.push(dataPoint);
   }
@@ -597,8 +574,8 @@ export function getQuarterlyPerformance(data: UserData, apartmentId: string, qua
   });
 
   const monthlyBreakdown = Object.entries(months).map(([month, days]) => {
-    const revenue = days.reduce((sum, d) => sum + d.daily_revenue_aed, 0);
-    const costs = days.reduce((sum, d) => sum + d.total_daily_cost_aed, 0);
+    const revenue = days.reduce((sum, d) => sum + d.daily_revenue, 0);
+    const costs = days.reduce((sum, d) => sum + d.total_daily_cost, 0);
     const occupiedNights = days.reduce((sum, d) => sum + d.occupied_nights_count, 0);
     const availableNights = days.length;
     
@@ -618,7 +595,7 @@ export function getQuarterlyPerformance(data: UserData, apartmentId: string, qua
 
   const totalRevenue = monthlyBreakdown.reduce((sum, m) => sum + m.revenue, 0);
   const totalCosts = monthlyBreakdown.reduce((sum, m) => sum + m.costs, 0);
-  const totalTarget = cheque.amount_aed + (apt.utilities_monthly_defaults.dewa_electricity_aed + apt.utilities_monthly_defaults.internet_aed) * monthsPerQuarter;
+  const totalTarget = cheque.amount + (apt.utilities_monthly_defaults.electricity + apt.utilities_monthly_defaults.internet) * monthsPerQuarter;
   
   const netSurplus = totalRevenue - totalCosts;
   const profitMargin = totalRevenue > 0 ? (netSurplus / totalRevenue) * 100 : 0;
@@ -648,8 +625,8 @@ export function getQuarterlyPerformance(data: UserData, apartmentId: string, qua
       collected: totalRevenue,
       remaining: Math.max(0, totalTarget - totalRevenue),
       targetCoverage: (totalRevenue / totalTarget) * 100,
-      rentCoverage: (totalRevenue / cheque.amount_aed) * 100,
-      opexCoverage: (totalRevenue / (totalCosts - (cheque.amount_aed / dailyData.length * dailyData.length))) * 100 // Simplified
+      rentCoverage: (totalRevenue / cheque.amount) * 100,
+      opexCoverage: (totalRevenue / (totalCosts - (cheque.amount / dailyData.length * dailyData.length))) * 100 // Simplified
     },
     stats: {
       profitMargin,

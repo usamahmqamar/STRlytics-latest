@@ -25,7 +25,8 @@ export async function listScenarios(orgId: string): Promise<Scenario[]> {
 }
 
 export async function saveScenario(orgId: string, name: string, inputs: Record<string, any>, id?: string | null): Promise<Scenario> {
-  const row = { name: name.trim().slice(0, 120), inputs };
+  const currency = typeof inputs.currency === 'string' && /^[A-Z]{3}$/.test(inputs.currency) ? inputs.currency : null;
+  const row = { name: name.trim().slice(0, 120), inputs, ...(currency ? { currency } : {}) };
   const q = id
     ? supabase.from('feasibility_scenarios').update(row).eq('org_id', orgId).eq('id', id).select('*').single()
     : supabase.from('feasibility_scenarios').insert({ org_id: orgId, ...row }).select('*').single();
@@ -64,7 +65,7 @@ export function apartmentFromScenario(name: string, f: Record<string, any>, exis
     cheque_id: `CHQ-${id}-${i + 1}`,
     due_date: format(addMonths(parseISO(start), (i * 12) / count), 'yyyy-MM-dd'),
     // the last cheque takes any rounding so the total equals the annual rent
-    amount_aed: i === count - 1 ? annual - each * (count - 1) : each,
+    amount: i === count - 1 ? annual - each * (count - 1) : each,
     status: 'due',
   }));
   const setup = Math.max(0, Math.round(Number(f.setupCost) || 0));
@@ -80,16 +81,17 @@ export function apartmentFromScenario(name: string, f: Record<string, any>, exis
     measurement_sqft: 0,
     start_operation_date: start,
     tenancy_end_date: end,
-    annual_rent_aed: annual,
-    monthly_rent_aed: Math.round(annual / 12),
+    annual_rent: annual,
+    monthly_rent: Math.round(annual / 12),
     num_cheques: count,
     rent_cheques,
-    utilities_monthly_defaults: { dewa_electricity_aed: 0, internet_aed: 0 },
+    utilities_monthly_defaults: { electricity: 0, internet: 0 },
     setup_costs: [
-      ...(setup ? [{ item_id: `SET-${id}-1`, date: start, category: 'Furnishing' as const, description: 'Furnishing and setup (from feasibility)', amount_aed: setup, is_refundable: false, payment_method: '', vendor: '' }] : []),
-      ...(deposit ? [{ item_id: `SET-${id}-2`, date: start, category: 'Deposit' as const, description: 'Security deposit', amount_aed: deposit, is_refundable: true, payment_method: '', vendor: '' }] : []),
+      ...(setup ? [{ item_id: `SET-${id}-1`, date: start, category: 'Furnishing' as const, description: 'Furnishing and setup (from feasibility)', amount: setup, is_refundable: false, payment_method: '', vendor: '' }] : []),
+      ...(deposit ? [{ item_id: `SET-${id}-2`, date: start, category: 'Deposit' as const, description: 'Security deposit', amount: deposit, is_refundable: true, payment_method: '', vendor: '' }] : []),
     ],
-    currency: 'AED',
+    // The unit's own currency (older saved units without one were in dirhams).
+    currency: typeof f.currency === 'string' && /^[A-Z]{3}$/.test(f.currency) ? f.currency : 'AED',
     status: 'active',
     tenancy_history: [],
     platform_settings: platforms.map(p => ({ platform_id: p.platform_id, commission_percent: p.commission_percent, payment_charge_percent: p.payment_charge_percent || 0 })),

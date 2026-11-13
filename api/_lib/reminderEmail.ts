@@ -13,7 +13,8 @@ export interface DueReminder {
 
 const esc = (s: unknown) =>
   String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
-const aed = (n: unknown) => `AED ${Number(n || 0).toLocaleString('en-AE', { maximumFractionDigits: 2 })}`;
+const money = (n: unknown, currency: unknown) =>
+  `${typeof currency === 'string' && /^[A-Z]{3}$/.test(currency) ? currency : ''} ${Number(n || 0).toLocaleString('en-US', { maximumFractionDigits: 3 })}`.trim();
 const day = (iso: unknown) => {
   const d = new Date(`${String(iso).slice(0, 10)}T00:00:00Z`);
   return Number.isNaN(d.getTime()) ? String(iso) : d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
@@ -21,7 +22,7 @@ const day = (iso: unknown) => {
 
 export function line(r: DueReminder): { text: string; link: string } {
   const d = r.details;
-  const cheque = `rent cheque${d.cheque_number ? ` ${d.cheque_number}` : ''} for ${d.property} (${aed(d.amount_aed)})`;
+  const cheque = `rent cheque${d.cheque_number ? ` ${d.cheque_number}` : ''} for ${d.property} (${money(d.amount, d.currency)})`;
   switch (r.kind) {
     case 'cheque_7d': return { text: `The ${cheque} is due in 7 days, on ${day(d.due_date)}.`, link: '/app/setup' };
     case 'cheque_today': return { text: `The ${cheque} is due today, ${day(d.due_date)}.`, link: '/app/setup' };

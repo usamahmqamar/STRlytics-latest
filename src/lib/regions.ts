@@ -54,7 +54,6 @@ const DEFAULTS: Record<string, { currency: string; timezone: string }> = {
   NZ: { currency: 'NZD', timezone: 'Pacific/Auckland' },
 };
 
-const FALLBACK_CURRENCIES = ['AED', 'AUD', 'BHD', 'CAD', 'CHF', 'EGP', 'EUR', 'GBP', 'INR', 'JPY', 'KWD', 'NGN', 'OMR', 'QAR', 'SAR', 'SGD', 'USD', 'ZAR'];
 
 function supported(key: 'currency' | 'timeZone'): string[] | null {
   const fn = (Intl as any).supportedValuesOf;
@@ -65,6 +64,8 @@ function displayNames(type: 'region' | 'currency') {
   try { return new Intl.DisplayNames(['en'], { type }); } catch { return null; }
 }
 
+import { SUPPORTED_CURRENCIES, isSupportedCurrency } from './money';
+
 export interface Option { value: string; label: string }
 
 export function countryOptions(): Option[] {
@@ -74,9 +75,10 @@ export function countryOptions(): Option[] {
     .sort((a, b) => a.label.localeCompare(b.label));
 }
 
+/** Only currencies with a daily exchange rate, so every amount can be converted. */
 export function currencyOptions(): Option[] {
   const names = displayNames('currency');
-  return (supported('currency') ?? FALLBACK_CURRENCIES)
+  return SUPPORTED_CURRENCIES
     .map(code => ({ value: code, label: `${code} · ${names?.of(code) ?? code}` }));
 }
 
@@ -110,6 +112,8 @@ export function guessCountry(): string {
   } catch { return ''; }
 }
 
+/** Country defaults. A local currency without a daily rate yet (e.g. KWD, NGN) falls back to USD. */
 export function defaultsFor(country: string): { currency: string; timezone: string } {
-  return DEFAULTS[country] ?? { currency: 'USD', timezone: browserTimezone() };
+  const d = DEFAULTS[country] ?? { currency: 'USD', timezone: browserTimezone() };
+  return isSupportedCurrency(d.currency) ? d : { ...d, currency: 'USD' };
 }

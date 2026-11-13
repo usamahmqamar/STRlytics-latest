@@ -32,13 +32,13 @@ export const Assets: React.FC<AssetsProps> = ({ data, setData }) => {
     category: 'furniture',
     condition: 'new',
     purchase_date: format(new Date(), 'yyyy-MM-dd'),
-    cost_aed: 0
+    cost: 0
   });
 
   const assets = useMemo(() => data.assets || [], [data.assets]);
 
   const handleAddAsset = () => {
-    if (!newAsset.name || !newAsset.apartment_id || !newAsset.cost_aed) return;
+    if (!newAsset.name || !newAsset.apartment_id || !newAsset.cost) return;
 
     const asset: Asset = {
       asset_id: `ASSET-${Date.now()}`,
@@ -48,7 +48,7 @@ export const Assets: React.FC<AssetsProps> = ({ data, setData }) => {
       apartment_id: newAsset.apartment_id,
       purchase_date: newAsset.purchase_date || format(new Date(), 'yyyy-MM-dd'),
       warranty_expiry: newAsset.warranty_expiry,
-      cost_aed: Number(newAsset.cost_aed),
+      cost: Number(newAsset.cost),
       next_service_due: newAsset.next_service_due
     };
 
@@ -62,7 +62,7 @@ export const Assets: React.FC<AssetsProps> = ({ data, setData }) => {
       category: 'furniture',
       condition: 'new',
       purchase_date: format(new Date(), 'yyyy-MM-dd'),
-      cost_aed: 0
+      cost: 0
     });
   };
 
@@ -76,19 +76,19 @@ export const Assets: React.FC<AssetsProps> = ({ data, setData }) => {
   }, [assets, searchQuery, categoryFilter, propertyFilter]);
 
   const stats = useMemo(() => {
-    const totalValue = assets.reduce((sum, a) => sum + a.cost_aed, 0);
+    const totalValue = assets.reduce((sum, a) => sum + a.cost, 0);
     const expiringSoon = assets.filter(a => a.warranty_expiry && isBefore(parseISO(a.warranty_expiry), addDays(new Date(), 90))).length;
     
     const categoryBreakdown = assets.reduce((acc: any, a) => {
-      acc[a.category] = (acc[a.category] || 0) + a.cost_aed;
+      acc[a.category] = (acc[a.category] || 0) + a.cost;
       return acc;
     }, {});
 
     // Simple Depreciation Logic: 5 years (60 months) useful life
     const totalCurrentValue = assets.reduce((sum, a) => {
       const monthsOld = Math.max(0, differenceInMonths(new Date(), parseISO(a.purchase_date)));
-      const depreciationPerMonth = a.cost_aed / 60;
-      const currentValue = Math.max(0, a.cost_aed - (depreciationPerMonth * monthsOld));
+      const depreciationPerMonth = a.cost / 60;
+      const currentValue = Math.max(0, a.cost - (depreciationPerMonth * monthsOld));
       return sum + currentValue;
     }, 0);
 
@@ -265,7 +265,7 @@ export const Assets: React.FC<AssetsProps> = ({ data, setData }) => {
                 <div className="flex justify-between items-center text-xs">
                   <span className="text-zinc-400 font-medium">Asset Value</span>
                   <div className="text-right">
-                    <span className="font-semibold text-zinc-900 block">{formatCurrency(asset.cost_aed)}</span>
+                    <span className="font-semibold text-zinc-900 block">{formatCurrency(asset.cost)}</span>
                     <span className="text-[11px] text-zinc-400 font-bold">Original Cost</span>
                   </div>
                 </div>
@@ -274,7 +274,7 @@ export const Assets: React.FC<AssetsProps> = ({ data, setData }) => {
                   <span className="text-zinc-400 font-medium">Current Value</span>
                   <div className="text-right">
                     <span className="font-semibold text-emerald-600 block">
-                      {formatCurrency(Math.max(0, asset.cost_aed - (asset.cost_aed / 60 * Math.max(0, differenceInMonths(new Date(), parseISO(asset.purchase_date))))))}
+                      {formatCurrency(Math.max(0, asset.cost - (asset.cost / 60 * Math.max(0, differenceInMonths(new Date(), parseISO(asset.purchase_date))))))}
                     </span>
                     <span className="text-[11px] text-zinc-400 font-bold">Est. Depreciated</span>
                   </div>
@@ -385,15 +385,15 @@ export const Assets: React.FC<AssetsProps> = ({ data, setData }) => {
                     </select>
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[11px] font-semibold text-zinc-400">Purchase Price (AED)</label>
+                    <label className="text-[11px] font-semibold text-zinc-400">Purchase Price ({data.apartments.find(a => a.apartment_id === newAsset.apartment_id)?.currency || 'in the property\'s currency'})</label>
                     <div className="relative">
                       <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" size={16} />
                       <input 
                         type="number"
                         className="w-full p-4 pl-10 bg-zinc-50 border border-zinc-100 rounded-2xl text-sm outline-none"
                         placeholder="0.00"
-                        value={newAsset.cost_aed || ""}
-                        onChange={(e) => setNewAsset({...newAsset, cost_aed: Number(e.target.value)})}
+                        value={newAsset.cost || ""}
+                        onChange={(e) => setNewAsset({...newAsset, cost: Number(e.target.value)})}
                       />
                     </div>
                   </div>
@@ -431,7 +431,7 @@ export const Assets: React.FC<AssetsProps> = ({ data, setData }) => {
                   <Button 
                     className="flex-1 py-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-semibold text-xs"
                     onClick={handleAddAsset}
-                    disabled={!newAsset.name || !newAsset.apartment_id || !newAsset.cost_aed}
+                    disabled={!newAsset.name || !newAsset.apartment_id || !newAsset.cost}
                   >
                     Save Asset
                   </Button>

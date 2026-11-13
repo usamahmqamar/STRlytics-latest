@@ -10,6 +10,7 @@ import { HttpError, consumeAiQuota, handle, readJson, requireUser } from '../api
 import { MAX_IMAGE_BYTES, validateMarketInput, validateReceiptImage } from '../api/_lib/validate';
 import { POST as aiPOST } from '../api/ai';
 import { GET as cronGET } from '../api/cron/reminders';
+import { GET as ratesGET } from '../api/cron/rates';
 import { buildEmail } from '../api/_lib/reminderEmail';
 import { parseDsn, reportServerError, scrubServer } from '../api/_lib/monitor';
 import { scrub as scrubBrowser } from '../src/lib/monitoring';
@@ -34,6 +35,11 @@ let cronDue: any[] = [];
 let resendStatus = 200;
 let fileBytes: Buffer = Buffer.from('%PDF-1.7 test');
 const realFetch = globalThis.fetch;
+let ratesStatus: { latest_stored: string | null; earliest_stored: string | null; earliest_needed: string | null } =
+  { latest_stored: null, earliest_stored: null, earliest_needed: null };
+const ecbDay = (d: string) => `<Cube time='${d}'><Cube currency='USD' rate='1.16'/><Cube currency='GBP' rate='0.87'/></Cube>`;
+const ECB_90 = `<Cube>${['2026-11-12', '2026-11-11', '2026-08-20'].map(ecbDay).join('')}</Cube>`;
+const ECB_ALL_XML = `<Cube>${['2026-11-12', '2026-08-20', '2026-03-02', '2026-02-27', '2025-01-02'].map(ecbDay).join('')}</Cube>`;
 globalThis.fetch = (async (url: any, init?: RequestInit) => {
   calls.push({ url: String(url), init });
   if (String(url).endsWith('/auth/v1/user')) {
@@ -44,6 +50,16 @@ globalThis.fetch = (async (url: any, init?: RequestInit) => {
   }
   if (String(url).includes('/rest/v1/rpc/cron_mark_reminders_sent')) {
     return new Response('1', { status: 200 });
+  }
+  if (String(url).includes('/rest/v1/rpc/cron_rates_status')) {
+    return new Response(JSON.stringify([ratesStatus]), { status: 200 });
+  }
+  if (String(url).includes('/rest/v1/rpc/cron_store_rates')) {
+    const days = JSON.parse(String(init?.body)).p_days;
+    return new Response(String(Object.keys(days).length), { status: 200 });
+  }
+  if (String(url).startsWith('https://www.ecb.europa.eu/')) {
+    return new Response(String(url).includes('hist-90d') ? ECB_90 : ECB_ALL_XML, { status: 200 });
   }
   if (String(url).startsWith('https://api.resend.com/')) {
     return new Response('{}', { status: resendStatus });
@@ -376,7 +392,7 @@ test('browser error reports leave out emails, tokens, keys and sign-in codes', (
 const SECRET = 'cron-secret-0123456789abcdef0123456789abcdef';
 const ORG_A = '22222222-2222-4222-8222-222222222222';
 const reminder = (o: any = {}) => ({ reminder_key: `cheque:${ORG_A}:p1:c1:cheque_7d|x`, kind: 'cheque_7d', org_id: ORG_A, org_name: 'Qamar Homes',
-  email: 'owner@example.test', details: { property: 'Marina 1BR', amount_aed: 27500, due_date: '2026-11-20', cheque_number: '0001' }, ...o });
+  email: 'owner@example.test', details: { property: 'Marina 1BR', amount: 27500, currency: 'AED', due_date: '2026-11-20', cheque_number: '0001' }, ...o });
 const cronReq = (auth?: string) => new Request('https://app.test/api/cron/reminders', { method: 'GET', headers: auth ? { authorization: auth } : {} });
 function withEnv(fn: () => Promise<void>) {
   return async () => {
@@ -421,8 +437,38 @@ test('without email settings the job stops before reading anything', async () =>
 });
 
 test('reminder emails escape every value and read clearly', () => {
-  const e = buildEmail([reminder({ org_name: 'Qamar <script>alert(1)</script>', details: { property: '<img src=x onerror=1>', amount_aed: 27500, due_date: '2026-11-20', cheque_number: '0001' } })], 'https://app.example.test');
+  const e = buildEmail([reminder({ org_name: 'Qamar <script>alert(1)</script>', details: { property: '<img src=x onerror=1>', amount: 27500, currency: 'AED', due_date: '2026-11-20', cheque_number: '0001' } })], 'https://app.example.test');
   assert.ok(!e.html.includes('<script>') && !e.html.includes('<img'));
   assert.match(e.text, /rent cheque 0001 for <img src=x onerror=1> \(AED 27,500\) is due in 7 days, on 20 November 2026/);
   assert.match(e.subject, /^Rent cheque due in 7 days/);
+});
+
+/* ---------- daily exchange rates job ---------- */
+
+const ratesReq = (auth?: string) => new Request('https://app.test/api/cron/rates', { method: 'GET', headers: auth ? { authorization: auth } : {} });
+
+test('the rates job refuses calls without the exact secret', async () => {
+  process.env.CRON_SECRET = SECRET;
+  try {
+    assert.equal((await ratesGET(ratesReq())).status, 401);
+    assert.equal((await ratesGET(ratesReq('Bearer nope'))).status, 401);
+    assert.ok(!calls.some(c => c.url.includes('cron_rates_status') || c.url.includes('ecb.europa.eu')));
+  } finally { delete process.env.CRON_SECRET; }
+});
+
+test('the rates job stores only new days, and fills older history once when bookings need it', async () => {
+  process.env.CRON_SECRET = SECRET;
+  try {
+    calls.length = 0;
+    ratesStatus = { latest_stored: '2026-11-11', earliest_stored: '2026-08-20', earliest_needed: '2026-03-05' };
+    const res = await ratesGET(ratesReq(`Bearer ${SECRET}`));
+    assert.equal(res.status, 200);
+    const stores = calls.filter(c => c.url.includes('cron_store_rates')).map(c => JSON.parse(String(c.init!.body)));
+    assert.ok(stores.every(b => b.p_token === SECRET));
+    const sent = stores.flatMap(b => Object.keys(b.p_days)).sort();
+    // new: 11 and 12 Nov from the 90-day file (11 Nov is re-sent; the database skips days it holds);
+    // history: from a week before 5 Mar (so the 5th has an earlier rate) up to the oldest stored day.
+    assert.deepEqual(sent, ['2026-02-27', '2026-03-02', '2026-11-11', '2026-11-12']);
+    assert.ok(calls.some(c => c.url.includes('eurofxref-hist.xml')));
+  } finally { delete process.env.CRON_SECRET; ratesStatus = { latest_stored: null, earliest_stored: null, earliest_needed: null }; }
 });

@@ -119,3 +119,17 @@ DATABASE_URL=postgres://... npm run test:db   # migrations + row-level security 
   key, not in clear) and only after Resend accepts it, so failures retry the next day.
 - Every value in an email is HTML-escaped. Tests: `reminders_test.sql`, cron tests in
   `tests/security.test.ts`.
+
+## Currencies and exchange rates
+
+- Every amount is stored in its own currency (a checked code from `public.currencies`); a row
+  that arrives without one takes its property's currency, else the workspace's. A property's
+  currency cannot change once anything is recorded against it (database trigger).
+- Daily rates live in `public.fx_rates`: readable by signed-in users (public market data),
+  writable by nobody except the job. Vercel Cron calls `/api/cron/rates` with the same
+  `CRON_SECRET`; it fetches the ECB reference rates and stores them through
+  `cron_store_rates` / `cron_rates_status`, which require the token and cannot be called by
+  signed-in users. Stored days are never overwritten. Dollar-pegged currencies (AED, SAR, QAR,
+  OMR, BHD) use their fixed peg.
+- Conversion happens only on screen; converted figures are never saved. Tests:
+  `multi_currency_test.sql`, `tests/money.test.ts`.

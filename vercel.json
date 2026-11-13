@@ -54,6 +54,10 @@
     {
       "path": "/api/cron/reminders",
       "schedule": "30 3 * * *"
+    },
+    {
+      "path": "/api/cron/rates",
+      "schedule": "20 15 * * *"
     }
   ]
 }

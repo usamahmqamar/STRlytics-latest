@@ -51,7 +51,7 @@ export async function buildExport(data: UserData, ws: Workspace): Promise<{ zip:
     `Staylytics export for ${ws.name}`,
     `Created ${format(new Date(), 'd MMM yyyy, HH:mm')}`,
     '',
-    'One CSV file per table, readable in Excel, Numbers or Google Sheets. Amounts are in AED.',
+    'One CSV file per table, readable in Excel, Numbers or Google Sheets. Each amount is in the currency shown in its row\'s currency column (properties: their own currency).',
     'Cells that start with = + - or @ are prefixed with an apostrophe so spreadsheets do not run them as formulas.',
     'Uploaded PDFs are listed in uploaded_documents.csv; open them from Payouts and bank > Documents.',
     '',

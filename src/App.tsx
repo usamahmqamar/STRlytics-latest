@@ -17,6 +17,8 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { setMonitoringUser } from './lib/monitoring';
 import { setActiveWorkspace } from './services/ai';
 import { UserData } from './types';
+import { convertUserData, currenciesInUse, isSupportedCurrency, type Rates } from './lib/money';
+import { earliestDate, loadRates } from './services/fx';
 import { DEFAULT_USER_DATA } from './constants';
 import { Toaster, toast } from 'react-hot-toast';
 import { Sidebar, NAV_LABELS } from './components/Sidebar';
@@ -93,6 +95,7 @@ export default function App() {
     endDate: format(endOfMonth(new Date()), 'yyyy-MM-dd'),
     displayCurrency: 'AED'
   });
+  const [rates, setRates] = useState<Rates>(new Map());
   const editable = workspace ? canEdit(workspace) : false;
   const blockedForSetup = userData.apartments.length === 0 && NEEDS_PROPERTY.has(activeTab);
   // Latest values for the save loop (avoids saving stale data from an old render).
@@ -108,6 +111,31 @@ export default function App() {
   };
 
   useEffect(() => { setMonitoringUser(user?.id ?? null, workspace?.id ?? null); }, [user?.id, workspace?.id]);
+
+  // Money is stored in each listing's own currency. Screens that total across listings see a
+  // converted copy: one listing selected → its own currency; all listings → the workspace's
+  // display currency. Each amount converts at the rate for its own date.
+  const workspaceCurrency = isSupportedCurrency(workspace?.base_currency) ? workspace!.base_currency : 'AED';
+  const viewCurrency = (filters.apartmentId !== 'ALL'
+    && userData.apartments.find(a => a.apartment_id === filters.apartmentId)?.currency) || workspaceCurrency;
+  // Rates for the currencies in use, plus the common ones PDFs and bank statements arrive in.
+  const currencyKey = [...new Set([...currenciesInUse(userData, workspaceCurrency), 'EUR', 'GBP', 'INR', 'USD'])].sort().join(',');
+  const firstMoneyDate = useMemo(() => earliestDate([
+    ...userData.reservations.map(r => r.check_in), ...userData.dailyExpenses.map(e => e.date),
+    ...userData.apartments.map(a => a.start_operation_date),
+  ]), [userData.reservations, userData.dailyExpenses, userData.apartments]);
+  useEffect(() => {
+    if (!workspace) return;
+    let cancelled = false;
+    loadRates(currencyKey.split(','), firstMoneyDate)
+      .then(r => { if (!cancelled) setRates(r); })
+      .catch(err => console.error('Exchange rates failed to load:', (err as any)?.code || err));
+    return () => { cancelled = true; };
+  }, [workspace?.id, currencyKey, firstMoneyDate]);
+  const view = useMemo(() => convertUserData(userData, viewCurrency, rates, workspaceCurrency),
+    [userData, viewCurrency, rates, workspaceCurrency]);
+  const viewFilters = useMemo(() => ({ ...filters, displayCurrency: viewCurrency }), [filters, viewCurrency]);
+  const viewData = view.data;
 
   // Load the active workspace's records; reload when the user switches workspace.
   useEffect(() => {
@@ -356,6 +384,8 @@ export default function App() {
           data={userData}
           setData={setUserData}
           canWrite={editable}
+          rates={rates}
+          baseCurrency={workspaceCurrency}
         />
         <HelpGuide isOpen={isHelpOpen} onClose={() => setIsHelpOpen(false)} />
 
@@ -364,6 +394,8 @@ export default function App() {
             filters={filters} 
             setFilters={setFilters} 
             apartments={userData.apartments} 
+            viewCurrency={viewCurrency}
+            missingRates={[...view.missing]}
           />
         )}
 
@@ -404,30 +436,32 @@ export default function App() {
             transition={{ duration: 0.2 }}
           >
             <ErrorBoundary key={activeTab} area={activeTab}>
-            {activeTab === 'dashboard' && <Dashboard data={userData} setData={setUserData} filters={filters} onTabChange={setActiveTab} onImportPdfs={() => setIsImportOpen(true)} />}
+            {activeTab === 'dashboard' && <Dashboard data={viewData} rawData={userData} setData={setUserData} filters={viewFilters} onTabChange={setActiveTab} onImportPdfs={() => setIsImportOpen(true)} />}
             {blockedForSetup && (
               <NeedsProperty screen={NAV_LABELS[activeTab] ?? 'This screen'} onAdd={() => setActiveTab('setup')} />
             )}
-            {!blockedForSetup && activeTab === 'calendar' && <Calendar data={userData} filters={filters} />}
-            {activeTab === 'reservations' && <Reservations data={userData} setData={setUserData} filters={filters} onImportPdfs={() => setIsImportOpen(true)} />}
-            {!blockedForSetup && activeTab === 'payouts' && <Payouts data={userData} orgId={workspace.id} canManage={canManage(workspace)} filters={filters} />}
+            {!blockedForSetup && activeTab === 'calendar' && <Calendar data={viewData} filters={viewFilters} />}
+            {activeTab === 'reservations' && <Reservations data={userData} setData={setUserData} filters={viewFilters} onImportPdfs={() => setIsImportOpen(true)} />}
+            {!blockedForSetup && activeTab === 'payouts' && <Payouts data={userData} orgId={workspace.id} canManage={canManage(workspace)} filters={viewFilters} rates={rates} baseCurrency={workspaceCurrency} />}
             {!blockedForSetup && activeTab === 'operations' && (
               <Operations 
                 data={userData} 
                 setData={setUserData} 
-                filters={filters} 
+                filters={viewFilters} 
+                view={viewData}
+                baseCurrency={workspaceCurrency}
                 prefilledExpense={prefilledExpense}
                 onClearPrefill={() => setPrefilledExpense(null)}
               />
             )}
-            {activeTab === 'setup' && <Setup data={userData} setData={setUserData} />}
-            {!blockedForSetup && activeTab === 'analytics' && <Analytics data={userData} filters={filters} />}
-            {!blockedForSetup && activeTab === 'occupancy' && <OccupancyRevenue data={userData} filters={filters} />}
+            {activeTab === 'setup' && <Setup data={userData} setData={setUserData} baseCurrency={workspaceCurrency} baseCountry={workspace.country ?? ''} />}
+            {!blockedForSetup && activeTab === 'analytics' && <Analytics data={viewData} filters={viewFilters} />}
+            {!blockedForSetup && activeTab === 'occupancy' && <OccupancyRevenue data={viewData} filters={viewFilters} />}
             {!blockedForSetup && activeTab === 'ocr' && (
               <ReceiptOCR 
                 onSuccess={(extractedData) => {
                   setPrefilledExpense({
-                    amount_aed: extractedData.total_amount,
+                    amount: extractedData.total_amount,
                     category: extractedData.category || 'Maintenance',
                     notes: `Extracted from receipt: ${extractedData.vendor_name || ''} - ${extractedData.date || ''}`,
                     date: extractedData.date || format(new Date(), 'yyyy-MM-dd')
@@ -436,12 +470,12 @@ export default function App() {
                 }} 
               />
             )}
-            {!blockedForSetup && activeTab === 'daily-pl' && <DailyPL data={userData} filters={filters} />}
-            {activeTab === 'projections' && <Projections orgId={workspace.id} data={userData} setData={setUserData} canWrite={editable} canAddProperty={canManage(workspace)} onOpenProperty={() => setActiveTab('setup')} />}
-            {!blockedForSetup && activeTab === 'cashflow' && <Cashflow data={userData} filters={filters} />}
+            {!blockedForSetup && activeTab === 'daily-pl' && <DailyPL data={viewData} filters={viewFilters} />}
+            {activeTab === 'projections' && <Projections orgId={workspace.id} data={userData} setData={setUserData} canWrite={editable} canAddProperty={canManage(workspace)} onOpenProperty={() => setActiveTab('setup')} baseCurrency={workspaceCurrency} />}
+            {!blockedForSetup && activeTab === 'cashflow' && <Cashflow data={viewData} filters={viewFilters} />}
             {!blockedForSetup && activeTab === 'assets' && <Assets data={userData} setData={setUserData} />}
             {activeTab === 'documents' && <Documents data={userData} setData={setUserData} />}
-            {!blockedForSetup && activeTab === 'reports' && <InvestorReports data={userData} />}
+            {!blockedForSetup && activeTab === 'reports' && <InvestorReports data={viewData} currency={viewCurrency} />}
             {activeTab === 'data' && (
               <DataManager 
                 data={userData} 

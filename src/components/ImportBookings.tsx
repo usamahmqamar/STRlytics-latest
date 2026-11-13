@@ -8,7 +8,7 @@ import { differenceInCalendarDays, parseISO } from 'date-fns';
 import { Sheet, fieldClass } from './ui/Sheet';
 import { Button } from './ui/Button';
 import { cn } from '../lib/utils';
-import { convertCurrency } from '../services/analytics';
+import { convert, formatMoney, isSupportedCurrency, type Rates } from '../lib/money';
 import { fileProblem, markDocumentSaved, readStoredDocument, uploadDocument, type SourceDocument } from '../services/finance';
 import type { Platform, Reservation, UserData } from '../types';
 
@@ -28,10 +28,10 @@ interface Row {
   check_in: string;
   check_out: string;
   guests: number | null;
-  currency: string;
-  gross: number;      // in AED
-  payout: number;     // in AED
-  originalGross: number | null;
+  currency: string;   // as shown in the PDF
+  gross: number;      // in the PDF's currency
+  payout: number;     // in the PDF's currency
+  originalGross: number | null; // unused
   status: 'confirmed' | 'cancelled';
   booking_date: string | null;
   payout_date: string | null;
@@ -52,7 +52,9 @@ export const ImportBookings: React.FC<{
   data: UserData;
   setData: React.Dispatch<React.SetStateAction<UserData>>;
   canWrite: boolean;
-}> = ({ open, onClose, orgId, data, setData, canWrite }) => {
+  rates: Rates;
+  baseCurrency: string;
+}> = ({ open, onClose, orgId, data, setData, canWrite, rates, baseCurrency }) => {
   const [unitId, setUnitId] = useState('');
   const [platformId, setPlatformId] = useState('');
   const [files, setFiles] = useState<FileState[]>([]);
@@ -97,8 +99,8 @@ export const ImportBookings: React.FC<{
         const result = await readStoredDocument(orgId, doc);
         const detected = platformId || matchPlatform(result.platform, data.platforms);
         const found: Row[] = (result.rows || []).map((b: any, n: number) => {
-          const currency = b.currency || 'AED';
-          const toAed = (v: number | null) => (v === null ? 0 : Math.round(convertCurrency(v, currency, 'AED') * 100) / 100);
+          const currency = isSupportedCurrency(b.currency) ? b.currency : '';
+          const num = (v: number | null) => (v === null ? 0 : Math.round(Number(v) * 100) / 100);
           return {
             key: `${doc.id}-${n}`,
             include: !existing.has(b.reservation_code),
@@ -111,9 +113,9 @@ export const ImportBookings: React.FC<{
             check_out: b.check_out,
             guests: b.guests,
             currency,
-            gross: toAed(b.gross_amount),
-            payout: toAed(b.host_payout),
-            originalGross: currency === 'AED' ? null : b.gross_amount,
+            gross: num(b.gross_amount),
+            payout: num(b.host_payout),
+            originalGross: null,
             status: b.status,
             booking_date: b.booking_date,
             payout_date: b.payout_date,
@@ -132,6 +134,14 @@ export const ImportBookings: React.FC<{
     if (input.current) input.current.value = '';
   };
 
+  // Bookings are saved in the chosen property's currency. A PDF in another currency is
+  // converted at the rate on the check-in date and flagged for checking.
+  const unitCurrency = data.apartments.find(a => a.apartment_id === unitId)?.currency || baseCurrency;
+  const inUnit = (r: Row, v: number) => {
+    if (!r.currency || r.currency === unitCurrency) return { value: v, converted: false, ok: true };
+    const c = convert(v, r.currency, unitCurrency, r.check_in || new Date().toISOString().slice(0, 10), rates);
+    return c === null ? { value: v, converted: false, ok: false } : { value: Math.round(c * 100) / 100, converted: true, ok: true };
+  };
   const update = (key: string, patch: Partial<Row>) => setRows(list => list.map(r => (r.key === key ? { ...r, ...patch } : r)));
   const chosen = rows.filter(r => r.include && !r.duplicate);
   const missingPlatform = chosen.some(r => !r.platformId);
@@ -151,14 +161,15 @@ export const ImportBookings: React.FC<{
         check_out: r.check_out,
         num_guests: r.guests ?? 1,
         nights: Math.max(1, differenceInCalendarDays(parseISO(r.check_out), parseISO(r.check_in))),
-        total_booking_revenue_aed: r.gross,
-        net_payout_aed: r.payout,
+        total_booking_revenue: inUnit(r, r.gross).value,
+        net_payout: inUnit(r, r.payout).value,
+        currency: unitCurrency,
         payout_date: r.payout_date ?? undefined,
-        cleaning_cost_aed: 0,
+        cleaning_cost: 0,
         status: r.status,
         cancellation_policy: 'refundable',
         booking_date: r.booking_date ?? r.check_in,
-        notes: `Imported from ${r.fileName}${r.originalGross !== null ? ` (amounts converted from ${r.currency})` : ''}`,
+        notes: `Imported from ${r.fileName}${inUnit(r, r.gross).converted ? ` (amounts converted from ${r.currency} ${r.gross} at the check-in date rate)` : ''}`,
         source_document_id: r.documentId,
       } as Reservation;
     });
@@ -171,7 +182,7 @@ export const ImportBookings: React.FC<{
     setSaving(false);
   };
 
-  const totals = chosen.reduce((t, r) => ({ gross: t.gross + r.gross, payout: t.payout + r.payout }), { gross: 0, payout: 0 });
+  const totals = chosen.reduce((t, r) => ({ gross: t.gross + inUnit(r, r.gross).value, payout: t.payout + inUnit(r, r.payout).value }), { gross: 0, payout: 0 });
 
   return (
     <Sheet
@@ -184,7 +195,7 @@ export const ImportBookings: React.FC<{
         <>
           <p className="mr-auto text-xs text-zinc-500">
             {chosen.length} {chosen.length === 1 ? 'booking' : 'bookings'} selected
-            {chosen.length > 0 && `: guests paid AED ${totals.gross.toLocaleString()}, payouts AED ${totals.payout.toLocaleString()}`}
+            {chosen.length > 0 && `: guests paid ${formatMoney(totals.gross, unitCurrency)}, payouts ${formatMoney(totals.payout, unitCurrency)}`}
           </p>
           {missingPlatform && <p className="text-xs text-rose-600">Choose a platform for every selected booking.</p>}
           <Button onClick={save} disabled={!chosen.length || missingPlatform || saving || busy || !canWrite}>
@@ -273,8 +284,8 @@ export const ImportBookings: React.FC<{
                     <th className="px-2 py-2 text-left font-medium">Check-in</th>
                     <th className="px-2 py-2 text-left font-medium">Check-out</th>
                     <th className="px-2 py-2 text-left font-medium">Platform</th>
-                    <th className="px-2 py-2 text-right font-medium">Guest paid (AED)</th>
-                    <th className="px-2 py-2 text-right font-medium">Payout (AED)</th>
+                    <th className="px-2 py-2 text-right font-medium">Guest paid</th>
+                    <th className="px-2 py-2 text-right font-medium">Payout</th>
                     <th className="px-2 py-2 text-left font-medium">Status</th>
                   </tr>
                 </thead>
@@ -294,7 +305,8 @@ export const ImportBookings: React.FC<{
                       <td className="px-2 py-1.5">
                         <span className="font-medium text-zinc-900 dark:text-zinc-100">{r.reservation_code}</span>
                         {r.duplicate && <span className="block text-[11px] text-zinc-500">Already saved</span>}
-                        {r.originalGross !== null && !r.duplicate && <span className="block text-[11px] text-amber-700">Converted from {r.currency}; check</span>}
+                        {!r.duplicate && inUnit(r, r.gross).converted && <span className="block text-[11px] text-amber-700">In {r.currency}; saved as {formatMoney(inUnit(r, r.gross).value, unitCurrency)}, check</span>}
+                        {!r.duplicate && !inUnit(r, r.gross).ok && <span className="block text-[11px] text-rose-600">In {r.currency}; no rate yet, amounts not converted</span>}
                       </td>
                       <td className="px-2 py-1.5"><input className={cn(fieldClass, 'h-8 min-w-[130px]')} value={r.guest_name} onChange={e => update(r.key, { guest_name: e.target.value.slice(0, 200) })} /></td>
                       <td className="px-2 py-1.5"><input type="date" className={cn(fieldClass, 'h-8')} value={r.check_in} onChange={e => update(r.key, { check_in: e.target.value })} /></td>
@@ -305,8 +317,8 @@ export const ImportBookings: React.FC<{
                           {data.platforms.map(p => <option key={p.platform_id} value={p.platform_id}>{p.name}</option>)}
                         </select>
                       </td>
-                      <td className="px-2 py-1.5"><input type="number" min={0} step="0.01" className={cn(fieldClass, 'h-8 w-28 text-right')} value={r.gross} onChange={e => update(r.key, { gross: Math.max(0, Number(e.target.value) || 0) })} /></td>
-                      <td className="px-2 py-1.5"><input type="number" min={0} step="0.01" className={cn(fieldClass, 'h-8 w-28 text-right')} value={r.payout} onChange={e => update(r.key, { payout: Math.max(0, Number(e.target.value) || 0) })} /></td>
+                      <td className="px-2 py-1.5"><input type="number" min={0} step="0.01" className={cn(fieldClass, 'h-8 w-28 text-right')} value={r.gross} onChange={e => update(r.key, { gross: Math.max(0, Number(e.target.value) || 0) })} /><span className="block text-right text-[11px] text-zinc-500">{r.currency || unitCurrency}</span></td>
+                      <td className="px-2 py-1.5"><input type="number" min={0} step="0.01" className={cn(fieldClass, 'h-8 w-28 text-right')} value={r.payout} onChange={e => update(r.key, { payout: Math.max(0, Number(e.target.value) || 0) })} /><span className="block text-right text-[11px] text-zinc-500">{r.currency || unitCurrency}</span></td>
                       <td className="px-2 py-1.5">
                         <select className={cn(fieldClass, 'h-8')} value={r.status} onChange={e => update(r.key, { status: e.target.value as Row['status'] })}>
                           <option value="confirmed">Confirmed</option>

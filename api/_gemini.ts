@@ -61,17 +61,17 @@ export async function extractReceiptData(mime: string, data: string) {
   });
 }
 
-export async function getMarketIntelligence(location: string, bedrooms: number) {
+export async function getMarketIntelligence(location: string, bedrooms: number, currency = 'USD') {
   const ai = new GoogleGenAI({ apiKey: getGeminiKey() });
   const response = await ai.models.generateContent({
     model: 'gemini-3-flash-preview',
     contents: `Analyze the short-term rental market for a ${bedrooms === 0 ? 'studio' : bedrooms + ' bedroom'} property in the location given below.
     Provide realistic estimates for:
-    1. Average Daily Rate (ADR) in AED
+    1. Average Daily Rate (ADR) in ${currency}
     2. Average Occupancy Rate (%)
-    3. Typical annual rent for such a property in AED
-    4. Typical furnishing/setup cost in AED
-    5. Typical monthly operational costs (utilities, cleaning, internet) in AED
+    3. Typical annual rent for such a property in ${currency}
+    4. Typical furnishing/setup cost in ${currency}
+    5. Typical monthly operational costs (utilities, cleaning, internet) in ${currency}
     6. Market Demand Strength (low, medium, high)
     7. Seasonality: A 12-month array of objects with { month: string, adrMultiplier: number, occMultiplier: number }
        where multipliers are relative to the annual average.

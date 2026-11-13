@@ -9,7 +9,7 @@ import { Card } from './ui/Card';
 import { Button } from './ui/Button';
 import { Sheet, fieldClass } from './ui/Sheet';
 import { cn } from '../lib/utils';
-import { convertCurrency } from '../services/analytics';
+import { SUPPORTED_CURRENCIES, convert, formatMoney, isSupportedCurrency, linkFor, type Rates } from '../lib/money';
 import {
   REASON_LABELS, STATUS_LABELS, TOLERANCE, bookingRecon, expectedPayout, findPlatform, payoutRecon, suggestMatches,
   type AdjustmentReason, type BookingRecon, type BookingStatus, type Candidate, type Payout, type Resolution,
@@ -21,10 +21,12 @@ import {
 } from '../services/finance';
 import type { Reservation, UserData } from '../types';
 
-const aed = (v: number) =>
-  new Intl.NumberFormat('en-AE', { style: 'currency', currency: 'AED', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(v);
+// Bookings are in their listing's currency, payouts in their own; every amount is shown with its code.
+const money = (v: number, currency: string) => formatMoney(v, currency);
 const day = (d: string) => format(parseISO(d), 'd MMM yyyy');
-const signed = (v: number) => (v > 0 ? `+${aed(v)}` : aed(v));
+const signed = (v: number, currency: string) => (v > 0 ? `+${money(v, currency)}` : money(v, currency));
+const r2 = (n: number) => Math.round(n * 100) / 100;
+
 
 const STATUS_STYLE: Record<BookingStatus, string> = {
   reconciled: 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200',
@@ -42,12 +44,15 @@ interface Props {
   data: UserData;
   orgId: string;
   canManage: boolean;
-  filters: { apartmentId: string; startDate: string; endDate: string };
+  filters: { apartmentId: string; startDate: string; endDate: string; displayCurrency: string };
+  rates: Rates;
+  baseCurrency: string;
 }
 
-type Row = { res: Reservation; recon: BookingRecon; unit: string; platform: string };
+type Row = { res: Reservation; recon: BookingRecon; unit: string; platform: string; currency: string };
 
-export const Payouts: React.FC<Props> = ({ data, orgId, canManage, filters }) => {
+export const Payouts: React.FC<Props> = ({ data, orgId, canManage, filters, rates, baseCurrency }) => {
+  const viewCurrency = filters.displayCurrency;
   const [finance, setFinance] = useState<FinanceData | null>(null);
   const [docs, setDocs] = useState<SourceDocument[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -79,6 +84,7 @@ export const Payouts: React.FC<Props> = ({ data, orgId, canManage, filters }) =>
         recon: bookingRecon(res, platform, finance.allocations, finance.adjustments, today),
         unit: data.apartments.find(a => a.apartment_id === res.apartment_id)?.name ?? '—',
         platform: platform?.name ?? res.channel ?? '—',
+        currency: res.currency || data.apartments.find(a => a.apartment_id === res.apartment_id)?.currency || baseCurrency,
       };
     });
   }, [data, finance, today]);
@@ -96,6 +102,7 @@ export const Payouts: React.FC<Props> = ({ data, orgId, canManage, filters }) =>
       platform_id: r.res.platform_id ?? null,
       expected_date: r.recon.expectedDate,
       outstanding: Math.round((r.recon.expected - r.recon.received) * 100) / 100,
+      currency: r.currency,
     })), [allRows]);
 
   if (!canManage) {
@@ -117,13 +124,15 @@ export const Payouts: React.FC<Props> = ({ data, orgId, canManage, filters }) =>
     return <div className="flex justify-center py-20"><Loader2 className="animate-spin text-zinc-400" /></div>;
   }
 
-  const sum = (f: (r: Row) => number, rows = inScope) => rows.reduce((t, r) => t + f(r), 0);
+  // Totals across listings: each booking's amount converted to the view currency at its payout date.
+  const sum = (f: (r: Row) => number, rows = inScope) =>
+    rows.reduce((t, r) => t + (convert(f(r), r.currency, viewCurrency, r.recon.expectedDate, rates) ?? f(r)), 0);
   const attention = inScope.filter(r => r.recon.status === 'difference' || r.recon.status === 'missing');
   const missing = attention.filter(r => r.recon.status === 'missing');
   const differing = attention.filter(r => r.recon.status === 'difference');
   const attentionNote = !attention.length ? 'Nothing outstanding' : [
     missing.length ? `${missing.length} ${missing.length === 1 ? 'payout' : 'payouts'} not received` : '',
-    differing.length ? `${aed(Math.abs(sum(r => r.recon.unexplained, differing)))} of differences` : '',
+    differing.length ? `${money(Math.abs(sum(r => r.recon.unexplained, differing)), viewCurrency)} of differences` : '',
   ].filter(Boolean).join(', ');
   const periodPayouts = finance.payouts.filter(p => p.received_date >= filters.startDate && p.received_date <= filters.endDate);
   const unmatched = periodPayouts.filter(p => payoutRecon(p, finance.allocations).status !== 'matched');
@@ -141,10 +150,10 @@ export const Payouts: React.FC<Props> = ({ data, orgId, canManage, filters }) =>
       {/* Summary */}
       <section className="grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-zinc-200 bg-zinc-200 md:grid-cols-4 dark:border-zinc-800 dark:bg-zinc-800">
         {[
-          ['Expected', aed(sum(r => r.recon.expected)), `${inScope.filter(r => r.recon.status !== 'not_due').length} bookings due in this period`],
-          ['Received', aed(sum(r => r.recon.received)), `${periodPayouts.length} payouts recorded`],
+          ['Expected', money(sum(r => r.recon.expected), viewCurrency), `${inScope.filter(r => r.recon.status !== 'not_due').length} bookings due in this period`],
+          ['Received', money(sum(r => r.recon.received), viewCurrency), `${periodPayouts.length} payouts recorded`],
           ['Needs explaining', String(attention.length), attentionNote],
-          ['In dispute', aed(sum(r => r.recon.openDisputes)), `${inScope.filter(r => r.recon.status === 'disputed').length} bookings`],
+          ['In dispute', money(sum(r => r.recon.openDisputes), viewCurrency), `${inScope.filter(r => r.recon.status === 'disputed').length} bookings`],
         ].map(([label, value, note]) => (
           <div key={label} className="bg-white p-5 dark:bg-zinc-900">
             <p className="text-xs text-zinc-500">{label}</p>
@@ -222,10 +231,10 @@ export const Payouts: React.FC<Props> = ({ data, orgId, canManage, filters }) =>
                         <span className="block text-xs text-zinc-500">{r.res.reservation_code}, {r.platform}, {r.unit}</span>
                       </td>
                       <td className="px-3 py-3 text-zinc-600 dark:text-zinc-400">{day(r.recon.expectedDate)}</td>
-                      <td className="px-3 py-3 text-right text-zinc-900 dark:text-zinc-100">{aed(r.recon.expected)}</td>
-                      <td className="px-3 py-3 text-right text-zinc-900 dark:text-zinc-100">{r.recon.received ? aed(r.recon.received) : '—'}</td>
+                      <td className="px-3 py-3 text-right text-zinc-900 dark:text-zinc-100">{money(r.recon.expected, r.currency)}</td>
+                      <td className="px-3 py-3 text-right text-zinc-900 dark:text-zinc-100">{r.recon.received ? money(r.recon.received, r.currency) : '—'}</td>
                       <td className={cn('px-3 py-3 text-right', Math.abs(r.recon.unexplained) > TOLERANCE && r.recon.status === 'difference' ? 'font-medium text-amber-700' : 'text-zinc-400')}>
-                        {r.recon.status === 'difference' ? signed(r.recon.unexplained) : '—'}
+                        {r.recon.status === 'difference' ? signed(r.recon.unexplained, r.currency) : '—'}
                       </td>
                       <td className="px-5 py-3"><Badge status={r.recon.status} /></td>
                     </tr>
@@ -263,12 +272,12 @@ export const Payouts: React.FC<Props> = ({ data, orgId, canManage, filters }) =>
                           <span className="block text-zinc-900 dark:text-zinc-100">{data.platforms.find(x => x.platform_id === p.platform_id)?.name ?? 'Unknown platform'}</span>
                           <span className="block max-w-[320px] truncate text-xs text-zinc-500">{p.reference || p.description || (p.source === 'manual' ? 'Added by hand' : '')}</span>
                         </td>
-                        <td className="px-3 py-3 text-right font-medium text-zinc-900 dark:text-zinc-100">{aed(p.amount_aed)}</td>
-                        <td className="px-3 py-3 text-right text-zinc-600 dark:text-zinc-400">{pr.allocated ? aed(pr.allocated) : '—'}</td>
+                        <td className="px-3 py-3 text-right font-medium text-zinc-900 dark:text-zinc-100">{money(p.amount, p.currency || baseCurrency)}</td>
+                        <td className="px-3 py-3 text-right text-zinc-600 dark:text-zinc-400">{pr.allocated ? money(pr.allocated, p.currency || baseCurrency) : '—'}</td>
                         <td className="px-5 py-3">
                           <span className={cn('rounded-full px-2 py-0.5 text-[11px] font-medium',
                             pr.status === 'matched' ? STATUS_STYLE.reconciled : pr.status === 'partly_matched' ? STATUS_STYLE.difference : STATUS_STYLE.missing)}>
-                            {pr.status === 'matched' ? 'Matched' : pr.status === 'partly_matched' ? `${aed(pr.remaining)} not matched` : 'Not matched'}
+                            {pr.status === 'matched' ? 'Matched' : pr.status === 'partly_matched' ? `${money(pr.remaining, p.currency || baseCurrency)} not matched` : 'Not matched'}
                           </span>
                         </td>
                       </tr>
@@ -313,6 +322,8 @@ export const Payouts: React.FC<Props> = ({ data, orgId, canManage, filters }) =>
           data={data}
           finance={finance}
           orgId={orgId}
+          rates={rates}
+          baseCurrency={baseCurrency}
           onClose={() => setBookingCode(null)}
           onChanged={refresh}
           onOpenPayout={id => { setBookingCode(null); setPayoutId(id); }}
@@ -325,6 +336,8 @@ export const Payouts: React.FC<Props> = ({ data, orgId, canManage, filters }) =>
           finance={finance}
           candidates={candidates}
           orgId={orgId}
+          rates={rates}
+          baseCurrency={baseCurrency}
           onClose={() => setPayoutId(null)}
           onChanged={refresh}
           onOpenBooking={code => { setPayoutId(null); setBookingCode(code); }}
@@ -336,6 +349,7 @@ export const Payouts: React.FC<Props> = ({ data, orgId, canManage, filters }) =>
           data={data}
           orgId={orgId}
           candidates={candidates}
+          baseCurrency={baseCurrency}
           onClose={() => setAdding(null)}
           onDone={async () => { await refresh(); setTab('payouts'); }}
         />
@@ -349,10 +363,13 @@ export const Payouts: React.FC<Props> = ({ data, orgId, canManage, filters }) =>
 /* ------------------------------------------------------------------ */
 
 const BookingPanel: React.FC<{
-  row: Row; data: UserData; finance: FinanceData; orgId: string;
+  row: Row; data: UserData; finance: FinanceData; orgId: string; rates: Rates; baseCurrency: string;
   onClose: () => void; onChanged: () => Promise<void>; onOpenPayout: (id: string) => void;
-}> = ({ row, data, finance, orgId, onClose, onChanged, onOpenPayout }) => {
+}> = ({ row, data, finance, orgId, rates, baseCurrency, onClose, onChanged, onOpenPayout }) => {
   const { res, recon } = row;
+  const bc = row.currency;
+  const aed = (v: number) => money(v, bc);
+  const pcOf = (p?: Payout) => p?.currency || baseCurrency;
   const platform = findPlatform(res, data.platforms);
   const exp = expectedPayout(res, platform);
   const allocations = finance.allocations.filter(a => a.reservation_id === res.reservation_code);
@@ -416,9 +433,12 @@ const BookingPanel: React.FC<{
                 return (
                   <li key={a.id} className="flex items-center gap-3 py-2">
                     <button className="min-w-0 flex-1 text-left hover:underline" onClick={() => onOpenPayout(a.payout_id)}>
-                      Payout of {p ? `${aed(p.amount_aed)} on ${day(p.received_date)}` : 'unknown date'}
+                      Payout of {p ? `${money(p.amount, pcOf(p))} on ${day(p.received_date)}` : 'unknown date'}
                     </button>
-                    <span className="font-medium">{aed(a.amount_aed)}</span>
+                    <span className="font-medium">
+                      {money(a.amount, pcOf(p))}
+                      {a.booking_amount != null && pcOf(p) !== bc && <span className="ml-1 text-xs font-normal text-zinc-500">({aed(a.booking_amount)})</span>}
+                    </span>
                     <button aria-label="Unlink this payout" disabled={busy} onClick={() => run(() => removeAllocation(orgId, a.id))} className="rounded p-1 text-zinc-400 hover:text-rose-600"><X size={14} /></button>
                   </li>
                 );
@@ -431,14 +451,16 @@ const BookingPanel: React.FC<{
               <ul className="mt-2 space-y-1">
                 {openPayouts.map(p => {
                   const left = payoutRecon(p, finance.allocations).remaining;
-                  const amt = Math.min(left, Math.max(0, recon.expected - recon.received) || left);
+                  const link = linkFor(p, left, bc, Math.max(0, recon.expected - recon.received), rates);
                   return (
                     <li key={p.id} className="flex items-center justify-between gap-2">
-                      <span className="text-zinc-600 dark:text-zinc-400">{day(p.received_date)}, {aed(p.amount_aed)} ({aed(left)} free)</span>
-                      <Button size="sm" variant="outline" disabled={busy}
-                        onClick={() => run(() => addAllocations(orgId, p.id!, [{ reservation_id: res.reservation_code, amount_aed: Math.round(amt * 100) / 100 }]))}>
-                        <Link2 size={12} /> Link {aed(amt)}
-                      </Button>
+                      <span className="text-zinc-600 dark:text-zinc-400">{day(p.received_date)}, {money(p.amount, pcOf(p))} ({money(left, pcOf(p))} free)</span>
+                      {link ? (
+                        <Button size="sm" variant="outline" disabled={busy}
+                          onClick={() => run(() => addAllocations(orgId, p.id!, [{ reservation_id: res.reservation_code, ...link }]))}>
+                          <Link2 size={12} /> Link {money(link.amount, pcOf(p))}
+                        </Button>
+                      ) : <span className="text-xs text-amber-700">No {pcOf(p)}/{bc} rate yet</span>}
                     </li>
                   );
                 })}
@@ -450,9 +472,9 @@ const BookingPanel: React.FC<{
         {/* Difference */}
         <section className="rounded-xl bg-zinc-50 p-4 dark:bg-zinc-850">
           <dl className="grid grid-cols-3 gap-3 text-sm">
-            <div><dt className="text-xs text-zinc-500">Difference</dt><dd className="font-semibold">{signed(recon.difference)}</dd></div>
-            <div><dt className="text-xs text-zinc-500">Explained</dt><dd className="font-semibold">{signed(recon.explained)}</dd></div>
-            <div><dt className="text-xs text-zinc-500">Unexplained</dt><dd className={cn('font-semibold', Math.abs(recon.unexplained) > TOLERANCE ? 'text-amber-700' : 'text-emerald-700')}>{signed(recon.unexplained)}</dd></div>
+            <div><dt className="text-xs text-zinc-500">Difference</dt><dd className="font-semibold">{signed(recon.difference, bc)}</dd></div>
+            <div><dt className="text-xs text-zinc-500">Explained</dt><dd className="font-semibold">{signed(recon.explained, bc)}</dd></div>
+            <div><dt className="text-xs text-zinc-500">Unexplained</dt><dd className={cn('font-semibold', Math.abs(recon.unexplained) > TOLERANCE ? 'text-amber-700' : 'text-emerald-700')}>{signed(recon.unexplained, bc)}</dd></div>
           </dl>
         </section>
 
@@ -471,7 +493,7 @@ const BookingPanel: React.FC<{
                         {a.note ? `. ${a.note}` : ''}
                       </p>
                     </div>
-                    <span className="font-medium">{signed(a.amount_aed)}</span>
+                    <span className="font-medium">{signed(a.amount, bc)}</span>
                   </div>
                   <div className="mt-1.5 flex flex-wrap gap-1.5">
                     {a.resolution === 'disputed' && (
@@ -525,7 +547,7 @@ const BookingPanel: React.FC<{
               disabled={busy || !amount}
               onClick={() => run(async () => {
                 await addAdjustment(orgId, {
-                  reservation_id: res.reservation_code, payout_id: null, amount_aed: Math.round(amount * 100) / 100,
+                  reservation_id: res.reservation_code, payout_id: null, currency: bc, amount: Math.round(amount * 100) / 100,
                   reason, note: note.trim() || null, resolution: mode as Resolution, dispute_reference: mode === 'disputed' ? disputeRef.trim() || null : null,
                 });
                 setNote(''); setDisputeRef('');
@@ -547,8 +569,11 @@ const BookingPanel: React.FC<{
 
 const PayoutPanel: React.FC<{
   payout: Payout; data: UserData; finance: FinanceData; candidates: Candidate[]; orgId: string;
+  rates: Rates; baseCurrency: string;
   onClose: () => void; onChanged: () => Promise<void>; onOpenBooking: (code: string) => void;
-}> = ({ payout, data, finance, candidates, orgId, onClose, onChanged, onOpenBooking }) => {
+}> = ({ payout, data, finance, candidates, orgId, rates, baseCurrency, onClose, onChanged, onOpenBooking }) => {
+  const pc = payout.currency || baseCurrency;
+  const aed = (v: number) => money(v, pc);
   const pr = payoutRecon(payout, finance.allocations);
   const mine = finance.allocations.filter(a => a.payout_id === payout.id);
   const linked = new Set(mine.map(a => a.reservation_id));
@@ -558,7 +583,7 @@ const PayoutPanel: React.FC<{
     const text = `${payout.description ?? ''} ${payout.reference ?? ''}`;
     return [...new Set(text.split(/[^A-Za-z0-9_\-./#]+/).filter(t => codes.has(t)))].map(c => ({ reservation_code: c, amount: null }));
   }, [payout, candidates]);
-  const suggestions = pr.status === 'matched' ? [] : suggestMatches({ ...payout, amount_aed: pr.remaining }, open, listed);
+  const suggestions = pr.status === 'matched' ? [] : suggestMatches({ ...payout, amount: pr.remaining }, open, listed);
   const [search, setSearch] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -572,11 +597,11 @@ const PayoutPanel: React.FC<{
     : [];
 
   return (
-    <Sheet open onClose={onClose} title={`${aed(payout.amount_aed)} received ${day(payout.received_date)}`}
+    <Sheet open onClose={onClose} title={`${aed(payout.amount)} received ${day(payout.received_date)}`}
       description={[data.platforms.find(p => p.platform_id === payout.platform_id)?.name, payout.reference, payout.description].filter(Boolean).join(', ') || undefined}>
       <div className="space-y-6">
         <dl className="grid grid-cols-3 gap-3 rounded-xl bg-zinc-50 p-4 text-sm dark:bg-zinc-850">
-          <div><dt className="text-xs text-zinc-500">Payout</dt><dd className="font-semibold">{aed(payout.amount_aed)}</dd></div>
+          <div><dt className="text-xs text-zinc-500">Payout</dt><dd className="font-semibold">{aed(payout.amount)}</dd></div>
           <div><dt className="text-xs text-zinc-500">Matched</dt><dd className="font-semibold">{aed(pr.allocated)}</dd></div>
           <div><dt className="text-xs text-zinc-500">Left to match</dt><dd className={cn('font-semibold', Math.abs(pr.remaining) > TOLERANCE ? 'text-amber-700' : 'text-emerald-700')}>{aed(pr.remaining)}</dd></div>
         </dl>
@@ -588,7 +613,7 @@ const PayoutPanel: React.FC<{
               {mine.map(a => (
                 <li key={a.id} className="flex items-center gap-3 py-2">
                   <button className="min-w-0 flex-1 text-left hover:underline" onClick={() => onOpenBooking(a.reservation_id)}>{nameOf(a.reservation_id)}, {a.reservation_id}</button>
-                  <span className="font-medium">{aed(a.amount_aed)}</span>
+                  <span className="font-medium">{aed(a.amount)}</span>
                   <button aria-label="Unlink" disabled={busy} onClick={() => run(() => removeAllocation(orgId, a.id))} className="rounded p-1 text-zinc-400 hover:text-rose-600"><X size={14} /></button>
                 </li>
               ))}
@@ -607,10 +632,10 @@ const PayoutPanel: React.FC<{
                   <li key={i} className="rounded-xl border border-zinc-200 p-3 dark:border-zinc-800">
                     <p className="text-sm text-zinc-900 dark:text-zinc-100">{s.explanation}</p>
                     <ul className="mt-1.5 text-xs text-zinc-600 dark:text-zinc-400">
-                      {s.allocations.map(a => <li key={a.reservation_id}>{nameOf(a.reservation_id)}, {a.reservation_id}: {aed(a.amount_aed)}</li>)}
+                      {s.allocations.map(a => <li key={a.reservation_id}>{nameOf(a.reservation_id)}, {a.reservation_id}: {aed(a.amount)}</li>)}
                     </ul>
                     {Math.abs(s.difference) > TOLERANCE && (
-                      <p className="mt-1.5 text-xs text-amber-700">{signed(s.difference)} compared with what these bookings expected. You can explain it on each booking afterwards.</p>
+                      <p className="mt-1.5 text-xs text-amber-700">{signed(s.difference, pc)} compared with what these bookings expected. You can explain it on each booking afterwards.</p>
                     )}
                     <Button size="sm" className="mt-2" disabled={busy} onClick={() => run(() => addAllocations(orgId, payout.id, s.allocations))}>
                       <CheckCircle2 size={13} /> Use this match
@@ -628,13 +653,15 @@ const PayoutPanel: React.FC<{
             <input className={cn(fieldClass, 'mt-2')} placeholder="Guest name or reservation code" value={search} onChange={e => setSearch(e.target.value)} />
             <ul className="mt-2 space-y-1 text-sm">
               {searchHits.map(c => {
-                const amt = Math.round(Math.min(Math.abs(pr.remaining), Math.max(c.outstanding, 0) || Math.abs(pr.remaining)) * 100) / 100;
+                const link = linkFor(payout, Math.abs(pr.remaining), c.currency || pc, Math.max(c.outstanding, 0), rates);
                 return (
                   <li key={c.reservation_id} className="flex items-center justify-between gap-2">
-                    <span className="text-zinc-700 dark:text-zinc-300">{c.guest_name}, {c.reservation_id}, due {day(c.expected_date)}, {aed(c.outstanding)} outstanding</span>
-                    <Button size="sm" variant="outline" disabled={busy || amt <= 0} onClick={() => run(() => addAllocations(orgId, payout.id, [{ reservation_id: c.reservation_id, amount_aed: amt }]))}>
-                      <Link2 size={12} /> Link {aed(amt)}
-                    </Button>
+                    <span className="text-zinc-700 dark:text-zinc-300">{c.guest_name}, {c.reservation_id}, due {day(c.expected_date)}, {money(c.outstanding, c.currency || pc)} outstanding</span>
+                    {link ? (
+                      <Button size="sm" variant="outline" disabled={busy || link.amount <= 0} onClick={() => run(() => addAllocations(orgId, payout.id, [{ reservation_id: c.reservation_id, ...link }]))}>
+                        <Link2 size={12} /> Link {aed(link.amount)}
+                      </Button>
+                    ) : <span className="text-xs text-amber-700">No {pc}/{c.currency} rate yet</span>}
                   </li>
                 );
               })}
@@ -662,8 +689,8 @@ interface Draft {
   key: string;
   include: boolean;
   date: string;
-  amount: number;          // AED
-  original: number | null;
+  amount: number;          // in `currency`, as received
+  original: number | null; // unused; kept for older drafts
   currency: string;
   platformId: string;
   reference: string;
@@ -673,11 +700,12 @@ interface Draft {
 
 const AddPayouts: React.FC<{
   mode: 'manual' | 'bank_statement' | 'payout_report';
-  data: UserData; orgId: string; candidates: Candidate[];
+  data: UserData; orgId: string; candidates: Candidate[]; baseCurrency: string;
   onClose: () => void; onDone: () => Promise<void>;
-}> = ({ mode, data, orgId, candidates, onClose, onDone }) => {
+}> = ({ mode, data, orgId, candidates, baseCurrency, onClose, onDone }) => {
+  const known = (c: unknown) => (isSupportedCurrency(c as string) ? (c as string) : baseCurrency);
   const [drafts, setDrafts] = useState<Draft[]>(mode === 'manual'
-    ? [{ key: 'm', include: true, date: format(new Date(), 'yyyy-MM-dd'), amount: 0, original: null, currency: 'AED', platformId: '', reference: '', description: '', codes: [] }]
+    ? [{ key: 'm', include: true, date: format(new Date(), 'yyyy-MM-dd'), amount: 0, original: null, currency: baseCurrency, platformId: '', reference: '', description: '', codes: [] }]
     : []);
   const [doc, setDoc] = useState<SourceDocument | null>(null);
   const [state, setState] = useState<'idle' | 'working' | 'done'>('idle');
@@ -704,17 +732,15 @@ const AddPayouts: React.FC<{
       const rows: Draft[] = mode === 'bank_statement'
         ? result.rows.map((t: any, i: number) => ({
             key: `b${i}`, include: t.platform !== 'other', date: t.date,
-            amount: Math.round(convertCurrency(t.amount, t.currency, 'AED') * 100) / 100,
-            original: t.currency === 'AED' ? null : t.amount, currency: t.currency,
+            amount: r2(Number(t.amount) || 0), original: null, currency: known(t.currency),
             platformId: platformFor(t.platform), reference: t.reference, description: t.description, codes: [],
           }))
         : result.rows.map((p: any, i: number) => ({
             key: `r${i}`, include: true, date: p.date,
-            amount: Math.round(convertCurrency(p.amount, p.currency, 'AED') * 100) / 100,
-            original: p.currency === 'AED' ? null : p.amount, currency: p.currency,
+            amount: r2(Number(p.amount) || 0), original: null, currency: known(p.currency),
             platformId: platformFor(result.platform), reference: p.reference,
             description: p.items.length ? `Covers ${p.items.length} ${p.items.length === 1 ? 'booking' : 'bookings'}: ${p.items.map((x: any) => x.reservation_code).join(', ')}`.slice(0, 500) : '',
-            codes: p.items.map((x: any) => ({ reservation_code: x.reservation_code, amount: x.amount === null ? null : Math.round(convertCurrency(x.amount, p.currency, 'AED') * 100) / 100 })),
+            codes: p.items.map((x: any) => ({ reservation_code: x.reservation_code, amount: x.amount === null ? null : r2(Number(x.amount)) })),
           }));
       setDrafts(rows);
       if (!rows.length) setErr(mode === 'bank_statement' ? 'No money received was found in this statement.' : 'No payouts were found in this report.');
@@ -733,8 +759,7 @@ const AddPayouts: React.FC<{
     setState('working'); setErr(null);
     try {
       const rows: NewPayout[] = chosen.map(d => ({
-        platform_id: d.platformId || null, received_date: d.date, amount_aed: d.amount,
-        original_amount: d.original, original_currency: d.original === null ? null : d.currency,
+        platform_id: d.platformId || null, received_date: d.date, amount: d.amount, currency: d.currency,
         reference: d.reference.trim() || null, description: d.description.trim() || null,
         source: mode, source_document_id: doc?.id ?? null,
       }));
@@ -743,7 +768,7 @@ const AddPayouts: React.FC<{
       let matched = 0;
       if (mode === 'payout_report') {
         for (const p of added) {
-          const draft = chosen.find(d => d.date === p.received_date && d.amount === p.amount_aed && (d.reference || null) === (p.reference ?? null));
+          const draft = chosen.find(d => d.date === p.received_date && d.amount === p.amount && (d.reference || null) === (p.reference ?? null));
           if (!draft?.codes.length) continue;
           const s = suggestMatches(p, candidates, draft.codes)[0];
           if (s?.kind === 'reference') { await addAllocations(orgId, p.id, s.allocations); matched++; }
@@ -768,7 +793,10 @@ const AddPayouts: React.FC<{
     <Sheet open onClose={() => state !== 'working' && onClose()} title={title} description={description} width={mode === 'manual' ? 'md' : 'xl'}
       footer={state === 'done' ? <Button onClick={onClose}>Done</Button> : drafts.length > 0 && (
         <>
-          <p className="mr-auto text-xs text-zinc-500">{chosen.length} selected, {aed(chosen.reduce((t, d) => t + d.amount, 0))}</p>
+          <p className="mr-auto text-xs text-zinc-500">
+            {chosen.length} selected
+            {[...new Set(chosen.map(d => d.currency))].map(c => `, ${money(chosen.filter(d => d.currency === c).reduce((t, d) => t + d.amount, 0), c)}`).join('')}
+          </p>
           <Button onClick={save} disabled={!chosen.length || state === 'working'}>
             {state === 'working' && <Loader2 size={14} className="animate-spin" />}
             Save {chosen.length === 1 ? 'payout' : `${chosen.length} payouts`}
@@ -792,8 +820,13 @@ const AddPayouts: React.FC<{
             <label className="block text-xs text-zinc-600 dark:text-zinc-400">Date received
               <input type="date" className={cn(fieldClass, 'mt-1')} value={drafts[0].date} onChange={e => update('m', { date: e.target.value })} />
             </label>
-            <label className="block text-xs text-zinc-600 dark:text-zinc-400">Amount (AED)
-              <input type="number" step="0.01" className={cn(fieldClass, 'mt-1 text-right')} value={drafts[0].amount || ''} onChange={e => update('m', { amount: Number(e.target.value) || 0 })} />
+            <label className="block text-xs text-zinc-600 dark:text-zinc-400">Amount received
+              <div className="mt-1 flex gap-2">
+                <select aria-label="Currency" className={cn(fieldClass, 'w-24')} value={drafts[0].currency} onChange={e => update('m', { currency: e.target.value })}>
+                  {SUPPORTED_CURRENCIES.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+                <input type="number" step="0.01" className={cn(fieldClass, 'text-right')} value={drafts[0].amount || ''} onChange={e => update('m', { amount: Number(e.target.value) || 0 })} />
+              </div>
             </label>
             <label className="col-span-2 block text-xs text-zinc-600 dark:text-zinc-400">Platform
               <select className={cn(fieldClass, 'mt-1')} value={drafts[0].platformId} onChange={e => update('m', { platformId: e.target.value })}>
@@ -817,7 +850,7 @@ const AddPayouts: React.FC<{
                 <tr>
                   <th className="w-8 px-3 py-2"><span className="sr-only">Include</span></th>
                   <th className="px-2 py-2 text-left font-medium">Date</th>
-                  <th className="px-2 py-2 text-right font-medium">Amount (AED)</th>
+                  <th className="px-2 py-2 text-right font-medium">Amount</th>
                   <th className="px-2 py-2 text-left font-medium">Platform</th>
                   <th className="px-2 py-2 text-left font-medium">{mode === 'payout_report' ? 'Covers' : 'Description'}</th>
                 </tr>
@@ -829,7 +862,7 @@ const AddPayouts: React.FC<{
                     <td className="px-2 py-1.5"><input type="date" className={cn(fieldClass, 'h-8')} value={d.date} onChange={e => update(d.key, { date: e.target.value })} /></td>
                     <td className="px-2 py-1.5">
                       <input type="number" step="0.01" className={cn(fieldClass, 'h-8 w-28 text-right')} value={d.amount} onChange={e => update(d.key, { amount: Number(e.target.value) || 0 })} />
-                      {d.original !== null && <span className="block text-[11px] text-amber-700">From {d.currency} {d.original}; check</span>}
+                      <span className="block text-right text-[11px] text-zinc-500">{d.currency}</span>
                     </td>
                     <td className="px-2 py-1.5">
                       <select className={cn(fieldClass, 'h-8 min-w-[110px]')} value={d.platformId} onChange={e => update(d.key, { platformId: e.target.value })}>

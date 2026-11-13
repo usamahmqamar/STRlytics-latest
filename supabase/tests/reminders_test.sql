@@ -34,7 +34,7 @@ grant select on d to anon, authenticated;
 
 insert into public.properties (org_id, id, name, status) select org, 'p1', 'Marina 1BR', 'active' from ids;
 insert into public.properties (org_id, id, name, status) select org, 'p2', 'Old unit', 'terminated' from ids;
-insert into public.property_rent_cheques (org_id, property_id, id, cheque_number, due_date, amount_aed, status)
+insert into public.property_rent_cheques (org_id, property_id, id, cheque_number, due_date, amount, status)
   select org, 'p1', 'c7', '0001', (select today + 7 from d), 27500, 'due' from ids
   union all select org, 'p1', 'c0', '0002', (select today from d), 27500, 'due' from ids
   union all select org, 'p1', 'c3', '0003', (select today - 3 from d), 27500, 'bounced' from ids

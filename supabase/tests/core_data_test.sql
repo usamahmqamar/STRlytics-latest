@@ -51,7 +51,7 @@ select tests.ok((select count(*) from public.workspace_settings where org_id = (
 select tests.login('c0000000-0000-0000-0000-00000000000a');
 set local role authenticated;
 insert into public.properties (org_id, id, name) select org_a, 'p1', 'A flat' from ids;
-insert into public.property_rent_cheques (org_id, property_id, id, amount_aed, status) select org_a, 'p1', 'c1', 1000, 'due' from ids;
+insert into public.property_rent_cheques (org_id, property_id, id, amount, status) select org_a, 'p1', 'c1', 1000, 'due' from ids;
 select tests.ok((select count(*) from public.properties) = 1, 'owner sees own property');
 select tests.denied(format('update public.properties set org_id = %L where id = %L', (select org_b from ids), 'p1'), 'move a row to another workspace');
 select tests.denied(format('insert into public.documents (org_id, id, file_url) values (%L, %L, %L)', (select org_a from ids), 'd1', 'javascript:alert(1)'), 'javascript: document link');

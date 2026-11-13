@@ -26,8 +26,8 @@ interface TableDef {
 // Column names match the app's field names; `idField` is stored in the `id` column.
 const TABLES: TableDef[] = [
   { table: 'reservations', collection: 'reservations', idField: 'reservation_code', staffCanWrite: true,
-    cols: ['apartment_id', 'platform_id', 'channel', 'guest_name', 'check_in', 'check_in_time', 'check_out', 'check_out_time',
-      'num_guests', 'nights', 'total_booking_revenue_aed', 'net_payout_aed', 'payout_date', 'cleaning_cost_aed', 'status',
+    cols: ['currency', 'apartment_id', 'platform_id', 'channel', 'guest_name', 'check_in', 'check_in_time', 'check_out', 'check_out_time',
+      'num_guests', 'nights', 'total_booking_revenue', 'net_payout', 'payout_date', 'cleaning_cost', 'status',
       'cancellation_policy', 'booking_date', 'non_refundable_date', 'rating', 'notes', 'damages_incurred', 'other_booking_costs',
       'source_document_id'],
     dates: ['check_in', 'check_out', 'payout_date', 'booking_date', 'non_refundable_date'], ints: ['num_guests', 'nights'] },
@@ -38,21 +38,21 @@ const TABLES: TableDef[] = [
   { table: 'vendors', collection: 'vendors', idField: 'vendor_id', staffCanWrite: false,
     cols: ['name', 'service_type', 'phone', 'email', 'status'] },
   { table: 'service_records', collection: 'serviceRecords', idField: 'record_id', staffCanWrite: true,
-    cols: ['date', 'apartment_id', 'service_type', 'vendor_id', 'description', 'quantity', 'unit_cost', 'total_cost', 'status', 'invoice_id'],
+    cols: ['currency', 'date', 'apartment_id', 'service_type', 'vendor_id', 'description', 'quantity', 'unit_cost', 'total_cost', 'status', 'invoice_id'],
     dates: ['date'] },
   { table: 'vendor_invoices', collection: 'invoices', idField: 'invoice_id', staffCanWrite: false,
-    cols: ['vendor_id', 'record_ids', 'total_amount', 'date', 'status'], dates: ['date'] },
+    cols: ['currency', 'vendor_id', 'record_ids', 'total_amount', 'date', 'status'], dates: ['date'] },
   { table: 'vendor_payments', collection: 'payments', idField: 'payment_id', staffCanWrite: false,
-    cols: ['date', 'vendor_id', 'amount_paid', 'type', 'invoice_id', 'notes'], dates: ['date'] },
+    cols: ['currency', 'date', 'vendor_id', 'amount_paid', 'type', 'invoice_id', 'notes'], dates: ['date'] },
   { table: 'daily_expenses', collection: 'dailyExpenses', idField: 'expense_id', staffCanWrite: true,
-    cols: ['apartment_id', 'date', 'category', 'amount_aed', 'notes'], dates: ['date'] },
+    cols: ['currency', 'apartment_id', 'date', 'category', 'amount', 'notes'], dates: ['date'] },
   { table: 'monthly_bills', collection: 'monthlyBills', idField: 'bill_id', staffCanWrite: true,
-    cols: ['apartment_id', 'month', 'bill_type', 'amount_aed', 'status', 'paid_date'], dates: ['paid_date'] },
+    cols: ['currency', 'apartment_id', 'month', 'bill_type', 'amount', 'status', 'paid_date'], dates: ['paid_date'] },
   { table: 'bank_reconciliations', collection: 'bankReconciliations', idField: 'reconciliation_id', staffCanWrite: false,
     cols: ['date', 'actual_balance', 'notes'], dates: ['date'] },
   { table: 'assets', collection: 'assets', idField: 'asset_id', staffCanWrite: true,
-    cols: ['apartment_id', 'name', 'category', 'purchase_date', 'warranty_expiry', 'condition', 'last_serviced_date',
-      'next_service_due', 'cost_aed', 'notes'],
+    cols: ['currency', 'apartment_id', 'name', 'category', 'purchase_date', 'warranty_expiry', 'condition', 'last_serviced_date',
+      'next_service_due', 'cost', 'notes'],
     dates: ['purchase_date', 'warranty_expiry', 'last_serviced_date', 'next_service_due'] },
   { table: 'documents', collection: 'documents', idField: 'doc_id', staffCanWrite: true,
     cols: ['apartment_id', 'title', 'type', 'expiry_date', 'file_url', 'status'], dates: ['expiry_date'] },
@@ -65,10 +65,11 @@ const TABLES: TableDef[] = [
 ];
 
 const PROPERTY_COLS = ['name', 'nickname', 'building', 'address', 'specification', 'measurement_sqft', 'start_operation_date',
-  'annual_rent_aed', 'monthly_rent_aed', 'num_cheques', 'currency', 'status', 'tenancy_end_date',
-  'utilities_monthly_defaults', 'platform_settings', 'tenancy_history'];
-const CHEQUE_COLS = ['cheque_number', 'due_date', 'amount_aed', 'amount_native', 'status'];
-const SETUP_COLS = ['date', 'category', 'description', 'amount_aed', 'is_refundable', 'payment_method', 'vendor'];
+  'annual_rent', 'monthly_rent', 'num_cheques', 'currency', 'status', 'tenancy_end_date',
+  'utilities_monthly_defaults', 'platform_settings', 'tenancy_history',
+  'country', 'region', 'city', 'timezone'];
+const CHEQUE_COLS = ['cheque_number', 'due_date', 'amount', 'currency', 'status'];
+const SETUP_COLS = ['date', 'category', 'description', 'amount', 'currency', 'is_refundable', 'payment_method', 'vendor'];
 
 // ---------- value conversion ----------
 export function toDate(v: unknown): string | null {
@@ -201,7 +202,7 @@ export async function loadWorkspaceData(ws: Workspace, userId: string): Promise<
     apartments: props.map(p => ({
       apartment_id: p.id,
       ...unpick(p, PROPERTY_COLS),
-      utilities_monthly_defaults: p.utilities_monthly_defaults || { dewa_electricity_aed: 0, internet_aed: 0 },
+      utilities_monthly_defaults: p.utilities_monthly_defaults || { electricity: 0, internet: 0 },
       rent_cheques: chequesBy.get(p.id as string) || [],
       setup_costs: setupBy.get(p.id as string) || [],
     })),
@@ -213,7 +214,7 @@ export async function loadWorkspaceData(ws: Workspace, userId: string): Promise<
     displaySettings: (prefs.data?.prefs as any)?.displaySettings || DEFAULT_USER_DATA.displaySettings,
     emailReminders: (prefs.data?.prefs as any)?.emailReminders !== false,
     // Billing state is owned by the server; shown read-only from the workspace.
-    subscription: { plan: ws.status, monthly_payment_aed: 0, next_charge_date: ws.trial_ends_at || '', card_details: { last4: '', brand: '', expiry: '' }, status: ws.status },
+    subscription: { plan: ws.status, monthly_payment: 0, next_charge_date: ws.trial_ends_at || '', card_details: { last4: '', brand: '', expiry: '' }, status: ws.status },
     paymentHistory: [],
   };
   TABLES.forEach((def, i) => {

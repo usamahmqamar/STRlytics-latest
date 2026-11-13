@@ -139,7 +139,7 @@ test('a scenario becomes a property with a one-year lease and cheques that add u
   assert.equal(apt.tenancy_end_date, '2028-02-29'); // one year, ending the day before
   assert.equal(apt.rent_cheques.length, 6);
   assert.deepEqual(apt.rent_cheques.map(c => c.due_date), ['2027-03-01', '2027-05-01', '2027-07-01', '2027-09-01', '2027-11-01', '2028-01-01']);
-  assert.equal(apt.rent_cheques.reduce((t, c) => t + c.amount_aed, 0), 100_000);
-  assert.equal(apt.setup_costs.find(c => c.category === 'Deposit')!.amount_aed, 5_000);
+  assert.equal(apt.rent_cheques.reduce((t, c) => t + c.amount, 0), 100_000);
+  assert.equal(apt.setup_costs.find(c => c.category === 'Deposit')!.amount, 5_000);
   assert.equal(apt.setup_costs.find(c => c.category === 'Deposit')!.is_refundable, true);
 });
