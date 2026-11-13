@@ -1,4 +1,4 @@
--- Tests for 20261113130000_multi_currency.sql. Rolled back.
+-- Tests for 20261113174738_multi_currency.sql. Rolled back.
 begin;
 create schema tests;
 create function tests.ok(cond boolean, msg text) returns void language plpgsql as $$
