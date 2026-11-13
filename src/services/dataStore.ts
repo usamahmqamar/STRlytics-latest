@@ -143,7 +143,7 @@ export function rowsFor(data: UserData, orgId: string): Snapshot {
     custom_document_types: data.customDocumentTypes || [],
   });
   put('user_preferences', 'me', {
-    prefs: { dashboardWidgets: data.dashboardWidgets || [], displaySettings: data.displaySettings || null },
+    prefs: { dashboardWidgets: data.dashboardWidgets || [], displaySettings: data.displaySettings || null, emailReminders: data.emailReminders !== false },
   });
   return snap;
 }
@@ -211,6 +211,7 @@ export async function loadWorkspaceData(ws: Workspace, userId: string): Promise<
       ? (prefs.data!.prefs as any).dashboardWidgets
       : DEFAULT_USER_DATA.dashboardWidgets,
     displaySettings: (prefs.data?.prefs as any)?.displaySettings || DEFAULT_USER_DATA.displaySettings,
+    emailReminders: (prefs.data?.prefs as any)?.emailReminders !== false,
     // Billing state is owned by the server; shown read-only from the workspace.
     subscription: { plan: ws.status, monthly_payment_aed: 0, next_charge_date: ws.trial_ends_at || '', card_details: { last4: '', brand: '', expiry: '' }, status: ws.status },
     paymentHistory: [],

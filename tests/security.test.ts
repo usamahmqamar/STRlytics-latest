@@ -9,6 +9,8 @@ import Papa from 'papaparse';
 import { HttpError, consumeAiQuota, handle, readJson, requireUser } from '../api/_lib/security';
 import { MAX_IMAGE_BYTES, validateMarketInput, validateReceiptImage } from '../api/_lib/validate';
 import { POST as aiPOST } from '../api/ai';
+import { GET as cronGET } from '../api/cron/reminders';
+import { buildEmail } from '../api/_lib/reminderEmail';
 import { parseDsn, reportServerError, scrubServer } from '../api/_lib/monitor';
 import { scrub as scrubBrowser } from '../src/lib/monitoring';
 import { cleanBankStatement, cleanBookings, cleanDate, cleanMoney, cleanPayoutReport, detectType } from '../api/_lib/documents';
@@ -28,12 +30,23 @@ let calls: Call[] = [];
 let authStatus = 200;
 let rpcReply: { status: number; body: any } = { status: 204, body: null };
 let docRows: any[] = [];
+let cronDue: any[] = [];
+let resendStatus = 200;
 let fileBytes: Buffer = Buffer.from('%PDF-1.7 test');
 const realFetch = globalThis.fetch;
 globalThis.fetch = (async (url: any, init?: RequestInit) => {
   calls.push({ url: String(url), init });
   if (String(url).endsWith('/auth/v1/user')) {
     return new Response(authStatus === 200 ? JSON.stringify({ id: 'user-1' }) : '{}', { status: authStatus });
+  }
+  if (String(url).includes('/rest/v1/rpc/cron_reminders_due')) {
+    return new Response(JSON.stringify(cronDue), { status: 200 });
+  }
+  if (String(url).includes('/rest/v1/rpc/cron_mark_reminders_sent')) {
+    return new Response('1', { status: 200 });
+  }
+  if (String(url).startsWith('https://api.resend.com/')) {
+    return new Response('{}', { status: resendStatus });
   }
   if (String(url).includes('.ingest.sentry.io/')) {
     return new Response('{}', { status: 200 });
@@ -357,4 +370,59 @@ test('reports are sent only when a valid DSN is configured, and only the scrubbe
 test('browser error reports leave out emails, tokens, keys and sign-in codes', () => {
   const out = scrubBrowser('ali@example.com https://app.test/update-password#access_token=abc.def&code=123 sb_publishable_xyz AIzaSyA1234567890123456789012345');
   assert.ok(!/ali@example|abc\.def|code=123|sb_publishable_xyz|AIzaSy/.test(out), out);
+});
+
+// ---------- Reminder emails ----------
+const SECRET = 'cron-secret-0123456789abcdef0123456789abcdef';
+const ORG_A = '22222222-2222-4222-8222-222222222222';
+const reminder = (o: any = {}) => ({ reminder_key: `cheque:${ORG_A}:p1:c1:cheque_7d|x`, kind: 'cheque_7d', org_id: ORG_A, org_name: 'Qamar Homes',
+  email: 'owner@example.test', details: { property: 'Marina 1BR', amount_aed: 27500, due_date: '2026-11-20', cheque_number: '0001' }, ...o });
+const cronReq = (auth?: string) => new Request('https://app.test/api/cron/reminders', { method: 'GET', headers: auth ? { authorization: auth } : {} });
+function withEnv(fn: () => Promise<void>) {
+  return async () => {
+    Object.assign(process.env, { CRON_SECRET: SECRET, RESEND_API_KEY: 're_test', EMAIL_FROM: 'Staylytics <r@example.test>', APP_URL: 'https://app.example.test' });
+    cronDue = []; resendStatus = 200;
+    try { await fn(); } finally { for (const k of ['CRON_SECRET', 'RESEND_API_KEY', 'EMAIL_FROM', 'APP_URL']) delete process.env[k]; }
+  };
+}
+
+test('the reminder job refuses calls without the exact secret', withEnv(async () => {
+  assert.equal((await cronGET(cronReq())).status, 401);
+  assert.equal((await cronGET(cronReq('Bearer wrong'))).status, 401);
+  assert.equal((await cronGET(cronReq(`Bearer ${SECRET}x`))).status, 401);
+  assert.ok(!calls.some(c => c.url.includes('cron_reminders_due')));
+}));
+
+test('one email per person per workspace, and only sent reminders are recorded', withEnv(async () => {
+  cronDue = [reminder(), reminder({ reminder_key: `trial:${ORG_A}:trial_3d|x`, kind: 'trial_3d', details: { trial_ends_on: '2026-11-16' } }),
+             reminder({ email: 'manager@example.test', reminder_key: `cheque:${ORG_A}:p1:c1:cheque_7d|y` })];
+  const res = await cronGET(cronReq(`Bearer ${SECRET}`));
+  assert.equal(res.status, 200);
+  assert.deepEqual(await res.json(), { due: 3, emails: 2, sent: 2, failed: 0 });
+  assert.equal(calls.filter(c => c.url.startsWith('https://api.resend.com/')).length, 2);
+  const marked = JSON.parse(String(calls.find(c => c.url.includes('cron_mark_reminders_sent'))!.init!.body));
+  assert.equal(marked.p_keys.length, 3);
+}));
+
+test('if sending fails, nothing is marked, so it is retried tomorrow', withEnv(async () => {
+  cronDue = [reminder()];
+  resendStatus = 500;
+  const res = await cronGET(cronReq(`Bearer ${SECRET}`));
+  assert.deepEqual(await res.json(), { due: 1, emails: 1, sent: 0, failed: 1 });
+  assert.ok(!calls.some(c => c.url.includes('cron_mark_reminders_sent')));
+}));
+
+test('without email settings the job stops before reading anything', async () => {
+  process.env.CRON_SECRET = SECRET;
+  try {
+    assert.equal((await cronGET(cronReq(`Bearer ${SECRET}`))).status, 503);
+    assert.ok(!calls.some(c => c.url.includes('cron_reminders_due')));
+  } finally { delete process.env.CRON_SECRET; }
+});
+
+test('reminder emails escape every value and read clearly', () => {
+  const e = buildEmail([reminder({ org_name: 'Qamar <script>alert(1)</script>', details: { property: '<img src=x onerror=1>', amount_aed: 27500, due_date: '2026-11-20', cheque_number: '0001' } })], 'https://app.example.test');
+  assert.ok(!e.html.includes('<script>') && !e.html.includes('<img'));
+  assert.match(e.text, /rent cheque 0001 for <img src=x onerror=1> \(AED 27,500\) is due in 7 days, on 20 November 2026/);
+  assert.match(e.subject, /^Rent cheque due in 7 days/);
 });

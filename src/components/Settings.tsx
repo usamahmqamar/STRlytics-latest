@@ -291,6 +291,22 @@ export const Settings: React.FC<SettingsProps> = ({ data, setData, workspace }) 
           {activeTab === 'display' && (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
               <div className="lg:col-span-2 space-y-4">
+                {(workspace.role === 'owner' || workspace.role === 'manager') && (
+                  <Card title="Reminder emails">
+                    <label className="mt-1 flex items-start gap-3 text-sm text-zinc-700 dark:text-zinc-300">
+                      <input
+                        type="checkbox"
+                        className="mt-0.5 accent-emerald-600"
+                        checked={data.emailReminders !== false}
+                        onChange={e => setData(prev => ({ ...prev, emailReminders: e.target.checked }))}
+                      />
+                      <span>
+                        Email me about rent cheques (7 days before, on the day, and 3 days after if still unpaid) and when the free trial is ending.
+                        <span className="mt-1 block text-xs text-zinc-500">Sent once a day at about 7:30 in the morning, Dubai time. This setting is only for you; teammates choose for themselves.</span>
+                      </span>
+                    </label>
+                  </Card>
+                )}
                 <Card title="Text size">
                   <div className="mt-6 space-y-8">
                     <p className="text-sm font-medium text-zinc-500 leading-relaxed max-w-lg">

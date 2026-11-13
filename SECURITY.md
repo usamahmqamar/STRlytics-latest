@@ -106,3 +106,16 @@ DATABASE_URL=postgres://... npm run test:db   # migrations + row-level security 
 - Server: unexpected errors and 5xx responses are sent to `SENTRY_DSN` with the error type,
   a scrubbed message and stack only (`api/_lib/monitor.ts`).
 - The Content-Security-Policy allows Sentry's ingest hosts in `connect-src`.
+
+## Reminder emails
+
+- Vercel Cron calls `/api/cron/reminders` daily with `Authorization: Bearer CRON_SECRET`
+  (compared in constant time). The job calls two database functions with the publishable key;
+  each requires the same secret, whose SHA-256 is stored in `private.app_settings`. No
+  service-role key is used, and the secret unlocks only these two functions, which signed-in
+  users cannot call at all.
+- Recipients: owners and managers who have not turned reminders off. Workspaces pending
+  deletion get none. Each reminder is logged once per person (email stored as an MD5 in the
+  key, not in clear) and only after Resend accepts it, so failures retry the next day.
+- Every value in an email is HTML-escaped. Tests: `reminders_test.sql`, cron tests in
+  `tests/security.test.ts`.

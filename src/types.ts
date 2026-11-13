@@ -282,6 +282,8 @@ export interface UserData {
     visible: boolean;
     colSpan: number;
   }[];
+  /** Rent-cheque and trial reminder emails for this person (owners and managers). Default on. */
+  emailReminders?: boolean;
   displaySettings?: {
     fontSize: 'sm' | 'md' | 'lg' | 'xl';
     theme: 'light' | 'dark';
