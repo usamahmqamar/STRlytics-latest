@@ -160,10 +160,17 @@ async function fetchAll(table: string, orgId: string): Promise<Row[]> {
   }
 }
 
+/** When each saved row last changed (table -> key -> updated_at), used to refuse stale writes. */
+export type Versions = Map<string, Map<string, string>>;
+
 export interface LoadedWorkspace {
   data: UserData;
   snapshot: Snapshot;
+  versions: Versions;
 }
+
+const rowKey = (table: string, r: Row) =>
+  table === 'property_rent_cheques' || table === 'property_setup_costs' ? `${r.property_id}::${r.id}` : String(r.id);
 
 export async function loadWorkspaceData(ws: Workspace, userId: string): Promise<LoadedWorkspace> {
   const [props, cheques, setup, settings, prefs, ...lists] = await Promise.all([
@@ -213,7 +220,15 @@ export async function loadWorkspaceData(ws: Workspace, userId: string): Promise<
   });
 
   const loaded = data as UserData;
-  return { data: loaded, snapshot: rowsFor(loaded, ws.id) };
+  const versions: Versions = new Map();
+  const remember = (table: string, rows: Row[]) =>
+    versions.set(table, new Map(rows.filter(r => r.updated_at).map(r => [rowKey(table, r), String(r.updated_at)])));
+  remember('properties', props);
+  remember('property_rent_cheques', cheques);
+  remember('property_setup_costs', setup);
+  TABLES.forEach((def, i) => remember(def.table, lists[i] as Row[]));
+  if (settings.data?.updated_at) versions.set('workspace_settings', new Map([[ws.id, String(settings.data.updated_at)]]));
+  return { data: loaded, snapshot: rowsFor(loaded, ws.id), versions };
 }
 
 // ---------- saving ----------
@@ -227,10 +242,14 @@ const CONFLICT: Record<string, string> = {
   user_preferences: 'user_id,org_id',
 };
 
+export interface Conflict { table: string; key: string }
+
 export interface SaveResult {
   snapshot: Snapshot;      // what is now confirmed saved
+  versions: Versions;      // updated_at of confirmed rows
   failed: string[];        // tables that failed
   blocked: string[];       // tables the role may not change
+  conflicts: Conflict[];   // rows someone else changed first; not overwritten
   changed: boolean;
 }
 
@@ -244,11 +263,30 @@ export function diffTable(before: Map<string, Row> = new Map(), after: Map<strin
   };
 }
 
-export async function saveChanges(ws: Workspace, userId: string, previous: Snapshot, data: UserData): Promise<SaveResult> {
+/** Runs tasks with limited parallelism. */
+async function pool<T>(items: T[], size: number, fn: (item: T) => Promise<void>) {
+  let i = 0;
+  await Promise.all(Array.from({ length: Math.min(size, items.length) }, async () => {
+    while (i < items.length) await fn(items[i++]);
+  }));
+}
+
+/**
+ * Saves only what changed since the last confirmed snapshot, one record at a time.
+ * Updates and deletes include the record's last-changed time, so if a teammate changed the
+ * record in the meantime the write matches nothing: their version is kept and the record is
+ * reported as a conflict instead of being overwritten.
+ */
+export async function saveChanges(
+  ws: Workspace, userId: string, previous: Snapshot, data: UserData, versions: Versions = new Map(),
+  db: { from: (table: string) => any } = supabase,
+): Promise<SaveResult> {
   const next = rowsFor(data, ws.id);
   const confirmed: Snapshot = new Map([...previous].map(([t, m]) => [t, new Map(m)]));
+  const vers: Versions = new Map([...versions].map(([t, m]) => [t, new Map(m)]));
   const failed: string[] = [];
   const blocked: string[] = [];
+  const conflicts: Conflict[] = [];
   let changed = false;
 
   for (const table of ORDER) {
@@ -264,44 +302,97 @@ export async function saveChanges(ws: Workspace, userId: string, previous: Snaps
       blocked.push(table);
       continue;
     }
+    if (!confirmed.has(table)) confirmed.set(table, new Map());
+    if (!vers.has(table)) vers.set(table, new Map());
+    const done = confirmed.get(table)!;
+    const v = vers.get(table)!;
+    const nested = table === 'property_rent_cheques' || table === 'property_setup_costs';
+    const scope = (q: any, r: Row) => {
+      q = q.eq('org_id', ws.id).eq('id', r.id);
+      return nested ? q.eq('property_id', r.property_id) : q;
+    };
 
     try {
       if (table === 'user_preferences') {
+        // Personal settings: one row per person, no one else edits it.
         const row = { user_id: userId, org_id: ws.id, ...after.get('me') };
-        const { error } = await supabase.from(table).upsert(row, { onConflict: CONFLICT[table] });
+        const { error } = await db.from(table).upsert(row, { onConflict: CONFLICT[table] });
         if (error) throw error;
-      } else {
-        const rows = upserts.map(([, r]) => r);
-        for (let i = 0; i < rows.length; i += 500) {
-          const { error } = await supabase.from(table).upsert(rows.slice(i, i + 500), { onConflict: CONFLICT[table] || 'org_id,id' });
-          if (error) throw error;
-        }
-        if (deletes.length) {
-          if (table === 'property_rent_cheques' || table === 'property_setup_costs') {
-            const byProp = new Map<string, string[]>();
-            for (const k of deletes) {
-              const r = before.get(k)!;
-              byProp.set(r.property_id as string, [...(byProp.get(r.property_id as string) || []), r.id as string]);
-            }
-            for (const [pid, ids] of byProp) {
-              const { error } = await supabase.from(table).delete().eq('org_id', ws.id).eq('property_id', pid).in('id', ids);
-              if (error) throw error;
-            }
-          } else {
-            for (let i = 0; i < deletes.length; i += 200) {
-              const { error } = await supabase.from(table).delete().eq('org_id', ws.id).in('id', deletes.slice(i, i + 200));
-              if (error) throw error;
-            }
-          }
-        }
+        confirmed.set(table, new Map(after));
+        continue;
       }
-      confirmed.set(table, new Map(after));
+      if (table === 'workspace_settings') {
+        const row = after.get(ws.id)!;
+        let q = db.from(table).update({ company_profile: row.company_profile, custom_document_types: row.custom_document_types }).eq('org_id', ws.id);
+        if (v.get(ws.id)) q = q.eq('updated_at', v.get(ws.id)!);
+        const { data: out, error } = await q.select('updated_at');
+        if (error) throw error;
+        if (!out?.length) conflicts.push({ table, key: ws.id });
+        else { done.set(ws.id, row); v.set(ws.id, String(out[0].updated_at)); }
+        continue;
+      }
+
+      const inserts = upserts.filter(([k]) => !before.has(k));
+      const updates = upserts.filter(([k]) => before.has(k));
+
+      // New records: insert in batches; if a batch clashes with a record someone else just
+      // created under the same id, retry one by one to find which.
+      for (let i = 0; i < inserts.length; i += 500) {
+        const batch = inserts.slice(i, i + 500);
+        const { data: out, error } = await db.from(table).insert(batch.map(([, r]) => r)).select('id, updated_at' + (nested ? ', property_id' : ''));
+        if (!error) {
+          for (const r of (out || []) as unknown as Row[]) v.set(rowKey(table, r), String(r.updated_at));
+          batch.forEach(([k, r]) => done.set(k, r));
+          continue;
+        }
+        if (error.code !== '23505') throw error;
+        await pool(batch, 6, async ([k, r]) => {
+          const one = await db.from(table).insert(r).select('updated_at');
+          if (one.error?.code === '23505') { conflicts.push({ table, key: k }); return; }
+          if (one.error) throw one.error;
+          done.set(k, r); v.set(k, String(one.data?.[0]?.updated_at));
+        });
+      }
+
+      await pool(updates, 6, async ([k, r]) => {
+        let q = scope(db.from(table).update(r), r);
+        if (v.get(k)) q = q.eq('updated_at', v.get(k)!);
+        const { data: out, error } = await q.select('updated_at');
+        if (error) throw error;
+        if (!out?.length) { conflicts.push({ table, key: k }); return; }
+        done.set(k, r); v.set(k, String(out[0].updated_at));
+      });
+
+      await pool(deletes, 6, async k => {
+        const r = before.get(k)!;
+        let q = scope(db.from(table).delete(), r);
+        if (v.get(k)) q = q.eq('updated_at', v.get(k)!);
+        const { data: out, error } = await q.select('id');
+        if (error) throw error;
+        if (!out?.length) {
+          // Nothing deleted: either someone already deleted it (fine) or changed it (keep theirs).
+          const still = await scope(db.from(table).select('id'), r).maybeSingle();
+          if (still.data) { conflicts.push({ table, key: k }); return; }
+        }
+        done.delete(k); v.delete(k);
+      });
     } catch (err) {
       console.error(`Save failed for ${table}:`, (err as any)?.code || err);
       failed.push(table);
     }
   }
-  return { snapshot: confirmed, failed, blocked, changed };
+  return { snapshot: confirmed, versions: vers, failed, blocked, conflicts, changed };
+}
+
+/** True when the screen holds changes that are not saved yet. */
+export function hasUnsaved(previous: Snapshot | null, data: UserData, orgId: string): boolean {
+  if (!previous) return false;
+  const next = rowsFor(data, orgId);
+  for (const [table, rows] of next) {
+    const d = diffTable(previous.get(table), rows);
+    if (d.upserts.length || d.deletes.length) return true;
+  }
+  return false;
 }
 
 /** Friendly names for messages. */

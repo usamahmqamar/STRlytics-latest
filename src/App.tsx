@@ -11,7 +11,8 @@ import { canEdit, canManage, workspaceIsWritable } from './lib/permissions';
 import { Payouts } from './components/Payouts';
 import { ImportBookings } from './components/ImportBookings';
 import { NeedsProperty } from './components/GettingStarted';
-import { loadWorkspaceData, saveChanges, TABLE_LABELS, type LoadedWorkspace } from './services/dataStore';
+import { hasUnsaved, loadWorkspaceData, saveChanges, TABLE_LABELS, type LoadedWorkspace } from './services/dataStore';
+import { subscribeToWorkspace } from './services/live';
 import { setActiveWorkspace } from './services/ai';
 import { UserData } from './types';
 import { DEFAULT_USER_DATA } from './constants';
@@ -66,6 +67,7 @@ export default function App() {
   const [workspaceError, setWorkspaceError] = useState<string | null>(null);
   const [userData, setUserData] = useState<UserData>(DEFAULT_USER_DATA);
   const snapshotRef = useRef<LoadedWorkspace['snapshot'] | null>(null);
+  const versionsRef = useRef<LoadedWorkspace['versions']>(new Map());
   const loadedDataRef = useRef<UserData | null>(null);
   const savingRef = useRef(false);
   const pendingRef = useRef(false);
@@ -98,6 +100,7 @@ export default function App() {
   const loadData = async (ws: Workspace, userId: string) => {
     const loaded = await loadWorkspaceData(ws, userId);
     snapshotRef.current = loaded.snapshot;
+    versionsRef.current = loaded.versions;
     loadedDataRef.current = loaded.data;
     setUserData(loaded.data);
   };
@@ -116,6 +119,7 @@ export default function App() {
       .then(loaded => {
         if (cancelled) return;
         snapshotRef.current = loaded.snapshot;
+        versionsRef.current = loaded.versions;
         loadedDataRef.current = loaded.data;
         setUserData(loaded.data);
       })
@@ -135,8 +139,17 @@ export default function App() {
     savingRef.current = true;
     setSyncStatus('syncing');
     try {
-      const result = await saveChanges(workspace, user.id, snapshotRef.current, userData);
+      const result = await saveChanges(workspace, user.id, snapshotRef.current, userData, versionsRef.current);
       snapshotRef.current = result.snapshot;
+      versionsRef.current = result.versions;
+      if (result.conflicts.length) {
+        // Someone else changed these first. Keep their version and say so; never overwrite.
+        const kinds = [...new Set(result.conflicts.map(c => TABLE_LABELS[c.table] || c.table))].join(', ');
+        const n = result.conflicts.length;
+        toast(`A teammate changed ${n === 1 ? 'a record' : `${n} records`} (${kinds}) while you were editing. Their version is now shown; make your change again if it is still needed.`,
+          { id: 'conflict', duration: 9000, icon: '⚠️' });
+        await loadData(workspace, user.id);
+      }
       if (result.blocked.length) {
         toast.error(`Your role can't change ${result.blocked.map(t => TABLE_LABELS[t] || t).join(', ')}. Those edits were undone.`, { id: 'blocked' });
         await loadData(workspace, user.id);
@@ -164,6 +177,26 @@ export default function App() {
     const timer = setTimeout(runSave, 1500);
     return () => clearTimeout(timer);
   }, [userData]);
+
+  // Live updates: when a teammate saves, reload (at most every few seconds) unless this
+  // screen has edits that are not saved yet; those save first and are checked for conflicts.
+  useEffect(() => {
+    if (!workspace || !user || loading) return;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const refresh = () => {
+      timer = null;
+      const { userData: current, workspace: ws, user: u } = latest.current;
+      if (!ws || !u || savingRef.current || hasUnsaved(snapshotRef.current, current, ws.id)) {
+        timer = setTimeout(refresh, 3000);
+        return;
+      }
+      loadData(ws, u.id).catch(() => {});
+    };
+    const stop = subscribeToWorkspace(workspace.id, () => {
+      if (!timer) timer = setTimeout(refresh, 2000);
+    });
+    return () => { stop(); if (timer) clearTimeout(timer); };
+  }, [workspace?.id, user?.id, loading]);
 
   // Pick up teammates' changes when returning to the tab, if nothing is waiting to save.
   useEffect(() => {
