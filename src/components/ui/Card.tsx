@@ -21,7 +21,7 @@ export const Card: React.FC<CardProps> = ({ children, className, title, action, 
       {...props}
     >
       {title && (
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-4 [.p-0>&]:mb-3 [.p-0>&]:px-5 [.p-0>&]:pt-5">
           <div className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">
             {title}
           </div>

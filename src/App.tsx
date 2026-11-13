@@ -397,7 +397,7 @@ export default function App() {
               />
             )}
             {!blockedForSetup && activeTab === 'daily-pl' && <DailyPL data={userData} filters={filters} />}
-            {activeTab === 'projections' && <Projections />}
+            {activeTab === 'projections' && <Projections orgId={workspace.id} data={userData} setData={setUserData} canWrite={editable} canAddProperty={canManage(workspace)} onOpenProperty={() => setActiveTab('setup')} />}
             {!blockedForSetup && activeTab === 'cashflow' && <Cashflow data={userData} filters={filters} />}
             {!blockedForSetup && activeTab === 'assets' && <Assets data={userData} setData={setUserData} />}
             {activeTab === 'documents' && <Documents data={userData} setData={setUserData} />}

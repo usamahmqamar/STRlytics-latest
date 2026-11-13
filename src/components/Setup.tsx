@@ -19,7 +19,7 @@ import { Card } from './ui/Card';
 import { Button } from './ui/Button';
 import { UserData, Apartment, SetupCost, RentCheque, Platform, Asset, CommunicationTemplate, TenancyHistoryRecord } from '../types';
 import { cn } from '../lib/utils';
-import { format, addMonths, parseISO, differenceInDays } from 'date-fns';
+import { format, addMonths, subDays, parseISO, differenceInDays } from 'date-fns';
 
 interface SetupProps {
   data: UserData;
@@ -139,7 +139,8 @@ export const Setup: React.FC<SetupProps> = ({ data, setData }) => {
 
     // Auto calculate tenancy_end_date if not specified (e.g., 1 year from start_operation_date)
     const startDateStr = newApt.start_operation_date || format(new Date(), 'yyyy-MM-dd');
-    const defaultEndStr = format(addMonths(parseISO(startDateStr), 12), 'yyyy-MM-dd');
+    // A one-year lease from 1 Jan ends on 31 Dec, not the next 1 Jan.
+    const defaultEndStr = format(subDays(addMonths(parseISO(startDateStr), 12), 1), 'yyyy-MM-dd');
 
     const apartment: Apartment = {
       ...newApt as Apartment,

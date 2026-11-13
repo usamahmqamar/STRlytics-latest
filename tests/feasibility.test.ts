@@ -127,3 +127,19 @@ test('incomplete inputs are not calculated', () => {
   assert.equal(isReady({ ...base, nightlyRate: 0 }), false);
   assert.equal(isReady({ ...base, annualRent: 0 }), false);
 });
+
+// ---------- turning a scenario into a property ----------
+import { apartmentFromScenario } from '../src/services/scenarios';
+
+test('a scenario becomes a property with a one-year lease and cheques that add up', () => {
+  const apt = apartmentFromScenario('Marina 1BR', { ...base, annualRent: 100_000, cheques: 6, startMonth: '2027-03', bedrooms: 1, location: 'Dubai Marina' },
+    new Set(['marina-1br']), []);
+  assert.equal(apt.apartment_id, 'marina-1br-2');
+  assert.equal(apt.start_operation_date, '2027-03-01');
+  assert.equal(apt.tenancy_end_date, '2028-02-29'); // one year, ending the day before
+  assert.equal(apt.rent_cheques.length, 6);
+  assert.deepEqual(apt.rent_cheques.map(c => c.due_date), ['2027-03-01', '2027-05-01', '2027-07-01', '2027-09-01', '2027-11-01', '2028-01-01']);
+  assert.equal(apt.rent_cheques.reduce((t, c) => t + c.amount_aed, 0), 100_000);
+  assert.equal(apt.setup_costs.find(c => c.category === 'Deposit')!.amount_aed, 5_000);
+  assert.equal(apt.setup_costs.find(c => c.category === 'Deposit')!.is_refundable, true);
+});

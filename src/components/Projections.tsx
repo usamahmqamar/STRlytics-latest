@@ -3,7 +3,7 @@
  * Calculates as you type (src/lib/feasibility.ts). AI market estimates are optional.
  */
 import React, { useEffect, useMemo, useState } from 'react';
-import { Loader2, Printer, RotateCcw, Sparkles } from 'lucide-react';
+import { Building2, Loader2, Printer, RotateCcw, Save, Sparkles, Trash2 } from 'lucide-react';
 import {
   Bar, CartesianGrid, Cell, ComposedChart, Line, ReferenceLine, ResponsiveContainer,
   Tooltip as RechartsTooltip, XAxis, YAxis,
@@ -12,6 +12,8 @@ import { format, addMonths, startOfMonth } from 'date-fns';
 import { Card } from './ui/Card';
 import { Button } from './ui/Button';
 import { getMarketIntelligence } from '../services/ai';
+import { apartmentFromScenario, deleteScenario, listScenarios, markConverted, saveScenario, type Scenario } from '../services/scenarios';
+import type { UserData } from '../types';
 import { cn } from '../lib/utils';
 import {
   VERDICT_RULES, calculateFeasibility, isReady, sensitivity,
@@ -118,10 +120,80 @@ const VERDICT_STYLE: Record<VerdictLevel, { title: string; panel: string; sub: s
 
 /* ---------- screen ---------- */
 
-export const Projections: React.FC = () => {
+interface ProjectionsProps {
+  orgId: string;
+  data: UserData;
+  setData: React.Dispatch<React.SetStateAction<UserData>>;
+  canWrite: boolean;
+  /** Owners and managers can add properties. */
+  canAddProperty: boolean;
+  onOpenProperty: () => void;
+}
+
+const VERDICT_SHORT: Record<VerdictLevel, string> = { viable: 'Worth pursuing', marginal: 'Marginal', not_viable: 'Not viable' };
+const VERDICT_DOT: Record<VerdictLevel, string> = { viable: 'bg-emerald-600', marginal: 'bg-amber-500', not_viable: 'bg-rose-500' };
+const resultFor = (f: Partial<FormState>) => {
+  const merged = { ...DEFAULTS, ...f } as FormState;
+  const i = { ...merged, seasonality: merged.useSeasonality ? merged.seasonality : null };
+  return isReady(i) ? calculateFeasibility(i) : null;
+};
+
+export const Projections: React.FC<ProjectionsProps> = ({ orgId, data, setData, canWrite, canAddProperty, onOpenProperty }) => {
   const [form, setForm] = useState<FormState>(loadSaved);
   const [estimating, setEstimating] = useState(false);
   const [estimateError, setEstimateError] = useState<string | null>(null);
+  const [scenarios, setScenarios] = useState<Scenario[]>([]);
+  const [currentId, setCurrentId] = useState<string | null>(null);
+  const [name, setName] = useState('');
+  const [compare, setCompare] = useState<string[]>([]);
+  const [busy, setBusy] = useState(false);
+  const [note, setNote] = useState<{ ok: boolean; text: string } | null>(null);
+
+  useEffect(() => { listScenarios(orgId).then(setScenarios).catch(() => setScenarios([])); }, [orgId]);
+  const current = scenarios.find(x => x.id === currentId) ?? null;
+
+  const save = async (asNew: boolean) => {
+    const label = name.trim() || `${form.bedrooms === 0 ? 'Studio' : `${form.bedrooms}BR`}${form.location ? ` in ${form.location}` : ''}`;
+    setBusy(true); setNote(null);
+    try {
+      const { marketNote, ...stored } = form;
+      const saved = await saveScenario(orgId, label, { ...stored, marketNote: marketNote.slice(0, 2000) }, asNew ? null : currentId);
+      setScenarios(list => [saved, ...list.filter(x => x.id !== saved.id)]);
+      setCurrentId(saved.id);
+      setName(saved.name);
+      setNote({ ok: true, text: `Saved "${saved.name}".` });
+    } catch (e: any) {
+      setNote({ ok: false, text: e.message });
+    } finally { setBusy(false); }
+  };
+
+  const open = (sc: Scenario) => {
+    setForm({ ...DEFAULTS, ...(sc.inputs as Partial<FormState>) });
+    setCurrentId(sc.id);
+    setName(sc.name);
+    setNote(null);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const remove = async (sc: Scenario) => {
+    if (!window.confirm(`Delete the saved unit "${sc.name}"?`)) return;
+    try {
+      await deleteScenario(orgId, sc.id);
+      setScenarios(list => list.filter(x => x.id !== sc.id));
+      setCompare(c => c.filter(id => id !== sc.id));
+      if (currentId === sc.id) setCurrentId(null);
+    } catch (e: any) { setNote({ ok: false, text: e.message }); }
+  };
+
+  const convert = async () => {
+    if (!current) return;
+    const apt = apartmentFromScenario(current.name, form, new Set(data.apartments.map(a => a.apartment_id)), data.platforms);
+    if (!window.confirm(`Add "${apt.name}" as a property, with a lease from ${apt.start_operation_date} to ${apt.tenancy_end_date} and ${apt.num_cheques} rent cheques?`)) return;
+    setData(prev => ({ ...prev, apartments: [...prev.apartments, apt] }));
+    await markConverted(orgId, current.id, apt.apartment_id).catch(() => undefined);
+    setScenarios(list => list.map(x => (x.id === current.id ? { ...x, converted_apartment_id: apt.apartment_id } : x)));
+    onOpenProperty();
+  };
 
   useEffect(() => {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(form)); } catch { /* storage unavailable */ }
@@ -271,17 +343,129 @@ export const Projections: React.FC = () => {
             </Field>
           </Group>
 
+          {canWrite && (
+            <Group title="Save this unit">
+              <Field label="Name" hint="Saved units are shared with your team and can be compared side by side.">
+                <input className={inputClass} maxLength={120} placeholder="e.g. Marina Gate 1BR, 23rd floor" value={name} onChange={e => setName(e.target.value)} />
+              </Field>
+              <div className="flex flex-wrap gap-2">
+                <Button onClick={() => save(false)} disabled={busy || !ready}>
+                  {busy ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+                  {currentId ? 'Save changes' : 'Save unit'}
+                </Button>
+                {currentId && <Button variant="outline" onClick={() => save(true)} disabled={busy || !ready}>Save as new</Button>}
+              </div>
+              {note && <p className={cn('text-xs', note.ok ? 'text-emerald-700' : 'text-rose-600')} role="status">{note.text}</p>}
+            </Group>
+          )}
+
           <button
-            onClick={() => { setForm({ ...DEFAULTS }); setEstimateError(null); }}
+            onClick={() => { setForm({ ...DEFAULTS }); setEstimateError(null); setCurrentId(null); setName(''); setNote(null); }}
             className="flex items-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100"
           >
-            <RotateCcw size={12} /> Start over
+            <RotateCcw size={12} /> Start a new unit
           </button>
         </Card>
       </div>
 
       {/* ---------------- Results ---------------- */}
       <div className="space-y-6 lg:col-span-8">
+        {scenarios.length > 0 && (
+          <Card title="Saved units" className="print:hidden">
+            <p className="-mt-2 mb-2 text-xs text-zinc-500">Tick two or more to compare them.</p>
+            <ul className="divide-y divide-zinc-100 dark:divide-zinc-800">
+              {scenarios.map(sc => {
+                const r = resultFor(sc.inputs as Partial<FormState>);
+                return (
+                  <li key={sc.id} className={cn('flex flex-wrap items-center gap-3 py-2.5', sc.id === currentId && 'rounded-lg bg-emerald-50/60 dark:bg-emerald-950/40')}>
+                    <input
+                      type="checkbox"
+                      aria-label={`Compare ${sc.name}`}
+                      className="ml-1 accent-emerald-600"
+                      checked={compare.includes(sc.id)}
+                      onChange={e => setCompare(c => (e.target.checked ? [...c, sc.id].slice(-4) : c.filter(id => id !== sc.id)))}
+                    />
+                    <button className="min-w-0 flex-1 text-left" onClick={() => open(sc)}>
+                      <span className="block truncate text-sm font-medium text-zinc-900 hover:underline dark:text-zinc-100">{sc.name}</span>
+                      <span className="flex items-center gap-1.5 text-xs text-zinc-500">
+                        {r && <span className={cn('h-1.5 w-1.5 rounded-full', VERDICT_DOT[r.verdict.level])} aria-hidden />}
+                        {r ? `${VERDICT_SHORT[r.verdict.level]}, ${aed(r.operatingProfit)} a year` : 'Incomplete'}
+                        {sc.converted_apartment_id && ', added as a property'}
+                      </span>
+                    </button>
+                    {canWrite && (
+                      <button aria-label={`Delete ${sc.name}`} onClick={() => remove(sc)} className="rounded p-1.5 text-zinc-400 hover:text-rose-600"><Trash2 size={14} /></button>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          </Card>
+        )}
+
+        {compare.length >= 2 && (() => {
+          const cols = compare.map(id => scenarios.find(x => x.id === id)).filter(Boolean).map(sc => ({ sc: sc!, r: resultFor(sc!.inputs as Partial<FormState>) }));
+          const rows: { label: string; get: (r: NonNullable<ReturnType<typeof resultFor>>, f: any) => number | null; fmt: (v: number | null) => string; better: 'high' | 'low' }[] = [
+            { label: 'Profit per year', get: r => r.operatingProfit, fmt: v => (v === null ? '—' : aed(v)), better: 'high' },
+            { label: 'Cash needed up front', get: r => r.upfrontCash, fmt: v => (v === null ? '—' : aed(v)), better: 'low' },
+            { label: 'Return on that cash', get: r => r.returnOnCash, fmt: v => pct(v), better: 'high' },
+            { label: 'Cash back by month', get: r => r.paybackMonth, fmt: v => (v === null ? 'Not in year one' : `Month ${v}`), better: 'low' },
+            { label: 'Break-even occupancy', get: r => r.breakEvenOccupancy, fmt: v => (v === null || v > 100 ? 'Above 100%' : pct(v)), better: 'low' },
+            { label: 'Break-even nightly rate', get: r => r.breakEvenRate, fmt: v => (v === null ? '—' : aed(v)), better: 'low' },
+            { label: 'Annual rent', get: (_r, f) => Number(f.annualRent) || 0, fmt: v => (v === null ? '—' : aed(v)), better: 'low' },
+            { label: 'Nightly rate and occupancy', get: () => null, fmt: () => '', better: 'high' },
+          ];
+          return (
+            <Card title={`Comparing ${cols.length} units`} className="p-0 print:hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-y border-zinc-100 dark:border-zinc-800">
+                      <th className="px-5 py-2.5 text-left text-xs font-medium text-zinc-500"><span className="sr-only">Measure</span></th>
+                      {cols.map(({ sc, r }) => (
+                        <th key={sc.id} className="px-4 py-2.5 text-right align-bottom">
+                          <span className="block text-sm font-semibold text-zinc-900 dark:text-zinc-50">{sc.name}</span>
+                          {r && <span className="text-xs font-normal text-zinc-500">{VERDICT_SHORT[r.verdict.level]}</span>}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rows.map(row => {
+                      if (row.label === 'Nightly rate and occupancy') {
+                        return (
+                          <tr key={row.label} className="border-b border-zinc-50 dark:border-zinc-800/60">
+                            <th scope="row" className="px-5 py-2.5 text-left text-xs font-medium text-zinc-600 dark:text-zinc-400">{row.label}</th>
+                            {cols.map(({ sc }) => (
+                              <td key={sc.id} className="px-4 py-2.5 text-right text-zinc-600 dark:text-zinc-400">
+                                {aed(Number(sc.inputs.nightlyRate) || 0)}, {Math.round(Number(sc.inputs.occupancy) || 0)}%
+                              </td>
+                            ))}
+                          </tr>
+                        );
+                      }
+                      const values = cols.map(({ sc, r }) => (r ? row.get(r, sc.inputs) : null));
+                      const valid = values.filter((v): v is number => v !== null);
+                      const best = valid.length > 1 ? (row.better === 'high' ? Math.max(...valid) : Math.min(...valid)) : null;
+                      return (
+                        <tr key={row.label} className="border-b border-zinc-50 dark:border-zinc-800/60">
+                          <th scope="row" className="px-5 py-2.5 text-left text-xs font-medium text-zinc-600 dark:text-zinc-400">{row.label}</th>
+                          {values.map((v, k) => (
+                            <td key={cols[k].sc.id} className={cn('px-4 py-2.5 text-right', v !== null && v === best ? 'font-semibold text-emerald-700 dark:text-emerald-300' : 'text-zinc-900 dark:text-zinc-100')}>
+                              {row.fmt(v)}
+                            </td>
+                          ))}
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+              <p className="px-5 pb-4 pt-2 text-[11px] text-zinc-500">The best figure in each row is highlighted.</p>
+            </Card>
+          );
+        })()}
+
         {!result ? (
           <div className="rounded-2xl border border-dashed border-zinc-300 p-10 text-center dark:border-zinc-700">
             <p className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">Test a unit before you sign the lease</p>
@@ -312,9 +496,16 @@ export const Projections: React.FC = () => {
                   </p>
                   <h2 className="mt-1 text-[28px] font-semibold leading-tight tracking-[-0.02em] sm:text-[34px]">{VERDICT_STYLE[result.verdict.level].title}</h2>
                 </div>
-                <Button variant="ghost" size="sm" onClick={() => window.print()} className="text-white/85 hover:bg-white/10 hover:text-white print:hidden">
-                  <Printer size={14} /> Print or save as PDF
-                </Button>
+                <div className="flex flex-wrap gap-1 print:hidden">
+                  {current && canAddProperty && !current.converted_apartment_id && (
+                    <Button variant="ghost" size="sm" onClick={convert} className="text-white/85 hover:bg-white/10 hover:text-white">
+                      <Building2 size={14} /> Turn into a property
+                    </Button>
+                  )}
+                  <Button variant="ghost" size="sm" onClick={() => window.print()} className="text-white/85 hover:bg-white/10 hover:text-white">
+                    <Printer size={14} /> Print or save as PDF
+                  </Button>
+                </div>
               </div>
               <ul className={cn('mt-4 space-y-1 text-sm', VERDICT_STYLE[result.verdict.level].sub)}>
                 {result.verdict.reasons.map(r => <li key={r}>{r}</li>)}
