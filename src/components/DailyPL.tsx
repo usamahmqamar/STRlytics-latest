@@ -31,7 +31,7 @@ import {
 } from 'recharts';
 import { format, subDays, startOfMonth, endOfMonth, parseISO, isSameDay } from 'date-fns';
 import { UserData } from '../types';
-import { calculateDailyPL, convertCurrency } from '../services/analytics';
+import { calculateDailyPL } from '../services/analytics';
 import { Card } from './ui/Card';
 import { Button } from './ui/Button';
 import { cn } from '../lib/utils';
@@ -71,24 +71,24 @@ export const DailyPL: React.FC<DailyPLProps> = ({ data, filters }) => {
           profit: 0
         };
       }
-      grouped[d.date].revenue += d.daily_revenue_aed;
-      grouped[d.date].cost += d.total_daily_cost_aed;
-      grouped[d.date].profit += d.daily_profit_aed;
+      grouped[d.date].revenue += d.daily_revenue;
+      grouped[d.date].cost += d.total_daily_cost;
+      grouped[d.date].profit += d.daily_profit;
     });
     return Object.values(grouped).sort((a, b) => a.date.localeCompare(b.date));
   }, [dailyData]);
 
   const totals = useMemo(() => {
     return dailyData.reduce((acc, curr) => ({
-      revenue: acc.revenue + curr.daily_revenue_aed,
-      cost: acc.cost + curr.total_daily_cost_aed,
-      profit: acc.profit + curr.daily_profit_aed,
-      lost: acc.lost + curr.lost_revenue_aed
+      revenue: acc.revenue + curr.daily_revenue,
+      cost: acc.cost + curr.total_daily_cost,
+      profit: acc.profit + curr.daily_profit,
+      lost: acc.lost + curr.lost_revenue
     }), { revenue: 0, cost: 0, profit: 0, lost: 0 });
   }, [dailyData]);
 
   const formatCurrency = (val: number) => {
-    const converted = convertCurrency(val, 'AED', filters.displayCurrency);
+    const converted = val;
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: filters.displayCurrency,
@@ -121,14 +121,14 @@ export const DailyPL: React.FC<DailyPLProps> = ({ data, filters }) => {
           properties: []
         };
       }
-      grouped[d.date].total.revenue += d.daily_revenue_aed;
-      grouped[d.date].total.lost += d.lost_revenue_aed;
-      grouped[d.date].total.rent += d.daily_rent_aed;
-      grouped[d.date].total.utilities += (d.daily_electricity_aed + d.daily_internet_aed);
-      grouped[d.date].total.cleaning += d.cleaning_allocated_aed;
-      grouped[d.date].total.expenses += (d.other_costs_allocated_aed + d.real_time_expenses_aed);
-      grouped[d.date].total.totalCost += d.total_daily_cost_aed;
-      grouped[d.date].total.profit += d.daily_profit_aed;
+      grouped[d.date].total.revenue += d.daily_revenue;
+      grouped[d.date].total.lost += d.lost_revenue;
+      grouped[d.date].total.rent += d.daily_rent;
+      grouped[d.date].total.utilities += (d.daily_electricity + d.daily_internet);
+      grouped[d.date].total.cleaning += d.cleaning_allocated;
+      grouped[d.date].total.expenses += (d.other_costs_allocated + d.real_time_expenses);
+      grouped[d.date].total.totalCost += d.total_daily_cost;
+      grouped[d.date].total.profit += d.daily_profit;
       
       grouped[d.date].properties.push(d);
     });
@@ -143,13 +143,13 @@ export const DailyPL: React.FC<DailyPLProps> = ({ data, filters }) => {
           <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
             <TrendingUp size={48} className="text-emerald-500" />
           </div>
-          <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Total Revenue</span>
-          <h3 className="text-xl font-black mt-1 font-mono tracking-tighter text-zinc-900 dark:text-zinc-100">
+          <span className="text-[11px] font-bold text-zinc-400">Total Revenue</span>
+          <h3 className="text-xl font-semibold mt-1 font-mono tracking-tighter text-zinc-900 dark:text-zinc-100">
             {formatCurrency(totals.revenue)}
           </h3>
           <div className="flex items-center gap-2 mt-4 text-emerald-500">
             <ArrowUpRight size={16} />
-            <span className="text-[10px] font-black uppercase tracking-widest">Gross Inflow</span>
+            <span className="text-[11px] font-semibold">Gross Inflow</span>
           </div>
         </Card>
 
@@ -157,13 +157,13 @@ export const DailyPL: React.FC<DailyPLProps> = ({ data, filters }) => {
           <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
             <TrendingDown size={48} className="text-rose-500" />
           </div>
-          <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Total Costs</span>
-          <h3 className="text-3xl font-black mt-2 font-mono tracking-tighter text-zinc-900 dark:text-zinc-100">
+          <span className="text-[11px] font-bold text-zinc-400">Total Costs</span>
+          <h3 className="text-3xl font-semibold mt-2 font-mono tracking-tighter text-zinc-900 dark:text-zinc-100">
             {formatCurrency(totals.cost)}
           </h3>
           <div className="flex items-center gap-2 mt-4 text-rose-500">
             <ArrowDownRight size={16} />
-            <span className="text-[10px] font-black uppercase tracking-widest">Operational Burn</span>
+            <span className="text-[11px] font-semibold">Operational Burn</span>
           </div>
         </Card>
 
@@ -171,15 +171,15 @@ export const DailyPL: React.FC<DailyPLProps> = ({ data, filters }) => {
           <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
             <TrendingUp size={48} className={totals.profit >= 0 ? "text-emerald-500" : "text-rose-500"} />
           </div>
-          <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Net Profit</span>
+          <span className="text-[11px] font-bold text-zinc-400">Net Profit</span>
           <h3 className={cn(
-            "text-3xl font-black mt-2 font-mono tracking-tighter",
+            "text-3xl font-semibold mt-2 font-mono tracking-tighter",
             totals.profit >= 0 ? "text-emerald-500" : "text-rose-500"
           )}>
             {formatCurrency(totals.profit)}
           </h3>
           <div className="flex items-center gap-2 mt-4 text-zinc-400">
-            <span className="text-[10px] font-black uppercase tracking-widest">Bottom Line</span>
+            <span className="text-[11px] font-semibold">Bottom Line</span>
           </div>
         </Card>
 
@@ -187,12 +187,12 @@ export const DailyPL: React.FC<DailyPLProps> = ({ data, filters }) => {
           <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
             <TrendingDown size={48} className="text-amber-500" />
           </div>
-          <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Lost Revenue</span>
-          <h3 className="text-xl font-black mt-1 font-mono tracking-tighter text-amber-500">
+          <span className="text-[11px] font-bold text-zinc-400">Lost Revenue</span>
+          <h3 className="text-xl font-semibold mt-1 font-mono tracking-tighter text-amber-500">
             {formatCurrency(totals.lost)}
           </h3>
           <div className="flex items-center gap-2 mt-4 text-amber-500">
-            <span className="text-[10px] font-black uppercase tracking-widest">Cancellations</span>
+            <span className="text-[11px] font-semibold">Cancellations</span>
           </div>
         </Card>
       </div>
@@ -204,30 +204,30 @@ export const DailyPL: React.FC<DailyPLProps> = ({ data, filters }) => {
             <AreaChart data={chartData}>
               <defs>
                 <linearGradient id="colorProfit" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#10b981" stopOpacity={0.1}/>
-                  <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                  <stop offset="5%" stopColor="#0e5a4a" stopOpacity={0.1}/>
+                  <stop offset="95%" stopColor="#0e5a4a" stopOpacity={0}/>
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e4e4e7" />
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#dce0d9" />
               <XAxis 
                 dataKey="date" 
                 axisLine={false}
                 tickLine={false}
-                tick={{ fontSize: 10, fontWeight: 700, fill: '#71717a' }}
+                tick={{ fontSize: 10, fontWeight: 700, fill: '#6c766f' }}
                 dy={10}
               />
               <YAxis 
                 axisLine={false}
                 tickLine={false}
-                tick={{ fontSize: 10, fontWeight: 700, fill: '#71717a' }}
-                tickFormatter={(val) => `AED ${val}`}
+                tick={{ fontSize: 10, fontWeight: 700, fill: '#6c766f' }}
+                tickFormatter={(val) => `${filters.displayCurrency} ${val}`}
               />
               <RechartsTooltip 
                 content={({ active, payload, label }) => {
                   if (active && payload && payload.length) {
                     return (
                       <div className="bg-zinc-900 border border-zinc-800 p-4 rounded-2xl shadow-2xl">
-                        <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-2">{label}</p>
+                        <p className="text-[11px] font-semibold text-zinc-500 mb-2">{label}</p>
                         <div className="space-y-1">
                           <p className="text-xs font-bold text-emerald-500 flex justify-between gap-8">
                             Revenue: <span>{formatCurrency(payload[0].value as number)}</span>
@@ -236,7 +236,7 @@ export const DailyPL: React.FC<DailyPLProps> = ({ data, filters }) => {
                             Cost: <span>{formatCurrency(payload[1].value as number)}</span>
                           </p>
                           <div className="h-px bg-zinc-800 my-2" />
-                          <p className="text-xs font-black text-white flex justify-between gap-8">
+                          <p className="text-xs font-semibold text-white flex justify-between gap-8">
                             Profit: <span>{formatCurrency(payload[2].value as number)}</span>
                           </p>
                         </div>
@@ -249,7 +249,7 @@ export const DailyPL: React.FC<DailyPLProps> = ({ data, filters }) => {
               <Area 
                 type="monotone" 
                 dataKey="revenue" 
-                stroke="#10b981" 
+                stroke="#0e5a4a" 
                 fillOpacity={1} 
                 fill="url(#colorProfit)" 
                 strokeWidth={3}
@@ -257,7 +257,7 @@ export const DailyPL: React.FC<DailyPLProps> = ({ data, filters }) => {
               <Area 
                 type="monotone" 
                 dataKey="cost" 
-                stroke="#f43f5e" 
+                stroke="#b0472f" 
                 fillOpacity={0} 
                 strokeWidth={2}
                 strokeDasharray="5 5"
@@ -265,7 +265,7 @@ export const DailyPL: React.FC<DailyPLProps> = ({ data, filters }) => {
               <Area 
                 type="monotone" 
                 dataKey="profit" 
-                stroke="#18181b" 
+                stroke="#1a2420" 
                 fillOpacity={0} 
                 strokeWidth={2}
               />
@@ -280,17 +280,17 @@ export const DailyPL: React.FC<DailyPLProps> = ({ data, filters }) => {
           <table className="w-full">
             <thead>
               <tr className="border-b border-zinc-100 dark:border-zinc-800">
-                <th className="pb-2 text-left text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Date</th>
-                <th className="pb-2 text-left text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Property</th>
-                <th className="pb-2 text-left text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Status</th>
-                <th className="pb-2 text-right text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Revenue</th>
-                <th className="pb-2 text-right text-[10px] font-bold text-rose-500 uppercase tracking-widest">Lost Rev.</th>
-                <th className="pb-2 text-right text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Rent</th>
-                <th className="pb-2 text-right text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Utilities</th>
-                <th className="pb-2 text-right text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Cleaning</th>
-                <th className="pb-2 text-right text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Expenses</th>
-                <th className="pb-2 text-right text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Total Cost</th>
-                <th className="pb-2 text-right text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Profit</th>
+                <th className="pb-2 text-left text-[11px] font-bold text-zinc-400">Date</th>
+                <th className="pb-2 text-left text-[11px] font-bold text-zinc-400">Property</th>
+                <th className="pb-2 text-left text-[11px] font-bold text-zinc-400">Status</th>
+                <th className="pb-2 text-right text-[11px] font-bold text-zinc-400">Revenue</th>
+                <th className="pb-2 text-right text-[11px] font-bold text-rose-500">Lost Rev.</th>
+                <th className="pb-2 text-right text-[11px] font-bold text-zinc-400">Rent</th>
+                <th className="pb-2 text-right text-[11px] font-bold text-zinc-400">Utilities</th>
+                <th className="pb-2 text-right text-[11px] font-bold text-zinc-400">Cleaning</th>
+                <th className="pb-2 text-right text-[11px] font-bold text-zinc-400">Expenses</th>
+                <th className="pb-2 text-right text-[11px] font-bold text-zinc-400">Total Cost</th>
+                <th className="pb-2 text-right text-[11px] font-bold text-zinc-400">Profit</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-50 dark:divide-zinc-900">
@@ -304,22 +304,22 @@ export const DailyPL: React.FC<DailyPLProps> = ({ data, filters }) => {
                     <td className="py-2">
                       <div className="flex items-center gap-2">
                         {expandedDays[day.date] ? <ChevronUp size={14} className="text-zinc-400" /> : <ChevronDown size={14} className="text-zinc-400" />}
-                        <span className="text-sm font-black text-zinc-900 dark:text-zinc-100">{day.date}</span>
+                        <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">{day.date}</span>
                       </div>
                     </td>
                     <td className="py-2">
-                      <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Daily Total</span>
+                      <span className="text-[11px] font-semibold text-zinc-400">Daily Total</span>
                     </td>
                     <td className="py-2"></td>
-                    <td className="py-2 text-right font-mono text-xs font-black">{formatCurrency(day.total.revenue)}</td>
-                    <td className="py-2 text-right font-mono text-xs font-black text-rose-500">{formatCurrency(day.total.lost)}</td>
-                    <td className="py-2 text-right font-mono text-xs font-black">{formatCurrency(day.total.rent)}</td>
-                    <td className="py-2 text-right font-mono text-xs font-black">{formatCurrency(day.total.utilities)}</td>
-                    <td className="py-2 text-right font-mono text-xs font-black">{formatCurrency(day.total.cleaning)}</td>
-                    <td className="py-2 text-right font-mono text-xs font-black">{formatCurrency(day.total.expenses)}</td>
-                    <td className="py-2 text-right font-mono text-xs font-black">{formatCurrency(day.total.totalCost)}</td>
+                    <td className="py-2 text-right font-mono text-xs font-semibold">{formatCurrency(day.total.revenue)}</td>
+                    <td className="py-2 text-right font-mono text-xs font-semibold text-rose-500">{formatCurrency(day.total.lost)}</td>
+                    <td className="py-2 text-right font-mono text-xs font-semibold">{formatCurrency(day.total.rent)}</td>
+                    <td className="py-2 text-right font-mono text-xs font-semibold">{formatCurrency(day.total.utilities)}</td>
+                    <td className="py-2 text-right font-mono text-xs font-semibold">{formatCurrency(day.total.cleaning)}</td>
+                    <td className="py-2 text-right font-mono text-xs font-semibold">{formatCurrency(day.total.expenses)}</td>
+                    <td className="py-2 text-right font-mono text-xs font-semibold">{formatCurrency(day.total.totalCost)}</td>
                     <td className={cn(
-                      "py-2 text-right font-mono text-xs font-black",
+                      "py-2 text-right font-mono text-xs font-semibold",
                       day.total.profit >= 0 ? "text-emerald-500" : "text-rose-500"
                     )}>
                       {formatCurrency(day.total.profit)}
@@ -338,7 +338,7 @@ export const DailyPL: React.FC<DailyPLProps> = ({ data, filters }) => {
                       </td>
                       <td className="py-2">
                         <span className={cn(
-                          "px-2 py-0.5 rounded-md text-[8px] font-black uppercase tracking-widest border",
+                          "px-2 py-0.5 rounded-md text-[8px] font-semibold border",
                           prop.occupied === 'yes' 
                             ? "bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20" 
                             : "bg-zinc-100 text-zinc-500 border-zinc-200 dark:bg-zinc-800 dark:text-zinc-400 dark:border-zinc-700"
@@ -346,18 +346,18 @@ export const DailyPL: React.FC<DailyPLProps> = ({ data, filters }) => {
                           {prop.occupied === 'yes' ? 'Occupied' : 'Vacant'}
                         </span>
                       </td>
-                      <td className="py-2 text-right font-mono text-[10px] text-zinc-500">{formatCurrency(prop.daily_revenue_aed)}</td>
-                      <td className="py-2 text-right font-mono text-[10px] text-rose-400">{formatCurrency(prop.lost_revenue_aed)}</td>
-                      <td className="py-2 text-right font-mono text-[10px] text-zinc-500">{formatCurrency(prop.daily_rent_aed)}</td>
-                      <td className="py-2 text-right font-mono text-[10px] text-zinc-500">{formatCurrency(prop.daily_electricity_aed + prop.daily_internet_aed)}</td>
-                      <td className="py-2 text-right font-mono text-[10px] text-zinc-500">{formatCurrency(prop.cleaning_allocated_aed)}</td>
-                      <td className="py-2 text-right font-mono text-[10px] text-zinc-500">{formatCurrency(prop.other_costs_allocated_aed + prop.real_time_expenses_aed)}</td>
-                      <td className="py-2 text-right font-mono text-[10px] text-zinc-500">{formatCurrency(prop.total_daily_cost_aed)}</td>
+                      <td className="py-2 text-right font-mono text-[11px] text-zinc-500">{formatCurrency(prop.daily_revenue)}</td>
+                      <td className="py-2 text-right font-mono text-[11px] text-rose-400">{formatCurrency(prop.lost_revenue)}</td>
+                      <td className="py-2 text-right font-mono text-[11px] text-zinc-500">{formatCurrency(prop.daily_rent)}</td>
+                      <td className="py-2 text-right font-mono text-[11px] text-zinc-500">{formatCurrency(prop.daily_electricity + prop.daily_internet)}</td>
+                      <td className="py-2 text-right font-mono text-[11px] text-zinc-500">{formatCurrency(prop.cleaning_allocated)}</td>
+                      <td className="py-2 text-right font-mono text-[11px] text-zinc-500">{formatCurrency(prop.other_costs_allocated + prop.real_time_expenses)}</td>
+                      <td className="py-2 text-right font-mono text-[11px] text-zinc-500">{formatCurrency(prop.total_daily_cost)}</td>
                       <td className={cn(
-                        "py-2 text-right font-mono text-[10px] font-bold",
-                        prop.daily_profit_aed >= 0 ? "text-emerald-500" : "text-rose-500"
+                        "py-2 text-right font-mono text-[11px] font-bold",
+                        prop.daily_profit >= 0 ? "text-emerald-500" : "text-rose-500"
                       )}>
-                        {formatCurrency(prop.daily_profit_aed)}
+                        {formatCurrency(prop.daily_profit)}
                       </td>
                     </tr>
                   ))}

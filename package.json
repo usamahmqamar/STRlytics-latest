@@ -9,16 +9,20 @@
     "preview": "vite preview",
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit",
-    "test:db": "scripts/db-test.sh"
+    "test:db": "scripts/db-test.sh",
+    "test:security": "esbuild tests/security.test.ts --bundle --platform=node --format=esm --packages=external --outfile=.test-build/security.test.mjs --log-level=warning && node --test .test-build/security.test.mjs",
+    "check:bundle": "node scripts/check-bundle.mjs",
+    "test:unit": "esbuild tests/feasibility.test.ts tests/reconcile.test.ts tests/pl.test.ts tests/export.test.ts tests/save.test.ts tests/money.test.ts --bundle --platform=node --format=esm --packages=external --outdir=.test-build --log-level=warning && node --test .test-build/feasibility.test.js .test-build/reconcile.test.js .test-build/pl.test.js .test-build/export.test.js .test-build/save.test.js .test-build/money.test.js"
   },
   "dependencies": {
     "@google/genai": "^1.29.0",
-    "@supabase/supabase-js": "^2.118.0",
+    "@sentry/browser": "^8.55.0",
+    "@supabase/supabase-js": "^2.119.0",
     "@tailwindcss/vite": "^4.1.14",
     "@vitejs/plugin-react": "^5.0.4",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
-    "firebase": "^12.11.0",
+    "fflate": "^0.8.2",
     "lucide-react": "^0.546.0",
     "motion": "^12.23.24",
     "papaparse": "^5.5.3",
@@ -34,6 +38,7 @@
   "devDependencies": {
     "@types/node": "^22.14.0",
     "autoprefixer": "^10.4.21",
+    "esbuild": "^0.25.12",
     "tailwindcss": "^4.1.14",
     "typescript": "~5.8.2",
     "vite": "^6.2.0"

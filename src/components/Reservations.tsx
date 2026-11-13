@@ -9,7 +9,7 @@ import {
   Plus, Upload, Download, Search, Filter, 
   MoreVertical, Edit2, Trash2, CheckCircle2,
   XCircle, Calendar, User, Building2, CreditCard,
-  Star, ChevronRight, Info, RefreshCw, X, Save
+  Star, ChevronRight, Info, RefreshCw, X, Save, FileText
 } from 'lucide-react';
 import { Card } from './ui/Card';
 import { Button } from './ui/Button';
@@ -17,10 +17,12 @@ import { Tooltip } from './ui/Tooltip';
 import { UserData, Reservation, Platform } from '../types';
 import { format, parseISO, addDays, differenceInDays, isAfter, subDays } from 'date-fns';
 import { cn } from '../lib/utils';
-import { convertCurrency } from '../services/analytics';
+import { formatMoney } from '../lib/money';
 import Papa from 'papaparse';
+import { csvFileProblem, safeParseOptions } from '../lib/csv';
 
 interface ReservationsProps {
+  onImportPdfs?: () => void;
   data: UserData;
   setData: React.Dispatch<React.SetStateAction<UserData>>;
   filters: {
@@ -31,7 +33,7 @@ interface ReservationsProps {
   };
 }
 
-export const Reservations: React.FC<ReservationsProps> = ({ data, setData, filters }) => {
+export const Reservations: React.FC<ReservationsProps> = ({ data, setData, filters, onImportPdfs }) => {
   const [view, setView] = useState<'confirmed' | 'cancelled'>('confirmed');
   const [searchQuery, setSearchQuery] = useState("");
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -45,8 +47,8 @@ export const Reservations: React.FC<ReservationsProps> = ({ data, setData, filte
     guest_name: '',
     check_in: format(new Date(), 'yyyy-MM-dd'),
     check_out: format(addDays(new Date(), 1), 'yyyy-MM-dd'),
-    total_booking_revenue_aed: 0,
-    cleaning_cost_aed: 0,
+    total_booking_revenue: 0,
+    cleaning_cost: 0,
     status: 'confirmed',
     cancellation_policy: 'non-refundable',
     booking_date: format(new Date(), 'yyyy-MM-dd'),
@@ -86,7 +88,7 @@ export const Reservations: React.FC<ReservationsProps> = ({ data, setData, filte
       check_out: format(checkOutDate, 'yyyy-MM-dd'),
       nights,
       channel: platform?.name || 'Unknown',
-      net_payout_aed: calculateNetPayout(newRes.total_booking_revenue_aed || 0, newRes.platform_id!)
+      net_payout: calculateNetPayout(newRes.total_booking_revenue || 0, newRes.platform_id!)
     };
 
     setData(prev => {
@@ -111,8 +113,8 @@ export const Reservations: React.FC<ReservationsProps> = ({ data, setData, filte
       guest_name: '',
       check_in: format(new Date(), 'yyyy-MM-dd'),
       check_out: format(addDays(new Date(), 1), 'yyyy-MM-dd'),
-      total_booking_revenue_aed: 0,
-      cleaning_cost_aed: 0,
+      total_booking_revenue: 0,
+      cleaning_cost: 0,
       status: 'confirmed',
       cancellation_policy: 'non-refundable',
       booking_date: format(new Date(), 'yyyy-MM-dd'),
@@ -123,13 +125,18 @@ export const Reservations: React.FC<ReservationsProps> = ({ data, setData, filte
   const handleImportCSV = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
+    const problem = csvFileProblem(file);
+    if (problem) {
+      alert(problem);
+      event.target.value = '';
+      return;
+    }
 
     Papa.parse(file, {
-      header: true,
-      skipEmptyLines: true,
+      ...safeParseOptions,
       complete: (results) => {
         const imported = results.data.map((row: any) => {
-          const gross = parseFloat(row.total_booking_revenue_aed) || 0;
+          const gross = parseFloat(row.total_booking_revenue) || 0;
           const platformId = row.platform_id || data.platforms.find(p => p.name === row.channel)?.platform_id || 'direct';
           
           // Ensure dates are parsed and re-formatted to strip any time/timezone info
@@ -149,9 +156,9 @@ export const Reservations: React.FC<ReservationsProps> = ({ data, setData, filte
             check_out: checkOut,
             num_guests: parseInt(row.num_guests) || 2,
             nights,
-            total_booking_revenue_aed: gross,
-            net_payout_aed: calculateNetPayout(gross, platformId),
-            cleaning_cost_aed: parseFloat(row.cleaning_cost_aed) || 0,
+            total_booking_revenue: gross,
+            net_payout: calculateNetPayout(gross, platformId),
+            cleaning_cost: parseFloat(row.cleaning_cost) || 0,
             status: (row.status?.toLowerCase() === 'cancelled' ? 'cancelled' : 'confirmed') as any,
             cancellation_policy: (row.cancellation_policy || 'non-refundable') as any,
             booking_date: row.booking_date || format(new Date(), 'yyyy-MM-dd'),
@@ -174,14 +181,10 @@ export const Reservations: React.FC<ReservationsProps> = ({ data, setData, filte
     });
   };
 
-  const formatValue = (val: number) => {
-    const converted = convertCurrency(val, 'AED', filters.displayCurrency);
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: filters.displayCurrency,
-      minimumFractionDigits: 0
-    }).format(converted);
-  };
+  /** Each booking is shown in its own listing's currency. */
+  const currencyOf = (r: Partial<Reservation>) =>
+    r.currency || data.apartments.find(a => a.apartment_id === r.apartment_id)?.currency || filters.displayCurrency;
+  const formatValue = (val: number, currency: string = filters.displayCurrency) => formatMoney(val, currency);
 
   const filteredReservations = useMemo(() => {
     return data.reservations.filter(res => {
@@ -217,24 +220,24 @@ export const Reservations: React.FC<ReservationsProps> = ({ data, setData, filte
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-        <div className="flex items-center gap-2 bg-zinc-100 p-1 rounded-xl border border-zinc-200">
+        <div className="flex items-center gap-0.5 bg-zinc-100 p-1 rounded-xl dark:bg-zinc-850">
           <button 
             onClick={() => setView('confirmed')}
             className={cn(
-              "px-6 py-2 rounded-lg text-xs font-bold transition-all",
-              view === 'confirmed' ? "bg-white text-zinc-900 shadow-sm border border-zinc-200" : "text-zinc-500 hover:text-zinc-900"
+              "px-4 py-1.5 rounded-lg text-xs font-medium transition-colors",
+              view === 'confirmed' ? "bg-white text-zinc-900 shadow-sm dark:bg-zinc-700 dark:text-zinc-50" : "text-zinc-500 hover:text-zinc-900"
             )}
           >
-            Active Bookings
+            Active bookings
           </button>
           <button 
             onClick={() => setView('cancelled')}
             className={cn(
-              "px-6 py-2 rounded-lg text-xs font-bold transition-all",
-              view === 'cancelled' ? "bg-white text-zinc-900 shadow-sm border border-zinc-200" : "text-zinc-500 hover:text-zinc-900"
+              "px-4 py-1.5 rounded-lg text-xs font-medium transition-colors",
+              view === 'cancelled' ? "bg-white text-zinc-900 shadow-sm dark:bg-zinc-700 dark:text-zinc-50" : "text-zinc-500 hover:text-zinc-900"
             )}
           >
-            Cancelled (Archive)
+            Cancelled
           </button>
         </div>
 
@@ -246,8 +249,14 @@ export const Reservations: React.FC<ReservationsProps> = ({ data, setData, filte
             accept=".csv" 
             onChange={handleImportCSV}
           />
+          {onImportPdfs && (
+            <Button variant="outline" size="md" onClick={onImportPdfs}>
+              <FileText size={16} className="text-zinc-400" />
+              Import from PDFs
+            </Button>
+          )}
           <Button variant="outline" size="md" onClick={() => fileInputRef.current?.click()}>
-            <Upload size={18} className="text-zinc-400" />
+            <Upload size={16} className="text-zinc-400" />
             Import CSV
           </Button>
           <Button onClick={() => {
@@ -259,8 +268,8 @@ export const Reservations: React.FC<ReservationsProps> = ({ data, setData, filte
               guest_name: '',
               check_in: format(new Date(), 'yyyy-MM-dd'),
               check_out: format(addDays(new Date(), 1), 'yyyy-MM-dd'),
-              total_booking_revenue_aed: 0,
-              cleaning_cost_aed: 0,
+              total_booking_revenue: 0,
+              cleaning_cost: 0,
               num_guests: 2,
               status: 'confirmed',
               cancellation_policy: 'non-refundable',
@@ -279,15 +288,15 @@ export const Reservations: React.FC<ReservationsProps> = ({ data, setData, filte
           <table className="w-full text-left text-sm">
             <thead>
               <tr className="border-b border-zinc-100">
-                <th className="pb-2 font-semibold text-zinc-400 uppercase text-[10px] tracking-widest">Booking Date</th>
-                <th className="pb-2 font-semibold text-zinc-400 uppercase text-[10px] tracking-widest">Property</th>
-                <th className="pb-2 font-semibold text-zinc-400 uppercase text-[10px] tracking-widest">Guest</th>
-                <th className="pb-2 font-semibold text-zinc-400 uppercase text-[10px] tracking-widest">Platform</th>
-                <th className="pb-2 font-semibold text-zinc-400 uppercase text-[10px] tracking-widest">Dates</th>
-                <th className="pb-2 font-semibold text-zinc-400 uppercase text-[10px] tracking-widest text-right">Revenue</th>
-                <th className="pb-2 font-semibold text-zinc-400 uppercase text-[10px] tracking-widest text-right">Net Payout</th>
-                <th className="pb-2 font-semibold text-zinc-400 uppercase text-[10px] tracking-widest text-center">Status</th>
-                <th className="pb-2 font-semibold text-zinc-400 uppercase text-[10px] tracking-widest text-right">Action</th>
+                <th className="pb-2 font-semibold text-zinc-400 text-[11px]">Booking Date</th>
+                <th className="pb-2 font-semibold text-zinc-400 text-[11px]">Property</th>
+                <th className="pb-2 font-semibold text-zinc-400 text-[11px]">Guest</th>
+                <th className="pb-2 font-semibold text-zinc-400 text-[11px]">Platform</th>
+                <th className="pb-2 font-semibold text-zinc-400 text-[11px]">Dates</th>
+                <th className="pb-2 font-semibold text-zinc-400 text-[11px] text-right">Revenue</th>
+                <th className="pb-2 font-semibold text-zinc-400 text-[11px] text-right">Net Payout</th>
+                <th className="pb-2 font-semibold text-zinc-400 text-[11px] text-center">Status</th>
+                <th className="pb-2 font-semibold text-zinc-400 text-[11px] text-right">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-50">
@@ -299,22 +308,22 @@ export const Reservations: React.FC<ReservationsProps> = ({ data, setData, filte
                   </td>
                   <td className="py-2">
                     <p className="font-bold text-zinc-900">{res.guest_name || "Guest"}</p>
-                    <p className="text-[10px] text-zinc-400 uppercase font-bold">{res.reservation_code}</p>
+                    <p className="text-[11px] text-zinc-400 font-bold">{res.reservation_code}</p>
                   </td>
                   <td className="py-2">
-                    <span className="px-2 py-1 bg-zinc-100 rounded-lg text-[10px] font-bold uppercase tracking-wider text-zinc-600 border border-zinc-200">
+                    <span className="px-2 py-1 bg-zinc-100 rounded-lg text-[11px] font-bold text-zinc-600 border border-zinc-200">
                       {res.channel}
                     </span>
                   </td>
                   <td className="py-2">
                     <p className="text-xs font-medium text-zinc-900">{res.check_in} to {res.check_out}</p>
-                    <p className="text-[10px] text-zinc-400">{res.nights} nights</p>
+                    <p className="text-[11px] text-zinc-400">{res.nights} nights</p>
                   </td>
-                  <td className="py-2 text-right font-medium text-zinc-900">{formatValue(res.total_booking_revenue_aed)}</td>
-                  <td className="py-2 text-right font-bold text-emerald-600">{formatValue(res.net_payout_aed)}</td>
+                  <td className="py-2 text-right font-medium text-zinc-900">{formatValue(res.total_booking_revenue, currencyOf(res))}</td>
+                  <td className="py-2 text-right font-bold text-emerald-600">{formatValue(res.net_payout, currencyOf(res))}</td>
                   <td className="py-2 text-center">
                     <span className={cn(
-                      "px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider",
+                      "px-2 py-1 rounded-lg text-[11px] font-bold",
                       res.status === 'confirmed' ? "bg-emerald-50 text-emerald-600 border border-emerald-100" : "bg-rose-50 text-rose-600 border border-rose-100"
                     )}>
                       {res.status}
@@ -364,7 +373,7 @@ export const Reservations: React.FC<ReservationsProps> = ({ data, setData, filte
               className="bg-white rounded-[32px] shadow-2xl w-full max-w-2xl overflow-hidden"
             >
               <div className="p-6 border-b border-zinc-100 flex justify-between items-center bg-zinc-50/50">
-                <h3 className="text-lg font-black text-zinc-900 tracking-tight">
+                <h3 className="text-lg font-semibold text-zinc-900 tracking-tight">
                   {editingReservation ? 'Edit Reservation' : 'Add New Reservation'}
                 </h3>
                 <button onClick={() => setIsAddModalOpen(false)} className="p-2 hover:bg-zinc-100 rounded-full transition-colors">
@@ -376,7 +385,7 @@ export const Reservations: React.FC<ReservationsProps> = ({ data, setData, filte
                 {/* Basic Info */}
                 <div className="space-y-4">
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Reservation Code (Mandatory)</label>
+                    <label className="text-[11px] font-semibold text-zinc-400 ml-1">Reservation Code (Mandatory)</label>
                     <input 
                       type="text" 
                       className="w-full px-4 py-3 rounded-xl border border-zinc-200 focus:border-zinc-900 focus:ring-0 transition-all text-sm font-bold"
@@ -387,7 +396,7 @@ export const Reservations: React.FC<ReservationsProps> = ({ data, setData, filte
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Guest Name</label>
+                    <label className="text-[11px] font-semibold text-zinc-400 ml-1">Guest Name</label>
                     <input 
                       type="text" 
                       className="w-full px-4 py-3 rounded-xl border border-zinc-200 focus:border-zinc-900 focus:ring-0 transition-all text-sm font-medium"
@@ -397,7 +406,7 @@ export const Reservations: React.FC<ReservationsProps> = ({ data, setData, filte
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1.5">
-                      <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Property</label>
+                      <label className="text-[11px] font-semibold text-zinc-400 ml-1">Property</label>
                       <select 
                         className="w-full px-4 py-3 rounded-xl border border-zinc-200 focus:border-zinc-900 focus:ring-0 transition-all text-sm font-medium appearance-none"
                         value={newRes.apartment_id}
@@ -410,7 +419,7 @@ export const Reservations: React.FC<ReservationsProps> = ({ data, setData, filte
                       </select>
                     </div>
                     <div className="space-y-1.5">
-                      <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Platform</label>
+                      <label className="text-[11px] font-semibold text-zinc-400 ml-1">Platform</label>
                       <select 
                         className="w-full px-4 py-3 rounded-xl border border-zinc-200 focus:border-zinc-900 focus:ring-0 transition-all text-sm font-medium appearance-none"
                         value={newRes.platform_id}
@@ -425,7 +434,7 @@ export const Reservations: React.FC<ReservationsProps> = ({ data, setData, filte
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1.5">
-                      <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Check-in Date</label>
+                      <label className="text-[11px] font-semibold text-zinc-400 ml-1">Check-in Date</label>
                       <input 
                         type="date" 
                         className="w-full px-4 py-3 rounded-xl border border-zinc-200 focus:border-zinc-900 focus:ring-0 transition-all text-sm font-medium"
@@ -434,7 +443,7 @@ export const Reservations: React.FC<ReservationsProps> = ({ data, setData, filte
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Check-out Date</label>
+                      <label className="text-[11px] font-semibold text-zinc-400 ml-1">Check-out Date</label>
                       <input 
                         type="date" 
                         className="w-full px-4 py-3 rounded-xl border border-zinc-200 focus:border-zinc-900 focus:ring-0 transition-all text-sm font-medium"
@@ -445,7 +454,7 @@ export const Reservations: React.FC<ReservationsProps> = ({ data, setData, filte
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1.5">
-                      <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Check-in Time (Opt)</label>
+                      <label className="text-[11px] font-semibold text-zinc-400 ml-1">Check-in Time (Opt)</label>
                       <input 
                         type="time" 
                         className="w-full px-4 py-3 rounded-xl border border-zinc-200 focus:border-zinc-900 focus:ring-0 transition-all text-sm font-medium"
@@ -454,7 +463,7 @@ export const Reservations: React.FC<ReservationsProps> = ({ data, setData, filte
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Check-out Time (Opt)</label>
+                      <label className="text-[11px] font-semibold text-zinc-400 ml-1">Check-out Time (Opt)</label>
                       <input 
                         type="time" 
                         className="w-full px-4 py-3 rounded-xl border border-zinc-200 focus:border-zinc-900 focus:ring-0 transition-all text-sm font-medium"
@@ -464,7 +473,7 @@ export const Reservations: React.FC<ReservationsProps> = ({ data, setData, filte
                     </div>
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Number of Guests</label>
+                    <label className="text-[11px] font-semibold text-zinc-400 ml-1">Number of Guests</label>
                     <input 
                       type="number" 
                       min="1"
@@ -479,7 +488,7 @@ export const Reservations: React.FC<ReservationsProps> = ({ data, setData, filte
                 <div className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1.5">
-                      <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Booking Date</label>
+                      <label className="text-[11px] font-semibold text-zinc-400 ml-1">Booking Date</label>
                       <input 
                         type="date" 
                         className="w-full px-4 py-3 rounded-xl border border-zinc-200 focus:border-zinc-900 focus:ring-0 transition-all text-sm font-medium"
@@ -488,7 +497,7 @@ export const Reservations: React.FC<ReservationsProps> = ({ data, setData, filte
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Status</label>
+                      <label className="text-[11px] font-semibold text-zinc-400 ml-1">Status</label>
                       <select 
                         className="w-full px-4 py-3 rounded-xl border border-zinc-200 focus:border-zinc-900 focus:ring-0 transition-all text-sm font-medium appearance-none"
                         value={newRes.status}
@@ -500,7 +509,7 @@ export const Reservations: React.FC<ReservationsProps> = ({ data, setData, filte
                     </div>
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Cancellation Policy</label>
+                    <label className="text-[11px] font-semibold text-zinc-400 ml-1">Cancellation Policy</label>
                     <select 
                       className="w-full px-4 py-3 rounded-xl border border-zinc-200 focus:border-zinc-900 focus:ring-0 transition-all text-sm font-medium appearance-none"
                       value={newRes.cancellation_policy}
@@ -514,38 +523,38 @@ export const Reservations: React.FC<ReservationsProps> = ({ data, setData, filte
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1.5">
-                      <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Gross Revenue (AED)</label>
+                      <label className="text-[11px] font-semibold text-zinc-400 ml-1">Gross Revenue ({currencyOf(newRes)})</label>
                       <input 
                         type="number" 
-                        className="w-full px-4 py-3 rounded-xl border border-zinc-200 focus:border-zinc-900 focus:ring-0 transition-all text-sm font-black"
-                        value={newRes.total_booking_revenue_aed}
-                        onChange={e => setNewRes({...newRes, total_booking_revenue_aed: Number(e.target.value)})}
+                        className="w-full px-4 py-3 rounded-xl border border-zinc-200 focus:border-zinc-900 focus:ring-0 transition-all text-sm font-semibold"
+                        value={newRes.total_booking_revenue}
+                        onChange={e => setNewRes({...newRes, total_booking_revenue: Number(e.target.value)})}
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Cleaning Cost (AED)</label>
+                      <label className="text-[11px] font-semibold text-zinc-400 ml-1">Cleaning Cost ({currencyOf(newRes)})</label>
                       <input 
                         type="number" 
-                        className="w-full px-4 py-3 rounded-xl border border-zinc-200 focus:border-zinc-900 focus:ring-0 transition-all text-sm font-black"
-                        value={newRes.cleaning_cost_aed}
-                        onChange={e => setNewRes({...newRes, cleaning_cost_aed: Number(e.target.value)})}
+                        className="w-full px-4 py-3 rounded-xl border border-zinc-200 focus:border-zinc-900 focus:ring-0 transition-all text-sm font-semibold"
+                        value={newRes.cleaning_cost}
+                        onChange={e => setNewRes({...newRes, cleaning_cost: Number(e.target.value)})}
                       />
                     </div>
                   </div>
                   
                   <div className="p-4 bg-emerald-50 rounded-2xl border border-emerald-100">
-                    <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-1">Estimated Net Payout</p>
-                    <p className="text-xl font-black text-emerald-700">
-                      {formatValue(calculateNetPayout(newRes.total_booking_revenue_aed || 0, newRes.platform_id || ''))}
+                    <p className="text-[11px] font-semibold text-emerald-600 mb-1">Estimated Net Payout</p>
+                    <p className="text-xl font-semibold text-emerald-700">
+                      {formatValue(calculateNetPayout(newRes.total_booking_revenue || 0, newRes.platform_id || ''), currencyOf(newRes))}
                     </p>
-                    <p className="text-[10px] text-emerald-600/70 font-medium">Auto-calculated based on platform commission & charges</p>
+                    <p className="text-[11px] text-emerald-600/70 font-medium">Auto-calculated based on platform commission & charges</p>
                   </div>
 
                   {/* Post-stay details */}
                   {editingReservation && isAfter(new Date(), parseISO(editingReservation.check_out)) && (
                     <div className="pt-4 border-t border-zinc-100 space-y-4">
                       <div className="space-y-1.5">
-                        <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Guest Rating (1-5)</label>
+                        <label className="text-[11px] font-semibold text-zinc-400 ml-1">Guest Rating (1-5)</label>
                         <div className="flex gap-2">
                           {[1,2,3,4,5].map(star => (
                             <button 
@@ -562,7 +571,7 @@ export const Reservations: React.FC<ReservationsProps> = ({ data, setData, filte
                         </div>
                       </div>
                       <div className="space-y-1.5">
-                        <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Stay Notes / Damages</label>
+                        <label className="text-[11px] font-semibold text-zinc-400 ml-1">Stay Notes / Damages</label>
                         <textarea 
                           className="w-full px-4 py-3 rounded-xl border border-zinc-200 focus:border-zinc-900 focus:ring-0 transition-all text-sm font-medium min-h-[80px]"
                           placeholder="Any notes about the guest or damages incurred..."

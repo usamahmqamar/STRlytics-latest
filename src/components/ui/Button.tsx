@@ -19,23 +19,23 @@ export const Button: React.FC<ButtonProps> = ({
   ...props 
 }) => {
   const variants = {
-    primary: "bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-950 hover:bg-zinc-800 dark:hover:bg-zinc-200 shadow-sm",
-    secondary: "bg-emerald-600 dark:bg-emerald-500 text-white hover:bg-emerald-700 dark:hover:bg-emerald-600 shadow-sm",
-    outline: "bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-650 dark:text-zinc-350 hover:bg-zinc-50 dark:hover:bg-zinc-850",
+    primary: "bg-emerald-600 text-white hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-400",
+    secondary: "bg-emerald-50 text-emerald-800 border border-emerald-100 hover:bg-emerald-100 dark:bg-emerald-950 dark:text-emerald-200 dark:border-emerald-900",
+    outline: "bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:border-zinc-300 hover:text-zinc-900 dark:hover:bg-zinc-850",
     ghost: "bg-transparent text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-850 hover:text-zinc-900 dark:hover:text-zinc-100",
-    danger: "bg-rose-600 dark:bg-rose-500 text-white hover:bg-rose-700 dark:hover:bg-rose-600 shadow-sm"
+    danger: "bg-rose-500 text-white hover:bg-rose-600 dark:bg-rose-500 dark:hover:bg-rose-400"
   };
 
   const sizes = {
-    sm: "px-3.5 py-1.5 text-xs font-medium",
-    md: "px-4.5 py-2 text-xs font-semibold",
-    lg: "px-6 py-2.5 text-sm font-semibold"
+    sm: "h-8 px-3 text-xs font-medium",
+    md: "h-9 px-4 text-[13px] font-medium",
+    lg: "h-11 px-5 text-sm font-semibold"
   };
 
   return (
     <button 
       className={cn(
-        "rounded-xl transition-all active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center gap-1.5 cursor-pointer",
+        "rounded-lg transition-colors active:translate-y-px disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center gap-1.5 cursor-pointer",
         variants[variant],
         sizes[size],
         className

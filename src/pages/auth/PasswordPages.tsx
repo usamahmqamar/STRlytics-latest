@@ -5,7 +5,7 @@ import { supabase, redirectTo } from '../../lib/supabase';
 import { useAuth } from '../../auth/AuthProvider';
 import { FullPageSpinner } from '../../auth/RequireAuth';
 import { Button } from '../../components/ui/Button';
-import { AuthLayout, Field, FormError, friendlyAuthError } from './AuthLayout';
+import { AuthLayout, Field, FormError, friendlyAuthError, passwordProblem, MIN_PASSWORD_LENGTH } from './AuthLayout';
 
 export const ForgotPasswordPage: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -61,7 +61,8 @@ export const UpdatePasswordPage: React.FC = () => {
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (password.length < 8) { setError('Use at least 8 characters.'); return; }
+    const weak = passwordProblem(password);
+    if (weak) { setError(weak); return; }
     if (password !== confirm) { setError('The two passwords do not match.'); return; }
     setBusy(true); setError(null);
     const { error } = await supabase.auth.updateUser({ password });
@@ -73,7 +74,7 @@ export const UpdatePasswordPage: React.FC = () => {
   return (
     <AuthLayout title="Choose a new password">
       <form onSubmit={onSubmit} className="space-y-4" noValidate>
-        <Field label="New password" name="password" type="password" autoComplete="new-password" required value={password} onChange={e => setPassword(e.target.value)} hint="At least 8 characters." />
+        <Field label="New password" name="password" type="password" autoComplete="new-password" required minLength={MIN_PASSWORD_LENGTH} value={password} onChange={e => setPassword(e.target.value)} hint="At least 10 characters, with letters and numbers." />
         <Field label="Confirm new password" name="confirm" type="password" autoComplete="new-password" required value={confirm} onChange={e => setConfirm(e.target.value)} />
         <FormError message={error} />
         <Button type="submit" size="lg" className="w-full" disabled={busy || !password || !confirm}>{busy ? 'Saving…' : 'Save password'}</Button>

@@ -7,7 +7,7 @@ on:
 
 jobs:
   app:
-    name: Type-check and build
+    name: Type-check, security tests and build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -17,7 +17,11 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run lint
+      - run: npm run test:security
+      - run: npm run test:unit
       - run: npm run build
+      # Fails if a secret, the Gemini endpoint or a guest bypass ends up in the browser bundle.
+      - run: npm run check:bundle
 
   database:
     name: Migrations and security policies

@@ -3,6 +3,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { useAuth, type Workspace } from '../auth/AuthProvider';
+import { supabase } from '../lib/supabase';
+import { SUPPORTED_CURRENCIES } from '../lib/money';
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -12,6 +15,7 @@ import {
   Zap, Download, FileText, Share2,
   X, Edit2, LayoutDashboard
 } from 'lucide-react';
+import { YourData } from './YourData';
 import { Card } from './ui/Card';
 import { Button } from './ui/Button';
 import { UserData } from '../types';
@@ -21,10 +25,11 @@ import { cn, formatCurrency } from '../lib/utils';
 interface SettingsProps {
   data: UserData;
   setData: React.Dispatch<React.SetStateAction<UserData>>;
+  workspace: Workspace;
 }
 
-export const Settings: React.FC<SettingsProps> = ({ data, setData }) => {
-  const [activeTab, setActiveTab] = useState<'profile' | 'subscription' | 'payments' | 'display' | 'dashboard'>('profile');
+export const Settings: React.FC<SettingsProps> = ({ data, setData, workspace }) => {
+  const [activeTab, setActiveTab] = useState<'profile' | 'subscription' | 'your-data' | 'display' | 'dashboard'>('profile');
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [profileForm, setProfileForm] = useState<any>(data.companyProfile || {});
 
@@ -55,11 +60,11 @@ export const Settings: React.FC<SettingsProps> = ({ data, setData }) => {
   };
 
   const tabs = [
-    { id: 'profile', label: 'Company Profile', icon: Building2 },
+    { id: 'profile', label: 'Company profile', icon: Building2 },
     { id: 'subscription', label: 'Subscription', icon: ShieldCheck },
-    { id: 'payments', label: 'Payment History', icon: History },
-    { id: 'display', label: 'Display Settings', icon: Monitor },
-    { id: 'dashboard', label: 'Dashboard Setup', icon: LayoutDashboard }
+    { id: 'your-data', label: 'Your data', icon: History },
+    { id: 'display', label: 'Display', icon: Monitor },
+    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard }
   ];
 
   const toggleWidget = (widgetId: string) => {
@@ -74,16 +79,16 @@ export const Settings: React.FC<SettingsProps> = ({ data, setData }) => {
   return (
     <div className="space-y-8">
       {/* Tabs */}
-      <div className="flex flex-wrap gap-1 p-1 bg-zinc-100/80 dark:bg-zinc-800/65 border border-zinc-200/50 dark:border-zinc-850 rounded-2xl w-fit shadow-xs">
+      <div className="flex flex-wrap gap-1 p-1 bg-zinc-100 dark:bg-zinc-850 rounded-xl w-fit max-w-full overflow-x-auto">
         {tabs.map(tab => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id as any)}
             className={cn(
-              "flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold tracking-tight transition-all duration-200 cursor-pointer",
+              "flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors cursor-pointer",
               activeTab === tab.id 
-                ? "bg-zinc-950 dark:bg-zinc-100 text-white dark:text-zinc-950 font-semibold shadow-xs" 
-                : "text-zinc-600 dark:text-zinc-350 hover:text-zinc-950 dark:hover:text-zinc-100 hover:bg-zinc-50/70 dark:hover:bg-zinc-800/80"
+                ? "bg-white text-zinc-900 shadow-sm dark:bg-zinc-700 dark:text-zinc-50" 
+                : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
             )}
           >
             <tab.icon size={14} />
@@ -103,10 +108,10 @@ export const Settings: React.FC<SettingsProps> = ({ data, setData }) => {
           {activeTab === 'profile' && (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
               <div className="lg:col-span-2">
-                <Card title="COMPANY INFORMATION">
+                <Card title="Company information">
                   <div className="mt-8 space-y-12">
                     <div className="flex items-center gap-4">
-                      <div className="w-32 h-32 bg-zinc-100 dark:bg-zinc-800 rounded-[2.5rem] overflow-hidden border border-zinc-200 dark:border-zinc-800 flex items-center justify-center shrink-0 shadow-inner">
+                      <div className="w-32 h-32 bg-zinc-100 dark:bg-zinc-800 rounded-2xl overflow-hidden border border-zinc-200 dark:border-zinc-800 flex items-center justify-center shrink-0 shadow-inner">
                         {data.companyProfile?.logo_url ? (
                           <img 
                             src={data.companyProfile.logo_url} 
@@ -139,7 +144,7 @@ export const Settings: React.FC<SettingsProps> = ({ data, setData }) => {
                           <Mail size={18} />
                         </div>
                         <div>
-                          <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] mb-0.5">Email</p>
+                          <p className="text-[11px] font-semibold text-zinc-400 mb-0.5">Email</p>
                           <p className="text-sm font-bold text-zinc-900">{data.companyProfile?.email || "contact@strcopilot.com"}</p>
                         </div>
                       </div>
@@ -148,7 +153,7 @@ export const Settings: React.FC<SettingsProps> = ({ data, setData }) => {
                           <MapPin size={18} />
                         </div>
                         <div>
-                          <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] mb-0.5">Location</p>
+                          <p className="text-[11px] font-semibold text-zinc-400 mb-0.5">Location</p>
                           <p className="text-sm font-bold text-zinc-900">{data.companyProfile?.location || "Dubai, UAE"}</p>
                         </div>
                       </div>
@@ -157,7 +162,7 @@ export const Settings: React.FC<SettingsProps> = ({ data, setData }) => {
                           <Phone size={18} />
                         </div>
                         <div>
-                          <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] mb-0.5">Phone</p>
+                          <p className="text-[11px] font-semibold text-zinc-400 mb-0.5">Phone</p>
                           <p className="text-sm font-bold text-zinc-900">{data.companyProfile?.phone || "+971 50 000 0000"}</p>
                         </div>
                       </div>
@@ -166,7 +171,7 @@ export const Settings: React.FC<SettingsProps> = ({ data, setData }) => {
                           <ShieldCheck size={18} />
                         </div>
                         <div>
-                          <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] mb-0.5">Tax ID / TRN</p>
+                          <p className="text-[11px] font-semibold text-zinc-400 mb-0.5">Tax ID / TRN</p>
                           <p className="text-sm font-bold text-zinc-900">{data.companyProfile?.tax_id || "100-2345-6789-001"}</p>
                         </div>
                       </div>
@@ -175,7 +180,7 @@ export const Settings: React.FC<SettingsProps> = ({ data, setData }) => {
                           <Globe size={18} />
                         </div>
                         <div>
-                          <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] mb-0.5">Website</p>
+                          <p className="text-[11px] font-semibold text-zinc-400 mb-0.5">Website</p>
                           <p className="text-sm font-bold text-zinc-900">{data.companyProfile?.website || "www.strcopilot.com"}</p>
                         </div>
                       </div>
@@ -185,11 +190,11 @@ export const Settings: React.FC<SettingsProps> = ({ data, setData }) => {
               </div>
 
               <div className="space-y-6">
-                <Card title="QUICK ACTIONS">
+                <Card title="Quick actions">
                   <div className="mt-6 space-y-4">
                     <button 
                       onClick={handleGeneratePDF}
-                      className="w-full p-6 bg-white border border-zinc-100 rounded-[2rem] flex items-center gap-4 hover:border-emerald-500/50 hover:bg-emerald-50/30 transition-all group text-left"
+                      className="w-full p-6 bg-white border border-zinc-100 rounded-2xl flex items-center gap-4 hover:border-emerald-500/50 hover:bg-emerald-50/30 transition-all group text-left"
                     >
                       <div className="w-12 h-12 bg-zinc-50 rounded-2xl flex items-center justify-center text-zinc-400 group-hover:text-emerald-600 transition-colors">
                         <FileText size={24} />
@@ -200,7 +205,7 @@ export const Settings: React.FC<SettingsProps> = ({ data, setData }) => {
                     </button>
                     <button 
                       onClick={handleSharePortfolio}
-                      className="w-full p-6 bg-white border border-zinc-100 rounded-[2rem] flex items-center gap-4 hover:border-emerald-500/50 hover:bg-emerald-50/30 transition-all group text-left"
+                      className="w-full p-6 bg-white border border-zinc-100 rounded-2xl flex items-center gap-4 hover:border-emerald-500/50 hover:bg-emerald-50/30 transition-all group text-left"
                     >
                       <div className="w-12 h-12 bg-zinc-50 rounded-2xl flex items-center justify-center text-zinc-400 group-hover:text-emerald-600 transition-colors">
                         <Share2 size={24} />
@@ -216,143 +221,29 @@ export const Settings: React.FC<SettingsProps> = ({ data, setData }) => {
           )}
 
           {activeTab === 'subscription' && (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-              <div className="lg:col-span-2 space-y-8">
-                <Card title="ACTIVE SUBSCRIPTION">
-                  <div className="mt-4 p-4 bg-white border border-zinc-100 rounded-2xl flex items-center gap-4 relative overflow-hidden group">
-                    <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/5 blur-[80px] rounded-full -mr-32 -mt-32" />
-                    <div className="w-20 h-20 bg-emerald-50 rounded-3xl flex items-center justify-center shrink-0 border border-emerald-100 shadow-sm">
-                      <Zap size={32} className="text-emerald-600" />
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="text-2xl font-black text-amber-600 uppercase tracking-tighter">PRO PLAN</h3>
-                      <p className="text-sm text-zinc-500 mt-1">Your plan includes unlimited properties and advanced analytics.</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-4xl font-black text-zinc-900">499.00</p>
-                      <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] mt-1">AED PER MONTH</p>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4 mt-6">
-                    <div className="space-y-4">
-                      <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em]">PAYMENT METHOD</p>
-                      <div className="p-6 bg-white border border-zinc-100 rounded-[2rem] flex items-center justify-between group hover:border-emerald-500/30 transition-all">
-                        <div className="flex items-center gap-4">
-                          <div className="w-12 h-12 bg-zinc-50 rounded-2xl flex items-center justify-center text-zinc-400">
-                            <CreditCard size={24} />
-                          </div>
-                          <div>
-                            <p className="text-sm font-bold text-zinc-900">Expires 12/28</p>
-                          </div>
-                        </div>
-                        <button className="text-[10px] font-black text-emerald-600 uppercase tracking-widest hover:underline">Edit</button>
-                      </div>
-                    </div>
-
-                    <div className="space-y-4">
-                      <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em]">NEXT BILLING CYCLE</p>
-                      <div className="p-6 bg-white border border-zinc-100 rounded-[2rem] flex items-center justify-between group hover:border-emerald-500/30 transition-all">
-                        <div className="flex-1">
-                          <p className="text-xs font-medium text-zinc-500 leading-relaxed">
-                            Your card will be automatically charged on this date.
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-lg font-black text-emerald-600">AED 499.00</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="mt-12 pt-8 border-t border-zinc-100 flex items-center justify-between">
-                    <div className="flex items-center gap-2 text-amber-600">
-                      <div className="w-5 h-5 bg-amber-50 rounded-full flex items-center justify-center text-amber-600 border border-amber-100">
-                        <Zap size={10} />
-                      </div>
-                      <p className="text-[10px] font-bold uppercase tracking-widest">Cancel your subscription anytime. No hidden fees.</p>
-                    </div>
-                    <button className="text-rose-500 text-sm font-black hover:underline">Cancel Subscription</button>
-                  </div>
-                </Card>
-              </div>
-
-              <div className="space-y-6">
-                <Card title="PLAN FEATURES">
-                  <div className="mt-6 space-y-6">
-                    {[
-                      "Unlimited Properties",
-                      "Advanced ROI Tracking",
-                      "AI-Powered Projections",
-                      "Custom Report Export",
-                      "Multi-User Access",
-                      "Priority Support"
-                    ].map((feature, i) => (
-                      <div key={i} className="flex items-center gap-4">
-                        <div className="w-6 h-6 bg-emerald-50 rounded-full flex items-center justify-center text-emerald-600 border border-emerald-100">
-                          <CheckCircle2 size={14} />
-                        </div>
-                        <span className="text-sm font-medium text-zinc-600">{feature}</span>
-                      </div>
-                    ))}
-                  </div>
-                </Card>
-              </div>
-            </div>
-          )}
-
-          {activeTab === 'payments' && (
-            <Card title="PAYMENT HISTORY">
-              <div className="mt-8 overflow-x-auto">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="border-b border-zinc-100">
-                      <th className="pb-3 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">DATE</th>
-                      <th className="pb-3 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">PLAN</th>
-                      <th className="pb-3 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">AMOUNT</th>
-                      <th className="pb-3 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">STATUS</th>
-                      <th className="pb-3 text-[10px] font-bold text-zinc-400 uppercase tracking-widest text-right">INVOICE</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-zinc-50">
-                    {(data.paymentHistory || [
-                      { payment_id: 'pay-001', date: '2024-03-01', plan: 'PRO', amount_aed: 499, status: 'Success' },
-                      { payment_id: 'pay-002', date: '2024-02-01', plan: 'PRO', amount_aed: 499, status: 'Success' }
-                    ]).map((pay) => (
-                      <tr key={pay.payment_id} className="group hover:bg-zinc-50/50 transition-colors">
-                        <td className="py-4">
-                          <p className="text-sm font-bold text-zinc-900">{format(parseISO(pay.date), 'MMM d, yyyy')}</p>
-                          <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mt-1">ID: {pay.payment_id}</p>
-                        </td>
-                        <td className="py-4">
-                          <span className="px-3 py-1 bg-zinc-100 text-zinc-500 text-[10px] font-black uppercase rounded-lg border border-zinc-200">
-                            {pay.plan}
-                          </span>
-                        </td>
-                        <td className="py-4">
-                          <p className="text-sm font-black text-zinc-900">{formatCurrency(pay.amount_aed)}</p>
-                        </td>
-                        <td className="py-4">
-                          <div className="flex items-center gap-2">
-                            <div className="w-2 h-2 bg-emerald-500 rounded-full shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
-                            <span className="text-sm font-bold text-zinc-900">{pay.status}</span>
-                          </div>
-                        </td>
-                        <td className="py-4 text-right">
-                          <button className="p-3 bg-white border border-zinc-200 rounded-2xl text-zinc-400 hover:text-emerald-600 hover:border-emerald-600 transition-all shadow-sm">
-                            <Download size={18} />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+            <Card title="Workspace plan">
+              <div className="mt-4 space-y-3 text-sm text-zinc-600">
+                <p>
+                  <span className="font-bold text-zinc-900">{workspace.name}</span>
+                  {' · '}your role: <span className="font-semibold capitalize">{workspace.role}</span>
+                </p>
+                <p>
+                  Status: <span className="font-semibold capitalize">{workspace.status.replace('_', ' ')}</span>
+                  {workspace.status === 'trialing' && workspace.trial_ends_at && (
+                    <> · free trial ends {format(parseISO(workspace.trial_ends_at), 'MMM d, yyyy')}</>
+                  )}
+                </p>
+                <p className="text-xs text-zinc-400">
+                  Paid plans and billing are coming soon. Card details are never stored in Staylytics.
+                </p>
               </div>
             </Card>
           )}
 
+          {activeTab === 'your-data' && <YourData data={data} workspace={workspace} />}
+
           {activeTab === 'dashboard' && (
-            <Card title="DASHBOARD WIDGETS">
+            <Card title="Dashboard sections">
               <div className="mt-6 space-y-4">
                 <p className="text-sm font-medium text-zinc-500 leading-relaxed max-w-lg mb-8">
                   Toggle the visibility of specific dashboard components. Changes are saved automatically.
@@ -363,7 +254,7 @@ export const Settings: React.FC<SettingsProps> = ({ data, setData }) => {
                       key={widget.id}
                       onClick={() => toggleWidget(widget.id)}
                       className={cn(
-                        "p-6 rounded-[2rem] border transition-all duration-300 flex items-center justify-between group",
+                        "p-6 rounded-2xl border transition-all duration-300 flex items-center justify-between group",
                         widget.visible 
                           ? "bg-zinc-900 border-zinc-800 text-white shadow-xl shadow-zinc-200" 
                           : "bg-white border-zinc-100 text-zinc-400 grayscale opacity-60 hover:opacity-100 hover:grayscale-0"
@@ -377,9 +268,9 @@ export const Settings: React.FC<SettingsProps> = ({ data, setData }) => {
                           <LayoutDashboard size={18} />
                         </div>
                         <div className="text-left">
-                          <p className="text-xs font-black uppercase tracking-widest">{widget.title || widget.id.replace(/-/g, ' ')}</p>
+                          <p className="text-xs font-semibold">{widget.title || widget.id.replace(/-/g, ' ')}</p>
                           <p className={cn(
-                            "text-[10px] mt-0.5",
+                            "text-[11px] mt-0.5",
                             widget.visible ? "text-zinc-400" : "text-zinc-300"
                           )}>
                             {widget.visible ? 'Visible' : 'Hidden'}
@@ -402,7 +293,24 @@ export const Settings: React.FC<SettingsProps> = ({ data, setData }) => {
           {activeTab === 'display' && (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
               <div className="lg:col-span-2 space-y-4">
-                <Card title="FONT SIZE SETTINGS">
+                <WorkspaceCurrency workspace={workspace} />
+                {(workspace.role === 'owner' || workspace.role === 'manager') && (
+                  <Card title="Reminder emails">
+                    <label className="mt-1 flex items-start gap-3 text-sm text-zinc-700 dark:text-zinc-300">
+                      <input
+                        type="checkbox"
+                        className="mt-0.5 accent-emerald-600"
+                        checked={data.emailReminders !== false}
+                        onChange={e => setData(prev => ({ ...prev, emailReminders: e.target.checked }))}
+                      />
+                      <span>
+                        Email me about rent cheques (7 days before, on the day, and 3 days after if still unpaid) and when the free trial is ending.
+                        <span className="mt-1 block text-xs text-zinc-500">Checked once a day; the dates follow each property's own time zone. This setting is only for you; teammates choose for themselves.</span>
+                      </span>
+                    </label>
+                  </Card>
+                )}
+                <Card title="Text size">
                   <div className="mt-6 space-y-8">
                     <p className="text-sm font-medium text-zinc-500 leading-relaxed max-w-lg">
                       Adjust the application's font size for better readability.
@@ -414,20 +322,20 @@ export const Settings: React.FC<SettingsProps> = ({ data, setData }) => {
                           key={size}
                           onClick={() => handleUpdateDisplay({ fontSize: size })}
                           className={cn(
-                            "p-8 rounded-[2rem] border transition-all duration-300 flex flex-col items-center gap-3 group",
+                            "p-8 rounded-2xl border transition-all duration-300 flex flex-col items-center gap-3 group",
                             data.displaySettings?.fontSize === size 
                               ? "bg-emerald-50 dark:bg-emerald-500/10 border-emerald-500 shadow-lg shadow-emerald-500/10" 
                               : "bg-white dark:bg-zinc-900 border-zinc-100 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-600"
                           )}
                         >
                           <span className={cn(
-                            "font-black uppercase tracking-widest",
+                            "font-semibold",
                             data.displaySettings?.fontSize === size ? "text-emerald-600" : "text-zinc-400 group-hover:text-zinc-900 dark:group-hover:text-zinc-100"
                           )}>
                             {size}
                           </span>
                           <span className={cn(
-                            "text-[10px] font-bold",
+                            "text-[11px] font-bold",
                             data.displaySettings?.fontSize === size ? "text-emerald-500" : "text-zinc-300"
                           )}>
                             Sample Text
@@ -437,7 +345,7 @@ export const Settings: React.FC<SettingsProps> = ({ data, setData }) => {
                     </div>
 
                     <div className="p-4 bg-zinc-50/50 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-800 rounded-2xl space-y-2">
-                      <h4 className="text-sm font-black text-zinc-900 dark:text-zinc-100 uppercase tracking-widest">Preview</h4>
+                      <h4 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Preview</h4>
                       <p className={cn(
                         "text-zinc-500 dark:text-zinc-400 leading-relaxed transition-all duration-300",
                         data.displaySettings?.fontSize === 'sm' && "text-xs",
@@ -453,12 +361,12 @@ export const Settings: React.FC<SettingsProps> = ({ data, setData }) => {
               </div>
 
               <div className="space-y-6">
-                <Card title="VISUAL THEME">
+                <Card title="Theme">
                   <div className="mt-6 space-y-4">
                     <button 
                       onClick={() => handleUpdateDisplay({ theme: 'light' })}
                       className={cn(
-                        "w-full p-6 border rounded-[2rem] space-y-2 text-left transition-all",
+                        "w-full p-6 border rounded-2xl space-y-2 text-left transition-all",
                         data.displaySettings?.theme === 'light' 
                           ? "bg-emerald-50/30 dark:bg-emerald-500/10 border-emerald-500/20" 
                           : "bg-white dark:bg-zinc-900 border-zinc-100 dark:border-zinc-800 hover:border-zinc-200 dark:hover:border-zinc-700"
@@ -475,7 +383,7 @@ export const Settings: React.FC<SettingsProps> = ({ data, setData }) => {
                     <button 
                       onClick={() => handleUpdateDisplay({ theme: 'dark' })}
                       className={cn(
-                        "w-full p-6 border rounded-[2rem] space-y-2 text-left transition-all",
+                        "w-full p-6 border rounded-2xl space-y-2 text-left transition-all",
                         data.displaySettings?.theme === 'dark' 
                           ? "bg-zinc-900 border-zinc-700" 
                           : "bg-white border-zinc-100 hover:border-zinc-200"
@@ -511,7 +419,7 @@ export const Settings: React.FC<SettingsProps> = ({ data, setData }) => {
               className="bg-white rounded-[32px] shadow-2xl w-full max-w-2xl overflow-hidden"
             >
               <div className="p-8 border-b border-zinc-100 flex justify-between items-center bg-zinc-50/50">
-                <h3 className="text-xl font-black text-zinc-900 tracking-tight">Edit Company Profile</h3>
+                <h3 className="text-xl font-semibold text-zinc-900 tracking-tight">Edit Company Profile</h3>
                 <button onClick={() => setIsEditingProfile(false)} className="p-2 hover:bg-zinc-100 rounded-full transition-colors">
                   <X size={24} />
                 </button>
@@ -520,7 +428,7 @@ export const Settings: React.FC<SettingsProps> = ({ data, setData }) => {
               <div className="p-8 space-y-6">
                 <div className="grid grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Company Name</label>
+                    <label className="text-[11px] font-semibold text-zinc-400 ml-1">Company Name</label>
                     <input 
                       type="text" 
                       className="w-full px-5 py-4 rounded-2xl border border-zinc-200 focus:border-emerald-500 focus:ring-0 transition-all text-sm font-medium"
@@ -529,7 +437,7 @@ export const Settings: React.FC<SettingsProps> = ({ data, setData }) => {
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Website</label>
+                    <label className="text-[11px] font-semibold text-zinc-400 ml-1">Website</label>
                     <input 
                       type="text" 
                       className="w-full px-5 py-4 rounded-2xl border border-zinc-200 focus:border-emerald-500 focus:ring-0 transition-all text-sm font-medium"
@@ -541,7 +449,7 @@ export const Settings: React.FC<SettingsProps> = ({ data, setData }) => {
 
                 <div className="grid grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Email</label>
+                    <label className="text-[11px] font-semibold text-zinc-400 ml-1">Email</label>
                     <input 
                       type="email" 
                       className="w-full px-5 py-4 rounded-2xl border border-zinc-200 focus:border-emerald-500 focus:ring-0 transition-all text-sm font-medium"
@@ -550,7 +458,7 @@ export const Settings: React.FC<SettingsProps> = ({ data, setData }) => {
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Phone</label>
+                    <label className="text-[11px] font-semibold text-zinc-400 ml-1">Phone</label>
                     <input 
                       type="text" 
                       className="w-full px-5 py-4 rounded-2xl border border-zinc-200 focus:border-emerald-500 focus:ring-0 transition-all text-sm font-medium"
@@ -561,7 +469,7 @@ export const Settings: React.FC<SettingsProps> = ({ data, setData }) => {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Description</label>
+                  <label className="text-[11px] font-semibold text-zinc-400 ml-1">Description</label>
                   <textarea 
                     rows={3}
                     className="w-full px-5 py-4 rounded-2xl border border-zinc-200 focus:border-emerald-500 focus:ring-0 transition-all text-sm font-medium resize-none"
@@ -580,5 +488,42 @@ export const Settings: React.FC<SettingsProps> = ({ data, setData }) => {
         )}
       </AnimatePresence>
     </div>
+  );
+};
+
+/** The currency totals across all properties are shown in. Owners and managers change it. */
+const WorkspaceCurrency: React.FC<{ workspace: Workspace }> = ({ workspace }) => {
+  const { refreshWorkspaces } = useAuth();
+  const [value, setValue] = useState(workspace.base_currency);
+  const [state, setState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const isOwner = workspace.role === 'owner' || workspace.role === 'manager';
+  const save = async (code: string) => {
+    setValue(code); setState('saving');
+    const { error } = await supabase.from('organizations').update({ base_currency: code }).eq('id', workspace.id);
+    if (error) { setState('error'); setValue(workspace.base_currency); return; }
+    await refreshWorkspaces();
+    setState('saved');
+  };
+  return (
+    <Card title="Workspace currency">
+      <p className="max-w-prose text-sm text-zinc-600 dark:text-zinc-400">
+        Totals across all your properties are shown in this currency. Each property keeps its own currency,
+        and its amounts are converted at the daily exchange rate for each amount's date. Nothing stored changes.
+      </p>
+      <div className="mt-4 flex items-center gap-3">
+        <select
+          aria-label="Workspace currency"
+          className="h-9 rounded-lg border border-zinc-200 bg-white px-3 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+          value={value}
+          disabled={!isOwner || state === 'saving'}
+          onChange={e => save(e.target.value)}
+        >
+          {SUPPORTED_CURRENCIES.map(c => <option key={c} value={c}>{c}</option>)}
+        </select>
+        <span className="text-xs text-zinc-500" role="status">
+          {!isOwner ? 'Only owners and managers can change this.' : state === 'saving' ? 'Saving…' : state === 'saved' ? 'Saved.' : state === 'error' ? 'Could not save. Please try again.' : ''}
+        </span>
+      </div>
+    </Card>
   );
 };

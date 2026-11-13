@@ -32,13 +32,13 @@ export const Assets: React.FC<AssetsProps> = ({ data, setData }) => {
     category: 'furniture',
     condition: 'new',
     purchase_date: format(new Date(), 'yyyy-MM-dd'),
-    cost_aed: 0
+    cost: 0
   });
 
   const assets = useMemo(() => data.assets || [], [data.assets]);
 
   const handleAddAsset = () => {
-    if (!newAsset.name || !newAsset.apartment_id || !newAsset.cost_aed) return;
+    if (!newAsset.name || !newAsset.apartment_id || !newAsset.cost) return;
 
     const asset: Asset = {
       asset_id: `ASSET-${Date.now()}`,
@@ -48,7 +48,7 @@ export const Assets: React.FC<AssetsProps> = ({ data, setData }) => {
       apartment_id: newAsset.apartment_id,
       purchase_date: newAsset.purchase_date || format(new Date(), 'yyyy-MM-dd'),
       warranty_expiry: newAsset.warranty_expiry,
-      cost_aed: Number(newAsset.cost_aed),
+      cost: Number(newAsset.cost),
       next_service_due: newAsset.next_service_due
     };
 
@@ -62,7 +62,7 @@ export const Assets: React.FC<AssetsProps> = ({ data, setData }) => {
       category: 'furniture',
       condition: 'new',
       purchase_date: format(new Date(), 'yyyy-MM-dd'),
-      cost_aed: 0
+      cost: 0
     });
   };
 
@@ -76,19 +76,19 @@ export const Assets: React.FC<AssetsProps> = ({ data, setData }) => {
   }, [assets, searchQuery, categoryFilter, propertyFilter]);
 
   const stats = useMemo(() => {
-    const totalValue = assets.reduce((sum, a) => sum + a.cost_aed, 0);
+    const totalValue = assets.reduce((sum, a) => sum + a.cost, 0);
     const expiringSoon = assets.filter(a => a.warranty_expiry && isBefore(parseISO(a.warranty_expiry), addDays(new Date(), 90))).length;
     
     const categoryBreakdown = assets.reduce((acc: any, a) => {
-      acc[a.category] = (acc[a.category] || 0) + a.cost_aed;
+      acc[a.category] = (acc[a.category] || 0) + a.cost;
       return acc;
     }, {});
 
     // Simple Depreciation Logic: 5 years (60 months) useful life
     const totalCurrentValue = assets.reduce((sum, a) => {
       const monthsOld = Math.max(0, differenceInMonths(new Date(), parseISO(a.purchase_date)));
-      const depreciationPerMonth = a.cost_aed / 60;
-      const currentValue = Math.max(0, a.cost_aed - (depreciationPerMonth * monthsOld));
+      const depreciationPerMonth = a.cost / 60;
+      const currentValue = Math.max(0, a.cost - (depreciationPerMonth * monthsOld));
       return sum + currentValue;
     }, 0);
 
@@ -134,10 +134,10 @@ export const Assets: React.FC<AssetsProps> = ({ data, setData }) => {
             <div className="p-2 bg-white/10 rounded-xl">
               <DollarSign size={20} className="text-emerald-400" />
             </div>
-            <p className="text-[10px] font-black uppercase tracking-widest text-white/40">Total Acquisition Cost</p>
+            <p className="text-[11px] font-semibold text-white/40">Total Acquisition Cost</p>
           </div>
-          <p className="text-xl font-black tracking-tight">{formatCurrency(stats.totalValue)}</p>
-          <div className="mt-4 flex items-center gap-2 text-[10px] font-bold text-white/40">
+          <p className="text-xl font-semibold tracking-tight">{formatCurrency(stats.totalValue)}</p>
+          <div className="mt-4 flex items-center gap-2 text-[11px] font-bold text-white/40">
             <Package size={12} />
             {assets.length} Total Assets
           </div>
@@ -148,10 +148,10 @@ export const Assets: React.FC<AssetsProps> = ({ data, setData }) => {
             <div className="p-2 bg-amber-50 rounded-xl">
               <TrendingDown size={20} className="text-amber-600" />
             </div>
-            <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Estimated Current Value</p>
+            <p className="text-[11px] font-semibold text-zinc-400">Estimated Current Value</p>
           </div>
-          <p className="text-xl font-black tracking-tight text-zinc-900">{formatCurrency(stats.totalCurrentValue)}</p>
-          <p className="mt-2 text-[10px] font-bold text-amber-600 uppercase tracking-widest">
+          <p className="text-xl font-semibold tracking-tight text-zinc-900">{formatCurrency(stats.totalCurrentValue)}</p>
+          <p className="mt-2 text-[11px] font-bold text-amber-600">
             {Math.round((stats.totalCurrentValue / stats.totalValue) * 100)}% of original value
           </p>
         </Card>
@@ -161,13 +161,13 @@ export const Assets: React.FC<AssetsProps> = ({ data, setData }) => {
             <div className="p-2 bg-blue-50 rounded-xl">
               <ShieldCheck size={20} className="text-blue-600" />
             </div>
-            <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Active Warranties</p>
+            <p className="text-[11px] font-semibold text-zinc-400">Active Warranties</p>
           </div>
-          <p className="text-xl font-black tracking-tight text-zinc-900">
+          <p className="text-xl font-semibold tracking-tight text-zinc-900">
             {assets.filter(a => a.warranty_expiry && !isBefore(parseISO(a.warranty_expiry), new Date())).length}
           </p>
           {stats.expiringSoon > 0 && (
-            <div className="mt-2 flex items-center gap-1.5 text-[10px] font-bold text-rose-500 uppercase tracking-widest">
+            <div className="mt-2 flex items-center gap-1.5 text-[11px] font-bold text-rose-500">
               <AlertCircle size={12} />
               {stats.expiringSoon} Expiring Soon
             </div>
@@ -179,12 +179,12 @@ export const Assets: React.FC<AssetsProps> = ({ data, setData }) => {
             <div className="p-2 bg-emerald-50 rounded-xl">
               <PieChart size={20} className="text-emerald-600" />
             </div>
-            <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Top Category</p>
+            <p className="text-[11px] font-semibold text-zinc-400">Top Category</p>
           </div>
-          <p className="text-xl font-black tracking-tight text-zinc-900 uppercase">
+          <p className="text-xl font-semibold tracking-tight text-zinc-900">
             {Object.entries(stats.categoryBreakdown).sort((a: any, b: any) => b[1] - a[1])[0]?.[0] || 'N/A'}
           </p>
-          <p className="mt-2 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">
+          <p className="mt-2 text-[11px] font-bold text-zinc-400">
             {formatCurrency(Object.values(stats.categoryBreakdown).sort((a: any, b: any) => b - a)[0] as number || 0)} Value
           </p>
         </Card>
@@ -238,11 +238,11 @@ export const Assets: React.FC<AssetsProps> = ({ data, setData }) => {
                   </div>
                   <div>
                     <h3 className="font-bold text-zinc-900 group-hover:text-emerald-600 transition-colors">{asset.name}</h3>
-                    <p className="text-[10px] text-zinc-400 uppercase tracking-widest font-bold">{apt?.name}</p>
+                    <p className="text-[11px] text-zinc-400 font-bold">{apt?.name}</p>
                   </div>
                 </div>
                 <span className={cn(
-                  "px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest border",
+                  "px-2 py-0.5 rounded-full text-[11px] font-semibold border",
                   getConditionColor(asset.condition)
                 )}>
                   {asset.condition}
@@ -265,25 +265,25 @@ export const Assets: React.FC<AssetsProps> = ({ data, setData }) => {
                 <div className="flex justify-between items-center text-xs">
                   <span className="text-zinc-400 font-medium">Asset Value</span>
                   <div className="text-right">
-                    <span className="font-black text-zinc-900 block">{formatCurrency(asset.cost_aed)}</span>
-                    <span className="text-[9px] text-zinc-400 font-bold uppercase">Original Cost</span>
+                    <span className="font-semibold text-zinc-900 block">{formatCurrency(asset.cost)}</span>
+                    <span className="text-[11px] text-zinc-400 font-bold">Original Cost</span>
                   </div>
                 </div>
 
                 <div className="flex justify-between items-center text-xs pt-2 border-t border-zinc-50">
                   <span className="text-zinc-400 font-medium">Current Value</span>
                   <div className="text-right">
-                    <span className="font-black text-emerald-600 block">
-                      {formatCurrency(Math.max(0, asset.cost_aed - (asset.cost_aed / 60 * Math.max(0, differenceInMonths(new Date(), parseISO(asset.purchase_date))))))}
+                    <span className="font-semibold text-emerald-600 block">
+                      {formatCurrency(Math.max(0, asset.cost - (asset.cost / 60 * Math.max(0, differenceInMonths(new Date(), parseISO(asset.purchase_date))))))}
                     </span>
-                    <span className="text-[9px] text-zinc-400 font-bold uppercase">Est. Depreciated</span>
+                    <span className="text-[11px] text-zinc-400 font-bold">Est. Depreciated</span>
                   </div>
                 </div>
                 
                 {asset.next_service_due && (
                   <div className="flex items-center gap-2 p-2 bg-emerald-50 rounded-xl mt-2 border border-emerald-100">
                     <Calendar className="w-3 h-3 text-emerald-600" />
-                    <span className="text-[10px] font-black text-emerald-700 uppercase tracking-widest">
+                    <span className="text-[11px] font-semibold text-emerald-700">
                       Next Service: {format(parseISO(asset.next_service_due), 'MMM d, yyyy')}
                     </span>
                   </div>
@@ -302,7 +302,7 @@ export const Assets: React.FC<AssetsProps> = ({ data, setData }) => {
           );
         })}
         {filteredAssets.length === 0 && (
-          <div className="col-span-full py-20 text-center border-2 border-dashed border-zinc-100 rounded-[2.5rem] bg-zinc-50/30">
+          <div className="col-span-full py-20 text-center border-2 border-dashed border-zinc-100 rounded-2xl bg-zinc-50/30">
             <Package size={40} className="mx-auto text-zinc-200 mb-4" />
             <p className="text-zinc-400 font-bold">No assets found.</p>
             <p className="text-xs text-zinc-400 mt-1">Add your first property asset to start tracking.</p>
@@ -317,10 +317,10 @@ export const Assets: React.FC<AssetsProps> = ({ data, setData }) => {
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-lg overflow-hidden"
+              className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden"
             >
               <div className="p-8 border-b border-zinc-100 flex items-center justify-between">
-                <h3 className="text-xl font-black text-zinc-900 tracking-tight">Add New Asset</h3>
+                <h3 className="text-xl font-semibold text-zinc-900 tracking-tight">Add New Asset</h3>
                 <button 
                   onClick={() => setIsAddModalOpen(false)}
                   className="p-2 hover:bg-zinc-100 rounded-full text-zinc-400 transition-colors"
@@ -331,7 +331,7 @@ export const Assets: React.FC<AssetsProps> = ({ data, setData }) => {
 
               <div className="p-8 space-y-6">
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Asset Name</label>
+                  <label className="text-[11px] font-semibold text-zinc-400">Asset Name</label>
                   <input 
                     type="text"
                     placeholder="e.g. Samsung 55' Smart TV"
@@ -343,7 +343,7 @@ export const Assets: React.FC<AssetsProps> = ({ data, setData }) => {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Category</label>
+                    <label className="text-[11px] font-semibold text-zinc-400">Category</label>
                     <select 
                       className="w-full p-4 bg-zinc-50 border border-zinc-100 rounded-2xl text-sm outline-none"
                       value={newAsset.category}
@@ -356,7 +356,7 @@ export const Assets: React.FC<AssetsProps> = ({ data, setData }) => {
                     </select>
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Condition</label>
+                    <label className="text-[11px] font-semibold text-zinc-400">Condition</label>
                     <select 
                       className="w-full p-4 bg-zinc-50 border border-zinc-100 rounded-2xl text-sm outline-none"
                       value={newAsset.condition}
@@ -372,7 +372,7 @@ export const Assets: React.FC<AssetsProps> = ({ data, setData }) => {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Property</label>
+                    <label className="text-[11px] font-semibold text-zinc-400">Property</label>
                     <select 
                       className="w-full p-4 bg-zinc-50 border border-zinc-100 rounded-2xl text-sm outline-none"
                       value={newAsset.apartment_id}
@@ -385,15 +385,15 @@ export const Assets: React.FC<AssetsProps> = ({ data, setData }) => {
                     </select>
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Purchase Price (AED)</label>
+                    <label className="text-[11px] font-semibold text-zinc-400">Purchase Price ({data.apartments.find(a => a.apartment_id === newAsset.apartment_id)?.currency || 'in the property\'s currency'})</label>
                     <div className="relative">
                       <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" size={16} />
                       <input 
                         type="number"
                         className="w-full p-4 pl-10 bg-zinc-50 border border-zinc-100 rounded-2xl text-sm outline-none"
                         placeholder="0.00"
-                        value={newAsset.cost_aed || ""}
-                        onChange={(e) => setNewAsset({...newAsset, cost_aed: Number(e.target.value)})}
+                        value={newAsset.cost || ""}
+                        onChange={(e) => setNewAsset({...newAsset, cost: Number(e.target.value)})}
                       />
                     </div>
                   </div>
@@ -401,7 +401,7 @@ export const Assets: React.FC<AssetsProps> = ({ data, setData }) => {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Purchase Date</label>
+                    <label className="text-[11px] font-semibold text-zinc-400">Purchase Date</label>
                     <input 
                       type="date"
                       className="w-full p-4 bg-zinc-50 border border-zinc-100 rounded-2xl text-sm outline-none"
@@ -410,7 +410,7 @@ export const Assets: React.FC<AssetsProps> = ({ data, setData }) => {
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Warranty Expiry</label>
+                    <label className="text-[11px] font-semibold text-zinc-400">Warranty Expiry</label>
                     <input 
                       type="date"
                       className="w-full p-4 bg-zinc-50 border border-zinc-100 rounded-2xl text-sm outline-none"
@@ -423,15 +423,15 @@ export const Assets: React.FC<AssetsProps> = ({ data, setData }) => {
                 <div className="flex gap-4 pt-4">
                   <Button 
                     variant="outline" 
-                    className="flex-1 py-4 rounded-2xl font-black uppercase tracking-widest text-xs"
+                    className="flex-1 py-4 rounded-2xl font-semibold text-xs"
                     onClick={() => setIsAddModalOpen(false)}
                   >
                     Cancel
                   </Button>
                   <Button 
-                    className="flex-1 py-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-black uppercase tracking-widest text-xs"
+                    className="flex-1 py-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-semibold text-xs"
                     onClick={handleAddAsset}
-                    disabled={!newAsset.name || !newAsset.apartment_id || !newAsset.cost_aed}
+                    disabled={!newAsset.name || !newAsset.apartment_id || !newAsset.cost}
                   >
                     Save Asset
                   </Button>

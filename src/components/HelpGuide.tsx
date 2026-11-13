@@ -72,7 +72,7 @@ export const HelpGuide: React.FC<HelpGuideProps> = ({ isOpen, onClose }) => {
       icon: <CheckCircle2 size={20} className="text-emerald-500" />,
       content: (
         <div className="space-y-3">
-          <p className="text-xs font-bold text-zinc-900 uppercase tracking-wider">Recommended Daily Tasks:</p>
+          <p className="text-xs font-bold text-zinc-900">Recommended Daily Tasks:</p>
           <div className="space-y-2">
             <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-100 flex items-center gap-3">
               <CheckCircle2 size={16} className="text-emerald-500" />
@@ -99,28 +99,28 @@ export const HelpGuide: React.FC<HelpGuideProps> = ({ isOpen, onClose }) => {
           <p>Welcome to your <strong>Short-Term Rental Management Dashboard</strong>. Follow these steps to set up and manage your portfolio successfully:</p>
           <div className="space-y-3">
             <div className="flex gap-3">
-              <div className="w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[10px] font-bold shrink-0">1</div>
+              <div className="w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[11px] font-bold shrink-0">1</div>
               <div>
                 <p className="font-bold text-zinc-900">Add Property</p>
                 <p className="text-xs">Go to <strong>Setup</strong> to add your apartments, rental details, and cheques.</p>
               </div>
             </div>
             <div className="flex gap-3">
-              <div className="w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[10px] font-bold shrink-0">2</div>
+              <div className="w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[11px] font-bold shrink-0">2</div>
               <div>
                 <p className="font-bold text-zinc-900">Add Booking</p>
                 <p className="text-xs">Import from Airbnb/Booking.com or manually add reservations in <strong>Reservations</strong>.</p>
               </div>
             </div>
             <div className="flex gap-3">
-              <div className="w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[10px] font-bold shrink-0">3</div>
+              <div className="w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[11px] font-bold shrink-0">3</div>
               <div>
                 <p className="font-bold text-zinc-900">Manage Guest Stay</p>
                 <p className="text-xs">Track check-ins/outs and guest details in the <strong>Dashboard</strong> or <strong>Reservations</strong>.</p>
               </div>
             </div>
             <div className="flex gap-3">
-              <div className="w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[10px] font-bold shrink-0">4</div>
+              <div className="w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[11px] font-bold shrink-0">4</div>
               <div>
                 <p className="font-bold text-zinc-900">Record Service</p>
                 <p className="text-xs">After checkout, record cleaning or maintenance tasks in <strong>Operations</strong>.</p>
@@ -263,7 +263,7 @@ export const HelpGuide: React.FC<HelpGuideProps> = ({ isOpen, onClose }) => {
             <div className="p-6 border-b border-zinc-100 flex items-center justify-between bg-zinc-900 text-white">
               <div className="flex items-center gap-3">
                 <HelpCircle className="text-emerald-500" />
-                <h2 className="text-xl font-black tracking-tight uppercase">Help & User Guide</h2>
+                <h2 className="text-xl font-semibold tracking-tight">Help & User Guide</h2>
               </div>
               <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full transition-colors">
                 <X size={24} />
@@ -312,7 +312,7 @@ export const HelpGuide: React.FC<HelpGuideProps> = ({ isOpen, onClose }) => {
                 <Info size={18} className="text-emerald-600 shrink-0 mt-0.5" />
                 <div>
                   <p className="text-xs font-bold text-zinc-900">Need more help?</p>
-                  <p className="text-[10px] text-zinc-500 mt-1 leading-relaxed">
+                  <p className="text-[11px] text-zinc-500 mt-1 leading-relaxed">
                     If you can't find what you're looking for, please contact our support team at <span className="text-emerald-600 font-bold">support@str-manager.com</span>
                   </p>
                 </div>

@@ -16,16 +16,16 @@ export const DEFAULT_USER_DATA: UserData = {
       specification: "1BR",
       measurement_sqft: 850,
       start_operation_date: "2026-01-01",
-      annual_rent_aed: 144000,
-      monthly_rent_aed: 12000,
+      annual_rent: 144000,
+      monthly_rent: 12000,
       num_cheques: 4,
       rent_cheques: [
-        { cheque_id: "chq-1", due_date: "2026-01-01", amount_aed: 36000, status: "paid" },
-        { cheque_id: "chq-2", due_date: "2026-04-01", amount_aed: 36000, status: "due" }
+        { cheque_id: "chq-1", due_date: "2026-01-01", amount: 36000, status: "paid" },
+        { cheque_id: "chq-2", due_date: "2026-04-01", amount: 36000, status: "due" }
       ],
       utilities_monthly_defaults: {
-        dewa_electricity_aed: 800,
-        internet_aed: 400
+        electricity: 800,
+        internet: 400
       },
       currency: "AED",
       setup_costs: [
@@ -34,7 +34,7 @@ export const DEFAULT_USER_DATA: UserData = {
           date: "2025-12-15",
           category: "Furnishing",
           description: "Living room set",
-          amount_aed: 15000,
+          amount: 15000,
           is_refundable: false,
           payment_method: "bank",
           vendor: "IKEA"
@@ -48,13 +48,13 @@ export const DEFAULT_USER_DATA: UserData = {
           start_date: "2025-01-01",
           end_date: "2025-12-31",
           status: "expired",
-          annual_rent_aed: 135000,
-          monthly_rent_aed: 11250,
+          annual_rent: 135000,
+          monthly_rent: 11250,
           num_cheques: 4,
-          total_revenue_aed: 184500,
-          total_expenses_aed: 147250,
-          net_payout_aed: 178900,
-          net_profit_aed: 31650,
+          total_revenue: 184500,
+          total_expenses: 147250,
+          net_payout: 178900,
+          net_profit: 31650,
           occupancy_rate: 82,
           num_reservations: 46
         }
@@ -72,9 +72,9 @@ export const DEFAULT_USER_DATA: UserData = {
       check_out: "2026-04-16",
       num_guests: 2,
       nights: 4,
-      total_booking_revenue_aed: 5000,
-      net_payout_aed: 4850,
-      cleaning_cost_aed: 250,
+      total_booking_revenue: 5000,
+      net_payout: 4850,
+      cleaning_cost: 250,
       status: "confirmed",
       cancellation_policy: "non-refundable",
       booking_date: "2026-03-20"
@@ -89,9 +89,9 @@ export const DEFAULT_USER_DATA: UserData = {
       check_out: "2026-04-22",
       num_guests: 3,
       nights: 4,
-      total_booking_revenue_aed: 4500,
-      net_payout_aed: 3825,
-      cleaning_cost_aed: 250,
+      total_booking_revenue: 4500,
+      net_payout: 3825,
+      cleaning_cost: 250,
       status: "confirmed",
       cancellation_policy: "7-day-flexible",
       booking_date: "2026-04-01"
@@ -179,7 +179,7 @@ export const DEFAULT_USER_DATA: UserData = {
   },
   subscription: {
     plan: "pro",
-    monthly_payment_aed: 499,
+    monthly_payment: 499,
     next_charge_date: "2026-03-29",
     card_details: {
       last4: "4242",

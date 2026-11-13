@@ -16,6 +16,7 @@ import { UserData } from '../types';
 import { format, parseISO, isAfter, isBefore, isEqual, addDays, differenceInDays } from 'date-fns';
 import { cn } from '../lib/utils';
 import Papa from 'papaparse';
+import { csvFileProblem, safeParseOptions, safeUnparseOptions } from '../lib/csv';
 import { calculateDailyPL, getMonthlyKPIs, getCashflowTimeline } from '../services/analytics';
 
 interface DataManagerProps {
@@ -36,7 +37,7 @@ export const DataManager: React.FC<DataManagerProps> = ({
   const [resetScope, setResetScope] = useState<'all' | 'after' | 'before'>('after');
 
   const exportToCSV = (jsonData: any[], fileName: string) => {
-    const csv = Papa.unparse(jsonData);
+    const csv = Papa.unparse(jsonData, safeUnparseOptions);
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
@@ -89,17 +90,17 @@ export const DataManager: React.FC<DataManagerProps> = ({
     let sample = [];
 
     if (type === 'reservations') {
-      headers = ['reservation_code', 'guest_name', 'num_guests', 'check_in', 'check_out', 'total_payout_aed', 'status', 'apartment_id'];
+      headers = ['reservation_code', 'guest_name', 'num_guests', 'check_in', 'check_out', 'total_payout', 'status', 'apartment_id'];
       sample = [['RES-001', 'John Doe', '2', '2024-05-01', '2024-05-05', '2500', 'confirmed', 'APT-1']];
     } else if (type === 'expenses') {
-      headers = ['date', 'category', 'amount_aed', 'notes', 'apartment_id', 'vendor_id'];
+      headers = ['date', 'category', 'amount', 'notes', 'apartment_id', 'vendor_id'];
       sample = [['2024-05-01', 'Maintenance', '500', 'AC Repair', 'APT-1', 'VEND-1']];
     } else {
-      headers = ['name', 'nickname', 'building', 'address', 'specification', 'measurement_sqft', 'annual_rent_aed'];
+      headers = ['name', 'nickname', 'building', 'address', 'specification', 'measurement_sqft', 'annual_rent'];
       sample = [['Bay Central 605', 'BC-605', 'Bay Central', 'Dubai Marina', '1BR', '850', '95000']];
     }
 
-    const csv = Papa.unparse({ fields: headers, data: sample });
+    const csv = Papa.unparse({ fields: headers, data: sample }, safeUnparseOptions);
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
@@ -110,11 +111,16 @@ export const DataManager: React.FC<DataManagerProps> = ({
   const handleDataImport = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    const problem = csvFileProblem(file);
+    if (problem) {
+      alert(problem);
+      e.target.value = '';
+      return;
+    }
 
     setIsImporting(true);
     Papa.parse(file, {
-      header: true,
-      skipEmptyLines: true,
+      ...safeParseOptions,
       complete: (results) => {
         if (importType === 'properties') {
           const importedApts: any[] = results.data.map((row: any) => ({
@@ -126,15 +132,15 @@ export const DataManager: React.FC<DataManagerProps> = ({
             specification: row.specification || 'Studio',
             measurement_sqft: Number(row.measurement_sqft) || 0,
             start_operation_date: row.start_operation_date || format(new Date(), 'yyyy-MM-dd'),
-            annual_rent_aed: Number(row.annual_rent_aed) || 0,
-            monthly_rent_aed: Number(row.monthly_rent_aed) || Math.round((Number(row.annual_rent_aed) || 0) / 12),
+            annual_rent: Number(row.annual_rent) || 0,
+            monthly_rent: Number(row.monthly_rent) || Math.round((Number(row.annual_rent) || 0) / 12),
             num_cheques: Number(row.num_cheques) || 4,
             rent_cheques: [],
             setup_costs: [],
             currency: 'AED',
             utilities_monthly_defaults: {
-              dewa_electricity_aed: 500,
-              internet_aed: 350
+              electricity: 500,
+              internet: 350
             }
           }));
           setData(prev => ({ ...prev, apartments: [...prev.apartments, ...importedApts] }));
@@ -145,9 +151,9 @@ export const DataManager: React.FC<DataManagerProps> = ({
             num_guests: Number(row.num_guests) || 1,
             check_in: row.check_in || format(new Date(), 'yyyy-MM-dd'),
             check_out: row.check_out || format(addDays(new Date(), 1), 'yyyy-MM-dd'),
-            total_payout_aed: Number(row.total_payout_aed) || 0,
-            net_payout_aed: Number(row.total_payout_aed) || 0,
-            status: row.status || 'confirmed',
+            total_payout: Number(row.total_payout) || 0,
+            net_payout: Number(row.total_payout) || 0,
+            status: String(row.status || '').toLowerCase() === 'cancelled' ? 'cancelled' : 'confirmed',
             apartment_id: row.apartment_id || data.apartments[0]?.apartment_id || '',
             nights: differenceInDays(parseISO(row.check_out || format(addDays(new Date(), 1), 'yyyy-MM-dd')), parseISO(row.check_in || format(new Date(), 'yyyy-MM-dd')))
           }));
@@ -157,7 +163,7 @@ export const DataManager: React.FC<DataManagerProps> = ({
             id: `EXP-${Math.random().toString(36).substr(2, 9)}`,
             date: row.date || format(new Date(), 'yyyy-MM-dd'),
             category: row.category || 'Maintenance',
-            amount_aed: Number(row.amount_aed) || 0,
+            amount: Number(row.amount) || 0,
             notes: row.notes || '',
             apartment_id: row.apartment_id || data.apartments[0]?.apartment_id || '',
             vendor_id: row.vendor_id || ''
@@ -183,7 +189,7 @@ export const DataManager: React.FC<DataManagerProps> = ({
         <Card title="Data Management" className="h-full">
           <div className="space-y-8 mt-4">
             <div className="space-y-4">
-              <h4 className="text-xs font-black text-zinc-900 uppercase tracking-widest flex items-center gap-2">
+              <h4 className="text-xs font-semibold text-zinc-900 flex items-center gap-2">
                 <Download size={16} className="text-emerald-500" />
                 Export Data
               </h4>
@@ -212,7 +218,7 @@ export const DataManager: React.FC<DataManagerProps> = ({
 
             <div className="space-y-6 pt-6 border-t border-zinc-100">
               <div className="flex items-center justify-between">
-                <h4 className="text-xs font-black text-zinc-900 uppercase tracking-widest flex items-center gap-2">
+                <h4 className="text-xs font-semibold text-zinc-900 flex items-center gap-2">
                   <Upload size={16} className="text-blue-500" />
                   Import System
                 </h4>
@@ -222,7 +228,7 @@ export const DataManager: React.FC<DataManagerProps> = ({
                       key={t}
                       onClick={() => setImportType(t)}
                       className={cn(
-                        "px-3 py-1.5 text-[9px] font-black uppercase tracking-widest rounded-lg transition-all",
+                        "px-3 py-1.5 text-[11px] font-semibold rounded-lg transition-all",
                         importType === t ? "bg-white text-zinc-900 shadow-sm" : "text-zinc-400 hover:text-zinc-600"
                       )}
                     >
@@ -233,7 +239,7 @@ export const DataManager: React.FC<DataManagerProps> = ({
               </div>
 
               <div className="space-y-4">
-                <div className="p-8 border-2 border-dashed border-zinc-100 rounded-[2rem] bg-zinc-50/50 text-center group hover:border-blue-500/30 transition-all">
+                <div className="p-8 border-2 border-dashed border-zinc-100 rounded-2xl bg-zinc-50/50 text-center group hover:border-blue-500/30 transition-all">
                   <input 
                     type="file" 
                     id="data-import" 
@@ -250,8 +256,8 @@ export const DataManager: React.FC<DataManagerProps> = ({
                       <Upload size={32} />
                     </div>
                     <div className="space-y-1">
-                      <p className="text-sm font-black text-zinc-900">Import {importType} via CSV</p>
-                      <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest">Click to upload or drag and drop</p>
+                      <p className="text-sm font-semibold text-zinc-900">Import {importType} via CSV</p>
+                      <p className="text-[11px] text-zinc-400 font-bold">Click to upload or drag and drop</p>
                     </div>
                   </label>
                 </div>
@@ -260,11 +266,11 @@ export const DataManager: React.FC<DataManagerProps> = ({
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <Zap size={14} className="text-amber-500" />
-                      <span className="text-[10px] font-black uppercase tracking-widest text-zinc-900">Key Reference Guide</span>
+                      <span className="text-[11px] font-semibold text-zinc-900">Key Reference Guide</span>
                     </div>
                     <button 
                       onClick={() => downloadTemplate(importType)}
-                      className="text-[9px] font-black text-blue-600 uppercase tracking-widest hover:underline flex items-center gap-1"
+                      className="text-[11px] font-semibold text-blue-600 hover:underline flex items-center gap-1"
                     >
                       <Download size={10} /> Download Template
                     </button>
@@ -276,33 +282,33 @@ export const DataManager: React.FC<DataManagerProps> = ({
                       { key: 'guest_name', desc: 'Full name of guest' },
                       { key: 'check_in', desc: 'YYYY-MM-DD' },
                       { key: 'check_out', desc: 'YYYY-MM-DD' },
-                      { key: 'total_payout_aed', desc: 'Numeric value' },
+                      { key: 'total_payout', desc: 'Numeric value' },
                       { key: 'apartment_id', desc: 'Must match property ID' },
                     ].map(item => (
                       <div key={item.key} className="flex flex-col">
-                        <span className="text-[9px] font-black text-zinc-900 font-mono">{item.key}</span>
+                        <span className="text-[11px] font-semibold text-zinc-900 font-mono">{item.key}</span>
                         <span className="text-[8px] text-zinc-400 font-medium">{item.desc}</span>
                       </div>
                     ))}
                     {importType === 'expenses' && [
                       { key: 'date', desc: 'YYYY-MM-DD' },
                       { key: 'category', desc: 'Maintenance, Utilities, etc' },
-                      { key: 'amount_aed', desc: 'Numeric value' },
+                      { key: 'amount', desc: 'Numeric value' },
                       { key: 'apartment_id', desc: 'Property link' },
                     ].map(item => (
                       <div key={item.key} className="flex flex-col">
-                        <span className="text-[9px] font-black text-zinc-900 font-mono">{item.key}</span>
+                        <span className="text-[11px] font-semibold text-zinc-900 font-mono">{item.key}</span>
                         <span className="text-[8px] text-zinc-400 font-medium">{item.desc}</span>
                       </div>
                     ))}
                     {importType === 'properties' && [
                       { key: 'name', desc: 'Display name' },
                       { key: 'nickname', desc: 'Short code (e.g. BC-605)' },
-                      { key: 'annual_rent_aed', desc: 'Total yearly rent' },
+                      { key: 'annual_rent', desc: 'Total yearly rent' },
                       { key: 'specification', desc: 'Studio, 1BR, etc' },
                     ].map(item => (
                       <div key={item.key} className="flex flex-col">
-                        <span className="text-[9px] font-black text-zinc-900 font-mono">{item.key}</span>
+                        <span className="text-[11px] font-semibold text-zinc-900 font-mono">{item.key}</span>
                         <span className="text-[8px] text-zinc-400 font-medium">{item.desc}</span>
                       </div>
                     ))}
@@ -315,20 +321,20 @@ export const DataManager: React.FC<DataManagerProps> = ({
 
         <Card title="System Maintenance" className="h-full">
           <div className="space-y-6 mt-4">
-            <div className="p-6 bg-rose-50 rounded-[2rem] border border-rose-100">
+            <div className="p-6 bg-rose-50 rounded-2xl border border-rose-100">
               <div className="flex items-start gap-4">
                 <div className="w-10 h-10 bg-rose-100 rounded-xl flex items-center justify-center text-rose-600 shrink-0">
                   <AlertCircle size={20} />
                 </div>
                 <div className="flex-1">
-                  <p className="text-xs font-black text-rose-900 uppercase tracking-widest">Granular Data Reset</p>
+                  <p className="text-xs font-semibold text-rose-900">Granular Data Reset</p>
                   <p className="text-[11px] text-rose-700 mt-2 leading-relaxed font-medium">
                     Permanently remove records based on a specific timeline. This is useful for clearing old history or resetting a specific period.
                   </p>
                   
                   <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <label className="text-[9px] font-black text-rose-900 uppercase tracking-widest">Target Date</label>
+                      <label className="text-[11px] font-semibold text-rose-900">Target Date</label>
                       <input 
                         type="date" 
                         value={resetDate}
@@ -337,7 +343,7 @@ export const DataManager: React.FC<DataManagerProps> = ({
                       />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-[9px] font-black text-rose-900 uppercase tracking-widest">Reset Scope</label>
+                      <label className="text-[11px] font-semibold text-rose-900">Reset Scope</label>
                       <select 
                         value={resetScope}
                         onChange={(e) => setResetScope(e.target.value as any)}
@@ -345,7 +351,7 @@ export const DataManager: React.FC<DataManagerProps> = ({
                       >
                         <option value="after">All data AFTER date</option>
                         <option value="before">All data BEFORE date</option>
-                        <option value="all">WIPE EVERYTHING</option>
+                        <option value="all">Delete all data</option>
                       </select>
                     </div>
                   </div>
@@ -362,7 +368,7 @@ export const DataManager: React.FC<DataManagerProps> = ({
                         }
                       }
                     }}
-                    className="mt-6 w-full px-4 py-4 bg-rose-600 text-white text-[10px] font-black uppercase tracking-widest rounded-2xl hover:bg-rose-700 transition-all shadow-lg shadow-rose-200 active:scale-[0.98]"
+                    className="mt-6 w-full px-4 py-4 bg-rose-600 text-white text-[11px] font-semibold rounded-2xl hover:bg-rose-700 transition-all shadow-lg shadow-rose-200 active:scale-[0.98]"
                   >
                     Execute Reset Sequence
                   </button>
@@ -374,11 +380,11 @@ export const DataManager: React.FC<DataManagerProps> = ({
               <div className="flex items-start gap-3">
                 <RefreshCw className="text-zinc-400 shrink-0 mt-0.5" size={18} />
                 <div>
-                  <p className="text-xs font-bold text-zinc-900 uppercase tracking-wider">Cache Synchronization</p>
+                  <p className="text-xs font-bold text-zinc-900">Cache Synchronization</p>
                   <p className="text-[11px] text-zinc-500 mt-1 leading-relaxed">
                     If you notice discrepancies in your reports, force a recalculation of all analytics.
                   </p>
-                  <button className="mt-4 px-4 py-2 bg-zinc-900 text-white text-[10px] font-black uppercase tracking-widest rounded-lg hover:bg-zinc-800 transition-all">
+                  <button className="mt-4 px-4 py-2 bg-zinc-900 text-white text-[11px] font-semibold rounded-lg hover:bg-zinc-800 transition-all">
                     Rebuild Analytics Cache
                   </button>
                 </div>
