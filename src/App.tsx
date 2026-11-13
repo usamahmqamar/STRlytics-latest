@@ -10,6 +10,7 @@ import { useAuth, type Workspace } from './auth/AuthProvider';
 import { canEdit, canManage, workspaceIsWritable } from './lib/permissions';
 import { Payouts } from './components/Payouts';
 import { ImportBookings } from './components/ImportBookings';
+import { NeedsProperty } from './components/GettingStarted';
 import { loadWorkspaceData, saveChanges, TABLE_LABELS, type LoadedWorkspace } from './services/dataStore';
 import { setActiveWorkspace } from './services/ai';
 import { UserData } from './types';
@@ -51,6 +52,9 @@ export const APP_TABS = [
 ];
 
 // Screens where the property, date and currency filters change what is shown.
+// Screens that show nothing useful until a property exists; they get one clear next step instead.
+const NEEDS_PROPERTY = new Set(['calendar', 'occupancy', 'daily-pl', 'analytics', 'cashflow', 'reports', 'operations', 'payouts', 'assets', 'ocr']);
+
 const FILTERED_TABS = new Set(['dashboard', 'reservations', 'occupancy', 'daily-pl', 'analytics', 'cashflow', 'payouts', 'reports', 'operations']);
 
 export default function App() {
@@ -86,6 +90,7 @@ export default function App() {
     displayCurrency: 'AED'
   });
   const editable = workspace ? canEdit(workspace) : false;
+  const blockedForSetup = userData.apartments.length === 0 && NEEDS_PROPERTY.has(activeTab);
   // Latest values for the save loop (avoids saving stale data from an old render).
   const latest = useRef({ userData, workspace, user });
   latest.current = { userData, workspace, user };
@@ -317,7 +322,7 @@ export default function App() {
         />
         <HelpGuide isOpen={isHelpOpen} onClose={() => setIsHelpOpen(false)} />
 
-        {FILTERED_TABS.has(activeTab) && (
+        {FILTERED_TABS.has(activeTab) && userData.apartments.length > 0 && (
           <FilterBar 
             filters={filters} 
             setFilters={setFilters} 
@@ -359,11 +364,14 @@ export default function App() {
             exit={{ opacity: 0, y: -10 }}
             transition={{ duration: 0.2 }}
           >
-            {activeTab === 'dashboard' && <Dashboard data={userData} setData={setUserData} filters={filters} onTabChange={setActiveTab} />}
-            {activeTab === 'calendar' && <Calendar data={userData} filters={filters} />}
+            {activeTab === 'dashboard' && <Dashboard data={userData} setData={setUserData} filters={filters} onTabChange={setActiveTab} onImportPdfs={() => setIsImportOpen(true)} />}
+            {blockedForSetup && (
+              <NeedsProperty screen={NAV_LABELS[activeTab] ?? 'This screen'} onAdd={() => setActiveTab('setup')} />
+            )}
+            {!blockedForSetup && activeTab === 'calendar' && <Calendar data={userData} filters={filters} />}
             {activeTab === 'reservations' && <Reservations data={userData} setData={setUserData} filters={filters} onImportPdfs={() => setIsImportOpen(true)} />}
-            {activeTab === 'payouts' && <Payouts data={userData} orgId={workspace.id} canManage={canManage(workspace)} filters={filters} />}
-            {activeTab === 'operations' && (
+            {!blockedForSetup && activeTab === 'payouts' && <Payouts data={userData} orgId={workspace.id} canManage={canManage(workspace)} filters={filters} />}
+            {!blockedForSetup && activeTab === 'operations' && (
               <Operations 
                 data={userData} 
                 setData={setUserData} 
@@ -373,9 +381,9 @@ export default function App() {
               />
             )}
             {activeTab === 'setup' && <Setup data={userData} setData={setUserData} />}
-            {activeTab === 'analytics' && <Analytics data={userData} filters={filters} />}
-            {activeTab === 'occupancy' && <OccupancyRevenue data={userData} filters={filters} />}
-            {activeTab === 'ocr' && (
+            {!blockedForSetup && activeTab === 'analytics' && <Analytics data={userData} filters={filters} />}
+            {!blockedForSetup && activeTab === 'occupancy' && <OccupancyRevenue data={userData} filters={filters} />}
+            {!blockedForSetup && activeTab === 'ocr' && (
               <ReceiptOCR 
                 onSuccess={(extractedData) => {
                   setPrefilledExpense({
@@ -388,12 +396,12 @@ export default function App() {
                 }} 
               />
             )}
-            {activeTab === 'daily-pl' && <DailyPL data={userData} filters={filters} />}
+            {!blockedForSetup && activeTab === 'daily-pl' && <DailyPL data={userData} filters={filters} />}
             {activeTab === 'projections' && <Projections />}
-            {activeTab === 'cashflow' && <Cashflow data={userData} filters={filters} />}
-            {activeTab === 'assets' && <Assets data={userData} setData={setUserData} />}
+            {!blockedForSetup && activeTab === 'cashflow' && <Cashflow data={userData} filters={filters} />}
+            {!blockedForSetup && activeTab === 'assets' && <Assets data={userData} setData={setUserData} />}
             {activeTab === 'documents' && <Documents data={userData} setData={setUserData} />}
-            {activeTab === 'reports' && <InvestorReports data={userData} />}
+            {!blockedForSetup && activeTab === 'reports' && <InvestorReports data={userData} />}
             {activeTab === 'data' && (
               <DataManager 
                 data={userData} 

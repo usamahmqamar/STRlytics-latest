@@ -20,6 +20,7 @@ import {
   BarChart, Bar, Cell, PieChart, Pie, Legend,
   Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis
 } from 'recharts';
+import { GettingStarted } from './GettingStarted';
 import { Card } from './ui/Card';
 import { Button } from './ui/Button';
 import { Tooltip } from './ui/Tooltip';
@@ -55,6 +56,7 @@ interface DashboardProps {
     displayCurrency: string;
   };
   onTabChange: (tab: string) => void;
+  onImportPdfs?: () => void;
 }
 
 const StatCard: React.FC<{
@@ -96,7 +98,7 @@ const StatCard: React.FC<{
   </div>
 );
 
-export const Dashboard: React.FC<DashboardProps> = ({ data, setData, filters, onTabChange }) => {
+export const Dashboard: React.FC<DashboardProps> = ({ data, setData, filters, onTabChange, onImportPdfs }) => {
   const [isCustomizing, setIsCustomizing] = React.useState(false);
 
   const formatValue = (val: number) => {
@@ -866,6 +868,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, setData, filters, on
 
   return (
     <div className="space-y-10 pb-20">
+      <GettingStarted data={data} onTabChange={onTabChange} onImportPdfs={onImportPdfs ?? (() => onTabChange('reservations'))} />
+      {data.apartments.length > 0 && <>
       {/* Summary: the one bold element on the page */}
       <section aria-label="Summary for the selected period" className="rounded-3xl bg-emerald-900 p-5 sm:p-7 text-white dark:border dark:border-emerald-800/60 dark:bg-emerald-950">
         <div className="flex flex-wrap items-start justify-between gap-6">
@@ -1006,6 +1010,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, setData, filters, on
           );
         })}
       </div>
+      </>}
     </div>
   );
 };
