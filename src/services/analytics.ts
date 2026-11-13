@@ -45,103 +45,9 @@ export function getExchangeRate(from: string, to: string): number {
   return (EXCHANGE_RATES[to] || 1) / (EXCHANGE_RATES[from] || 1);
 }
 
-export function calculateDailyPL(data: UserData, startDate: Date, endDate: Date, apartmentId?: string) {
-  if (isNaN(startDate.getTime()) || isNaN(endDate.getTime()) || startDate > endDate) return [];
-
-  const days: Date[] = [];
-  let current = new Date(startDate);
-  while (current <= endDate) {
-    days.push(new Date(current));
-    current.setDate(current.getDate() + 1);
-  }
-
-  const results = [];
-  for (const day of days) {
-    const dateStr = format(day, 'yyyy-MM-dd');
-    const monthStr = format(day, 'yyyy-MM');
-    const targetApartments = apartmentId ? data.apartments.filter(a => a.apartment_id === apartmentId) : data.apartments;
-
-    for (const apt of targetApartments) {
-      // Revenue
-      const activeBooking = data.reservations.find(r => 
-        r.apartment_id === apt.apartment_id && 
-        r.status !== 'cancelled' && 
-        isWithinInterval(day, { start: parseISO(r.check_in), end: subDays(parseISO(r.check_out), 1) })
-      );
-
-      const cancelledRevenue = data.reservations
-        .filter(r => r.apartment_id === apt.apartment_id && r.status === 'cancelled' && isWithinInterval(day, { start: parseISO(r.check_in), end: subDays(parseISO(r.check_out), 1) }))
-        .reduce((sum, r) => sum + (r.net_payout_aed / r.nights), 0);
-
-      const isOccupied = !!activeBooking;
-      const dailyRevenue = activeBooking ? (activeBooking.net_payout_aed / activeBooking.nights) : 0;
-      
-      const daysInMonth = getDaysInMonth(day);
-      
-      // Rent
-      let monthlyRent = apt.monthly_rent_aed;
-      if (apt.rent_cheques && apt.rent_cheques.length > 0) {
-        monthlyRent = apt.rent_cheques.reduce((sum, chq) => sum + chq.amount_aed, 0) / 12;
-      }
-      const dailyRent = monthlyRent / daysInMonth;
-
-      // Utilities
-      const elecBill = data.monthlyBills.find(b => b.apartment_id === apt.apartment_id && b.month === monthStr && b.bill_type === 'electricity');
-      const interBill = data.monthlyBills.find(b => b.apartment_id === apt.apartment_id && b.month === monthStr && b.bill_type === 'internet');
-      
-      const monthlyElec = elecBill ? elecBill.amount_aed : apt.utilities_monthly_defaults.dewa_electricity_aed;
-      const monthlyInter = interBill ? interBill.amount_aed : apt.utilities_monthly_defaults.internet_aed;
-      
-      const dailyElec = monthlyElec / daysInMonth;
-      const dailyInter = monthlyInter / daysInMonth;
-
-      // Cleaning (allocated per night of stay)
-      const cleaningAllocated = activeBooking ? (activeBooking.cleaning_cost_aed / activeBooking.nights) : 0;
-
-      // Other costs from reservation
-      let otherCosts = 0;
-      data.reservations.filter(r => r.apartment_id === apt.apartment_id && r.status !== 'cancelled').forEach(r => {
-        r.other_booking_costs?.forEach(cost => {
-          const costDate = cost.date ? parseISO(cost.date) : parseISO(r.check_out);
-          if (format(day, 'yyyy-MM-dd') === format(costDate, 'yyyy-MM-dd')) {
-            otherCosts += cost.amount_aed;
-          }
-        });
-      });
-
-      // Real-time expenses
-      const directExpenses = data.dailyExpenses
-        .filter(e => e.apartment_id === apt.apartment_id && format(parseISO(e.date), 'yyyy-MM-dd') === dateStr)
-        .reduce((sum, e) => sum + e.amount_aed, 0);
-
-      const portfolioSharedExpense = data.apartments.length > 0 
-        ? data.dailyExpenses.filter(e => e.apartment_id === 'PORTFOLIO' && format(parseISO(e.date), 'yyyy-MM-dd') === dateStr).reduce((sum, e) => sum + e.amount_aed, 0) / data.apartments.length
-        : 0;
-
-      const totalDailyCost = dailyRent + dailyElec + dailyInter + cleaningAllocated + otherCosts + directExpenses + portfolioSharedExpense;
-      const dailyProfit = dailyRevenue - totalDailyCost;
-
-      results.push({
-        date: dateStr,
-        apartment: apt.name,
-        apartment_id: apt.apartment_id,
-        occupied: isOccupied ? 'yes' : 'no',
-        occupied_nights_count: isOccupied ? 1 : 0,
-        daily_revenue_aed: dailyRevenue,
-        lost_revenue_aed: cancelledRevenue,
-        daily_rent_aed: dailyRent,
-        daily_electricity_aed: dailyElec,
-        daily_internet_aed: dailyInter,
-        cleaning_allocated_aed: cleaningAllocated,
-        other_costs_allocated_aed: otherCosts,
-        real_time_expenses_aed: directExpenses + portfolioSharedExpense,
-        total_daily_cost_aed: totalDailyCost,
-        daily_profit_aed: dailyProfit
-      });
-    }
-  }
-  return results;
-}
+// Daily P&L lives in src/lib/pl.ts (tested); re-exported here for existing screens.
+export { calculateDailyPL } from '../lib/pl';
+import { calculateDailyPL } from '../lib/pl';
 
 export function getMonthlyKPIs(data: UserData, monthStr: string) {
   const start = startOfMonth(parseISO(`${monthStr}-01`));
@@ -153,7 +59,8 @@ export function getMonthlyKPIs(data: UserData, monthStr: string) {
 
   for (const apt of apartments) {
     const aptDaily = dailyData.filter(d => d.apartment_id === apt.apartment_id);
-    const availableNights = aptDaily.length;
+    // Only nights the unit was operating (inside a tenancy) count as available.
+    const availableNights = aptDaily.filter(d => d.operating).length;
     const occupiedNights = aptDaily.reduce((sum, d) => sum + d.occupied_nights_count, 0);
     const revenue = aptDaily.reduce((sum, d) => sum + d.daily_revenue_aed, 0);
     const lostRevenue = aptDaily.reduce((sum, d) => sum + d.lost_revenue_aed, 0);

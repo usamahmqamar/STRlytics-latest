@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { calculateDailyPL } from '../lib/pl';
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -198,49 +199,17 @@ export const Setup: React.FC<SetupProps> = ({ data, setData }) => {
     endDate: string,
     annualRentAed: number
   ) => {
-    // 1. Filter reservations
-    const matchedReservations = (data.reservations || []).filter(r => 
-      r.apartment_id === apartmentId && 
-      r.status === 'confirmed' &&
-      r.check_in >= startDate && 
-      r.check_in <= endDate
-    );
-
-    const totalRevenue = matchedReservations.reduce((sum, r) => sum + r.total_booking_revenue_aed, 0);
-    const netPayout = matchedReservations.reduce((sum, r) => sum + r.net_payout_aed, 0);
+    // Same figures as Daily P&L for this unit and period, so the archive matches the reports.
+    const rows = calculateDailyPL(data, parseISO(startDate), parseISO(endDate), apartmentId);
+    const matchedReservations = (data.reservations || []).filter(r =>
+      r.apartment_id === apartmentId && r.status === 'confirmed' && r.check_in >= startDate && r.check_in <= endDate);
+    const totalRevenue = matchedReservations.reduce((sum, r) => sum + (Number(r.total_booking_revenue_aed) || 0), 0);
     const num_reservations = matchedReservations.length;
-
-    // Occupancy percentage formula
-    const totalNights = matchedReservations.reduce((sum, r) => sum + r.nights, 0);
-    const date1 = parseISO(startDate);
-    const date2 = parseISO(endDate);
-    const totalDays = Math.max(1, differenceInDays(date2, date1));
-    const occupancyRate = Math.min(100, Math.round((totalNights / totalDays) * 100));
-
-    // Bills during the period
-    const startMonth = startDate.substring(0, 7);
-    const endMonth = endDate.substring(0, 7);
-    const matchedBills = (data.monthlyBills || []).filter(b => 
-      b.apartment_id === apartmentId && 
-      b.month >= startMonth && 
-      b.month <= endMonth
-    );
-    const totalBills = matchedBills.reduce((sum, b) => sum + b.amount_aed, 0);
-
-    // Daily expenses during the period
-    const matchedExpenses = (data.dailyExpenses || []).filter(e => 
-      e.apartment_id === apartmentId && 
-      e.date >= startDate && 
-      e.date <= endDate
-    );
-    const totalExpensesDaily = matchedExpenses.reduce((sum, e) => sum + e.amount_aed, 0);
-
-    // Proportional Rent Expense
-    const fractionOfYear = totalDays / 365;
-    const rentCost = Math.round(annualRentAed * fractionOfYear);
-
-    const totalExpenses = totalBills + totalExpensesDaily + rentCost;
+    const netPayout = Math.round(rows.reduce((t, r) => t + r.daily_revenue_aed, 0));
+    const totalExpenses = Math.round(rows.reduce((t, r) => t + r.total_daily_cost_aed, 0));
     const netProfit = netPayout - totalExpenses;
+    const operatingNights = rows.filter(r => r.operating).length;
+    const occupancyRate = operatingNights ? Math.round((rows.filter(r => r.occupied === 'yes').length / operatingNights) * 100) : 0;
 
     return {
       total_revenue_aed: totalRevenue,

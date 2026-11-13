@@ -128,7 +128,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, setData, filters, on
     const revenue = dailyPL.reduce((t, d) => t + d.daily_revenue_aed, 0);
     const costs = dailyPL.reduce((t, d) => t + d.total_daily_cost_aed, 0);
     const profit = dailyPL.reduce((t, d) => t + d.daily_profit_aed, 0);
-    const nights = dailyPL.length;
+    const nights = dailyPL.filter((d: any) => d.operating !== false).length;
     const booked = dailyPL.filter(d => d.occupied === 'yes').length;
     const nightlyRate = booked ? revenue / booked : 0;
     const days = new Set(dailyPL.map(d => d.date)).size;
