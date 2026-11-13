@@ -9,7 +9,7 @@ import {
   Plus, Upload, Download, Search, Filter, 
   MoreVertical, Edit2, Trash2, CheckCircle2,
   XCircle, Calendar, User, Building2, CreditCard,
-  Star, ChevronRight, Info, RefreshCw, X, Save
+  Star, ChevronRight, Info, RefreshCw, X, Save, FileText
 } from 'lucide-react';
 import { Card } from './ui/Card';
 import { Button } from './ui/Button';
@@ -22,6 +22,7 @@ import Papa from 'papaparse';
 import { csvFileProblem, safeParseOptions } from '../lib/csv';
 
 interface ReservationsProps {
+  onImportPdfs?: () => void;
   data: UserData;
   setData: React.Dispatch<React.SetStateAction<UserData>>;
   filters: {
@@ -32,7 +33,7 @@ interface ReservationsProps {
   };
 }
 
-export const Reservations: React.FC<ReservationsProps> = ({ data, setData, filters }) => {
+export const Reservations: React.FC<ReservationsProps> = ({ data, setData, filters, onImportPdfs }) => {
   const [view, setView] = useState<'confirmed' | 'cancelled'>('confirmed');
   const [searchQuery, setSearchQuery] = useState("");
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -252,8 +253,14 @@ export const Reservations: React.FC<ReservationsProps> = ({ data, setData, filte
             accept=".csv" 
             onChange={handleImportCSV}
           />
+          {onImportPdfs && (
+            <Button variant="outline" size="md" onClick={onImportPdfs}>
+              <FileText size={16} className="text-zinc-400" />
+              Import from PDFs
+            </Button>
+          )}
           <Button variant="outline" size="md" onClick={() => fileInputRef.current?.click()}>
-            <Upload size={18} className="text-zinc-400" />
+            <Upload size={16} className="text-zinc-400" />
             Import CSV
           </Button>
           <Button onClick={() => {

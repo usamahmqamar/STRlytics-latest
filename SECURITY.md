@@ -66,3 +66,20 @@ DATABASE_URL=postgres://... npm run test:db   # migrations + row-level security 
 
 - **App:** in Vercel → Deployments, promote the previous production deployment (instant), or revert the merge commit on `main`.
 - **Database:** the new tables are additive. Rolling the app back needs no database change; leave the tables in place.
+
+## Files, payouts and reconciliation
+
+- Uploaded files live in a private storage bucket (`workspace-files`), one folder per workspace:
+  `<workspace>/bookings/` (booking PDFs: all members read, staff and above upload) and
+  `<workspace>/finance/` (bank statements and payout reports: owners and managers only).
+  Files are never overwritten; only owners and managers can delete them. Links to open a file
+  are signed and expire after 2 minutes.
+- Payouts, payout matches and explained differences are visible to owners and managers only.
+  A payout cannot be matched beyond its own amount (database trigger).
+- `/api/ai` with `action: 'document'` reads a stored file using the caller's own token, so
+  storage and row-level security decide access; the server holds no storage secret. Files are
+  checked by content (PDF signature or plain text), capped at 15 MB, and counted against the
+  AI limits (30 documents per user per hour). AI output is treated as untrusted: dates, amounts,
+  codes and text are validated and cleaned, and nothing is saved until a person reviews it.
+- Tests: `supabase/tests/payouts_test.sql` (roles, other workspaces, read-only mode, storage
+  folders, allocation cap, account deletion) and the document tests in `tests/security.test.ts`.

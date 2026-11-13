@@ -7,7 +7,9 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth, type Workspace } from './auth/AuthProvider';
-import { canEdit, workspaceIsWritable } from './lib/permissions';
+import { canEdit, canManage, workspaceIsWritable } from './lib/permissions';
+import { Payouts } from './components/Payouts';
+import { ImportBookings } from './components/ImportBookings';
 import { loadWorkspaceData, saveChanges, TABLE_LABELS, type LoadedWorkspace } from './services/dataStore';
 import { setActiveWorkspace } from './services/ai';
 import { UserData } from './types';
@@ -45,11 +47,11 @@ import { format, startOfMonth, endOfMonth, differenceInDays, parseISO, addDays, 
 
 export const APP_TABS = [
   'dashboard', 'calendar', 'reservations', 'occupancy', 'projections', 'reports', 'setup',
-  'assets', 'documents', 'ocr', 'daily-pl', 'analytics', 'cashflow', 'operations', 'data', 'team', 'settings',
+  'assets', 'documents', 'ocr', 'daily-pl', 'analytics', 'cashflow', 'payouts', 'operations', 'data', 'team', 'settings',
 ];
 
 // Screens where the property, date and currency filters change what is shown.
-const FILTERED_TABS = new Set(['dashboard', 'reservations', 'occupancy', 'daily-pl', 'analytics', 'cashflow', 'reports', 'operations']);
+const FILTERED_TABS = new Set(['dashboard', 'reservations', 'occupancy', 'daily-pl', 'analytics', 'cashflow', 'payouts', 'reports', 'operations']);
 
 export default function App() {
   // Sign-in and the active workspace come from AuthProvider; RequireAuth and RequireWorkspace
@@ -74,6 +76,7 @@ export default function App() {
   const [prefilledExpense, setPrefilledExpense] = useState<any>(null);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isImportOpen, setIsImportOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
   const [filters, setFilters] = useState({
@@ -304,6 +307,14 @@ export default function App() {
           </div>
         </header>
 
+        <ImportBookings
+          open={isImportOpen}
+          onClose={() => setIsImportOpen(false)}
+          orgId={workspace.id}
+          data={userData}
+          setData={setUserData}
+          canWrite={editable}
+        />
         <HelpGuide isOpen={isHelpOpen} onClose={() => setIsHelpOpen(false)} />
 
         {FILTERED_TABS.has(activeTab) && (
@@ -350,7 +361,8 @@ export default function App() {
           >
             {activeTab === 'dashboard' && <Dashboard data={userData} setData={setUserData} filters={filters} onTabChange={setActiveTab} />}
             {activeTab === 'calendar' && <Calendar data={userData} filters={filters} />}
-            {activeTab === 'reservations' && <Reservations data={userData} setData={setUserData} filters={filters} />}
+            {activeTab === 'reservations' && <Reservations data={userData} setData={setUserData} filters={filters} onImportPdfs={() => setIsImportOpen(true)} />}
+            {activeTab === 'payouts' && <Payouts data={userData} orgId={workspace.id} canManage={canManage(workspace)} filters={filters} />}
             {activeTab === 'operations' && (
               <Operations 
                 data={userData} 
