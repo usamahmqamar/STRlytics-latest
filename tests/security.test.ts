@@ -9,6 +9,7 @@ import Papa from 'papaparse';
 import { HttpError, consumeAiQuota, handle, readJson, requireUser } from '../api/_lib/security';
 import { MAX_IMAGE_BYTES, validateMarketInput, validateReceiptImage } from '../api/_lib/validate';
 import { POST as aiPOST } from '../api/ai';
+import { cleanBankStatement, cleanBookings, cleanDate, cleanMoney, cleanPayoutReport, detectType } from '../api/_lib/documents';
 import { csvFileProblem, safeUnparseOptions, MAX_CSV_BYTES } from '../src/lib/csv';
 import { diffTable, rowsFor, toDate } from '../src/services/dataStore';
 import { DEFAULT_USER_DATA } from '../src/constants';
@@ -24,18 +25,26 @@ type Call = { url: string; init?: RequestInit };
 let calls: Call[] = [];
 let authStatus = 200;
 let rpcReply: { status: number; body: any } = { status: 204, body: null };
+let docRows: any[] = [];
+let fileBytes: Buffer = Buffer.from('%PDF-1.7 test');
 const realFetch = globalThis.fetch;
 globalThis.fetch = (async (url: any, init?: RequestInit) => {
   calls.push({ url: String(url), init });
   if (String(url).endsWith('/auth/v1/user')) {
     return new Response(authStatus === 200 ? JSON.stringify({ id: 'user-1' }) : '{}', { status: authStatus });
   }
+  if (String(url).includes('/rest/v1/source_documents')) {
+    return new Response(JSON.stringify(docRows), { status: 200 });
+  }
+  if (String(url).includes('/storage/v1/object/authenticated/')) {
+    return new Response(fileBytes, { status: 200 });
+  }
   if (String(url).includes('/rest/v1/rpc/consume_ai_quota')) {
     return new Response(rpcReply.body ? JSON.stringify(rpcReply.body) : null, { status: rpcReply.status });
   }
   return realFetch(url, init);
 }) as typeof fetch;
-beforeEach(() => { calls = []; authStatus = 200; rpcReply = { status: 204, body: null }; });
+beforeEach(() => { calls = []; authStatus = 200; rpcReply = { status: 204, body: null }; docRows = []; fileBytes = Buffer.from('%PDF-1.7 test'); });
 
 const req = (init: RequestInit = {}) => new Request('https://app.test/api/x', { method: 'POST', ...init });
 const authed = (extra: Record<string, string> = {}) =>
@@ -207,4 +216,111 @@ test('bad dates are stored as empty, never sent as invalid values', () => {
   assert.equal(toDate('2026-11-05'), '2026-11-05');
   assert.equal(toDate('2026-11-05T10:00:00Z'), '2026-11-05');
   for (const v of ['05/11/2026', '', 'tomorrow', null, 42]) assert.equal(toDate(v), null);
+});
+
+// ---------- Documents (OTA PDFs, bank statements, payout reports) ----------
+const DOC = '99999999-2222-4333-8444-555555555555';
+const docReq = (documentId: unknown) => aiPOST(req({ headers: authed(), body: JSON.stringify({ action: 'document', documentId }) }));
+const usedQuota = () => calls.some(c => c.url.includes('consume_ai_quota'));
+
+test('document reading requires sign-in', async () => {
+  const res = await aiPOST(req({ headers: { 'content-type': 'application/json' }, body: JSON.stringify({ action: 'document', documentId: DOC }) }));
+  assert.equal(res.status, 401);
+});
+
+test('a malformed document id is rejected before anything is fetched', async () => {
+  for (const bad of ['', '../../etc/passwd', `${DOC}' or 1=1`, 42]) {
+    assert.equal((await docReq(bad)).status, 400);
+  }
+  assert.ok(!calls.some(c => c.url.includes('source_documents')) && !usedQuota());
+});
+
+test("a document the caller cannot see (another workspace, or none) is not found, and no AI use is counted", async () => {
+  docRows = [];
+  assert.equal((await docReq(DOC)).status, 404);
+  assert.ok(!usedQuota());
+  // the lookup is scoped to the caller's workspace and made with the caller's own token
+  const lookup = calls.find(c => c.url.includes('source_documents'))!;
+  assert.ok(lookup.url.includes(`org_id=eq.${WS}`));
+  assert.equal((lookup.init!.headers as any).authorization, `Bearer ${TOKEN}`);
+});
+
+test('a stored path outside the workspace folder is refused', async () => {
+  docRows = [{ kind: 'bookings', file_path: `other-org/bookings/x.pdf`, platform_id: null, file_size: 10 }];
+  assert.equal((await docReq(DOC)).status, 400);
+  docRows = [{ kind: 'bookings', file_path: `${WS}/bookings/../../x.pdf`, platform_id: null, file_size: 10 }];
+  assert.equal((await docReq(DOC)).status, 400);
+  assert.ok(!usedQuota());
+});
+
+test('oversized files are refused before reading', async () => {
+  docRows = [{ kind: 'bookings', file_path: `${WS}/bookings/x.pdf`, platform_id: null, file_size: 16 * 1024 * 1024 }];
+  assert.equal((await docReq(DOC)).status, 413);
+  assert.ok(!usedQuota());
+});
+
+test('binary files posing as documents are refused', async () => {
+  docRows = [{ kind: 'bookings', file_path: `${WS}/bookings/x.pdf`, platform_id: null, file_size: 10 }];
+  fileBytes = Buffer.from([0x4d, 0x5a, 0x00, 0x01, 0x02]); // an executable header
+  assert.equal((await docReq(DOC)).status, 415);
+  assert.equal(detectType(Buffer.from('%PDF-1.4')), 'application/pdf');
+  assert.equal(detectType(Buffer.from('date,amount\n2026-01-01,10')), 'text/csv');
+});
+
+test('without an AI key, reading fails clearly after the usage check', async () => {
+  docRows = [{ kind: 'bookings', file_path: `${WS}/bookings/x.pdf`, platform_id: null, file_size: 10 }];
+  const res = await docReq(DOC);
+  assert.equal(res.status, 503);
+  assert.match((await res.json()).error, /not configured/);
+});
+
+test('AI output for bookings is cleaned: bad rows dropped, codes and text made safe', () => {
+  const out = cleanBookings({
+    platform: 'Airbnb, Inc.',
+    bookings: [
+      { reservation_code: 'HM4X<script>', guest_name: 'Ali\u0000 Khan', check_in: '2026-03-01', check_out: '2026-03-04', host_payout: '1,250.50', status: 'Confirmed' },
+      { reservation_code: 'BAD1', check_in: '2026-02-30', check_out: '2026-03-02' },
+      { reservation_code: 'BAD2', check_in: '2026-03-05', check_out: '2026-03-01' },
+      { reservation_code: '', check_in: '2026-03-01', check_out: '2026-03-02' },
+      { reservation_code: 'CXL9', check_in: '2026-04-01', check_out: '2026-04-02', status: 'Cancelled by guest' },
+    ],
+  });
+  assert.equal(out.platform, 'airbnb');
+  assert.equal(out.rows.length, 2);
+  assert.equal(out.skipped, 3);
+  assert.equal(out.rows[0].reservation_code, 'HM4Xscript');
+  assert.equal(out.rows[0].guest_name, 'Ali Khan');
+  assert.equal(out.rows[0].nights, 3);
+  assert.equal(out.rows[0].host_payout, 1250.5);
+  assert.equal(out.rows[1].status, 'cancelled');
+});
+
+test('bank statements keep only money received', () => {
+  const out = cleanBankStatement({ transactions: [
+    { date: '2026-03-02', amount: 1250.5, description: 'AIRBNB PAYMENTS UK 0302', reference: 'G-123' },
+    { date: '2026-03-03', amount: -5000, description: 'Rent cheque' },
+    { date: 'yesterday', amount: 10 },
+  ] });
+  assert.equal(out.rows.length, 1);
+  assert.equal(out.rows[0].platform, 'airbnb');
+  assert.equal(out.skipped, 2);
+});
+
+test('payout reports keep the bookings each payout covers', () => {
+  const out = cleanPayoutReport({ platform: 'Booking.com', payouts: [
+    { date: '2026-03-10', amount: 2400, reference: 'PO-1', items: [{ reservation_code: '4012345678', amount: 1400 }, { reservation_code: '4012345679', amount: 1000 }, { amount: 5 }] },
+    { date: '2026-03-11', amount: 0 },
+  ] });
+  assert.equal(out.platform, 'booking');
+  assert.equal(out.rows.length, 1);
+  assert.equal(out.rows[0].items.length, 2);
+});
+
+test('dates and amounts outside sensible ranges are rejected', () => {
+  assert.equal(cleanDate('1899-01-01'), null);
+  assert.equal(cleanDate('2026-02-29'), null);
+  assert.equal(cleanDate('2028-02-29'), '2028-02-29');
+  assert.equal(cleanMoney('AED 1,234.567'), 1234.57);
+  assert.equal(cleanMoney(1e12), null);
+  assert.equal(cleanMoney('n/a'), null);
 });

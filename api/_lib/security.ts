@@ -9,14 +9,14 @@ export class HttpError extends Error {
   }
 }
 
-function supabaseConfig() {
+export function supabaseConfig() {
   const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
   const key = process.env.SUPABASE_PUBLISHABLE_KEY || process.env.VITE_SUPABASE_PUBLISHABLE_KEY;
   if (!url || !key) throw new HttpError(500, 'Server is not configured.');
   return { url: url.replace(/\/+$/, ''), key };
 }
 
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+export const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export interface Caller {
   userId: string;
@@ -54,7 +54,7 @@ export async function requireUser(request: Request): Promise<Caller> {
  * Records one AI use in the database with the caller's own token. The database function
  * checks workspace membership, role, workspace status and shared hourly/daily limits.
  */
-export async function consumeAiQuota(caller: Caller, kind: 'receipt' | 'market'): Promise<void> {
+export async function consumeAiQuota(caller: Caller, kind: 'receipt' | 'market' | 'document'): Promise<void> {
   const { url, key } = supabaseConfig();
   let res: Response;
   try {

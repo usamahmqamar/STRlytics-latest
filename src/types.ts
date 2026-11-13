@@ -100,6 +100,8 @@ export interface Reservation {
     amount_aed: number;
     date?: string;
   }[];
+  /** The OTA PDF this booking was imported from, if any. */
+  source_document_id?: string | null;
 }
 
 export interface Platform {

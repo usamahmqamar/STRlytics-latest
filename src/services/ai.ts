@@ -27,6 +27,10 @@ async function callAi<T>(payload: Record<string, unknown>): Promise<T> {
   return body as T;
 }
 
+/** Reads an uploaded document (booking PDF, bank statement or payout report) on the server. */
+export const readDocument = (documentId: string) =>
+  callAi<any>({ action: 'document', documentId });
+
 export const extractReceiptData = (base64Image: string) =>
   callAi<any>({ action: 'receipt', image: base64Image });
 
