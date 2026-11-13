@@ -13,6 +13,7 @@ import {
   Zap, Download, FileText, Share2,
   X, Edit2, LayoutDashboard
 } from 'lucide-react';
+import { YourData } from './YourData';
 import { Card } from './ui/Card';
 import { Button } from './ui/Button';
 import { UserData } from '../types';
@@ -26,7 +27,7 @@ interface SettingsProps {
 }
 
 export const Settings: React.FC<SettingsProps> = ({ data, setData, workspace }) => {
-  const [activeTab, setActiveTab] = useState<'profile' | 'subscription' | 'payments' | 'display' | 'dashboard'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'subscription' | 'your-data' | 'display' | 'dashboard'>('profile');
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [profileForm, setProfileForm] = useState<any>(data.companyProfile || {});
 
@@ -59,7 +60,7 @@ export const Settings: React.FC<SettingsProps> = ({ data, setData, workspace }) 
   const tabs = [
     { id: 'profile', label: 'Company profile', icon: Building2 },
     { id: 'subscription', label: 'Subscription', icon: ShieldCheck },
-    { id: 'payments', label: 'Payment history', icon: History },
+    { id: 'your-data', label: 'Your data', icon: History },
     { id: 'display', label: 'Display', icon: Monitor },
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard }
   ];
@@ -237,52 +238,7 @@ export const Settings: React.FC<SettingsProps> = ({ data, setData, workspace }) 
             </Card>
           )}
 
-          {activeTab === 'payments' && (
-            <Card title="Payment history">
-              <div className="mt-8 overflow-x-auto">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="border-b border-zinc-100">
-                      <th className="pb-3 text-[11px] font-bold text-zinc-400">DATE</th>
-                      <th className="pb-3 text-[11px] font-bold text-zinc-400">PLAN</th>
-                      <th className="pb-3 text-[11px] font-bold text-zinc-400">AMOUNT</th>
-                      <th className="pb-3 text-[11px] font-bold text-zinc-400">STATUS</th>
-                      <th className="pb-3 text-[11px] font-bold text-zinc-400 text-right">Invoice</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-zinc-50">
-                    {(data.paymentHistory || []).map((pay) => (
-                      <tr key={pay.payment_id} className="group hover:bg-zinc-50/50 transition-colors">
-                        <td className="py-4">
-                          <p className="text-sm font-bold text-zinc-900">{format(parseISO(pay.date), 'MMM d, yyyy')}</p>
-                          <p className="text-[11px] font-bold text-zinc-400 mt-1">ID: {pay.payment_id}</p>
-                        </td>
-                        <td className="py-4">
-                          <span className="px-3 py-1 bg-zinc-100 text-zinc-500 text-[11px] font-semibold rounded-lg border border-zinc-200">
-                            {pay.plan}
-                          </span>
-                        </td>
-                        <td className="py-4">
-                          <p className="text-sm font-semibold text-zinc-900">{formatCurrency(pay.amount_aed)}</p>
-                        </td>
-                        <td className="py-4">
-                          <div className="flex items-center gap-2">
-                            <div className="w-2 h-2 bg-emerald-500 rounded-full shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
-                            <span className="text-sm font-bold text-zinc-900">{pay.status}</span>
-                          </div>
-                        </td>
-                        <td className="py-4 text-right">
-                          <button className="p-3 bg-white border border-zinc-200 rounded-2xl text-zinc-400 hover:text-emerald-600 hover:border-emerald-600 transition-all shadow-sm">
-                            <Download size={18} />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </Card>
-          )}
+          {activeTab === 'your-data' && <YourData data={data} workspace={workspace} />}
 
           {activeTab === 'dashboard' && (
             <Card title="Dashboard sections">

@@ -332,7 +332,9 @@ export default function App() {
 
         {!editable && (
           <div className="mb-4 p-3 rounded-xl border border-amber-200 bg-amber-50 text-amber-800 text-xs font-medium">
-            {workspace.role === 'viewer' || workspaceIsWritable(workspace)
+            {workspace.deletion_requested_at
+              ? 'This workspace is scheduled for deletion and is read-only. An owner can cancel this in Settings, Your data.'
+              : workspace.role === 'viewer' || workspaceIsWritable(workspace)
               ? 'You have view-only access to this workspace. Changes you make here are not saved.'
               : 'This workspace is read-only because its trial or subscription has ended. Your data is safe; changes are not saved.'}
           </div>

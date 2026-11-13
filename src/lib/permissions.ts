@@ -8,6 +8,7 @@ import type { Workspace } from '../auth/AuthProvider';
 const GRACE_MS = 5 * 24 * 3600 * 1000; // matches the 5-day grace in private.org_is_writable()
 
 export function workspaceIsWritable(ws: Workspace): boolean {
+  if (ws.deletion_requested_at) return false;
   if (ws.status === 'active' || ws.status === 'past_due') return true;
   if (ws.status !== 'trialing') return false;
   if (!ws.trial_ends_at) return true;

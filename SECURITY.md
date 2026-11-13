@@ -83,3 +83,16 @@ DATABASE_URL=postgres://... npm run test:db   # migrations + row-level security 
   codes and text are validated and cleaned, and nothing is saved until a person reviews it.
 - Tests: `supabase/tests/payouts_test.sql` (roles, other workspaces, read-only mode, storage
   folders, allocation cap, account deletion) and the document tests in `tests/security.test.ts`.
+
+## Data export and workspace deletion
+
+- Settings > Your data downloads every table the user can see as formula-safe CSV files in one
+  ZIP (payouts only for owners and managers). The internal workspace id is left out.
+- Owners can request deletion by typing the workspace name (`request_workspace_deletion`).
+  The workspace becomes read-only at once and any owner can cancel for 30 days
+  (`cancel_workspace_deletion`). The deletion columns cannot be changed directly.
+- `private.purge_deleted_workspace(org)` removes a workspace whose hold has passed. It is not
+  callable by app users and **is not scheduled**: scheduling it (for example a daily pg_cron
+  job) permanently deletes customer data and needs the owner's explicit approval first.
+  Stored files under the workspace folder must be removed with the Storage API at the same time.
+- Tests: `supabase/tests/deletion_test.sql`, `tests/export.test.ts`.

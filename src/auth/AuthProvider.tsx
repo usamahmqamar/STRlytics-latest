@@ -14,6 +14,8 @@ export interface Workspace {
   country: string | null;
   timezone: string;
   onboarding_completed_at: string | null;
+  /** Set when an owner asked to delete the workspace; read-only for 30 days, then removed. */
+  deletion_requested_at?: string | null;
   role: MemberRole;
 }
 
@@ -61,7 +63,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!userId) { setWorkspaces([]); setLoadedFor(null); return; }
     const { data, error } = await supabase
       .from('memberships')
-      .select('role, organizations(id, name, status, trial_ends_at, base_currency, country, timezone, onboarding_completed_at)')
+      .select('role, organizations(id, name, status, trial_ends_at, base_currency, country, timezone, onboarding_completed_at, deletion_requested_at)')
       .eq('user_id', userId);
     if (error) { console.error('Could not load workspaces', error); setLoadedFor(userId); return; }
     const list = (data ?? [])
