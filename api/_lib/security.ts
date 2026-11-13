@@ -1,3 +1,5 @@
+import { reportServerError } from './monitor.js';
+
 /**
  * Shared server-side security helpers for Vercel functions.
  * Files under api/_lib are not exposed as endpoints.
@@ -103,8 +105,13 @@ export function handle(fn: (request: Request) => Promise<Response>) {
     try {
       return await fn(request);
     } catch (err) {
-      if (err instanceof HttpError) return json(err.status, { error: err.message });
+      if (err instanceof HttpError) {
+        // 5xx HttpErrors are real failures (e.g. a dependency down); 4xx are the caller's.
+        if (err.status >= 500) await reportServerError(err, new URL(request.url).pathname);
+        return json(err.status, { error: err.message });
+      }
       console.error('Unhandled API error:', err instanceof Error ? err.name : 'unknown');
+      await reportServerError(err, new URL(request.url).pathname);
       return json(500, { error: 'Something went wrong. Please try again.' });
     }
   };

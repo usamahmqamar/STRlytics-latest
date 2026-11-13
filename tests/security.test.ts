@@ -9,6 +9,8 @@ import Papa from 'papaparse';
 import { HttpError, consumeAiQuota, handle, readJson, requireUser } from '../api/_lib/security';
 import { MAX_IMAGE_BYTES, validateMarketInput, validateReceiptImage } from '../api/_lib/validate';
 import { POST as aiPOST } from '../api/ai';
+import { parseDsn, reportServerError, scrubServer } from '../api/_lib/monitor';
+import { scrub as scrubBrowser } from '../src/lib/monitoring';
 import { cleanBankStatement, cleanBookings, cleanDate, cleanMoney, cleanPayoutReport, detectType } from '../api/_lib/documents';
 import { csvFileProblem, safeUnparseOptions, MAX_CSV_BYTES } from '../src/lib/csv';
 import { diffTable, rowsFor, toDate } from '../src/services/dataStore';
@@ -32,6 +34,9 @@ globalThis.fetch = (async (url: any, init?: RequestInit) => {
   calls.push({ url: String(url), init });
   if (String(url).endsWith('/auth/v1/user')) {
     return new Response(authStatus === 200 ? JSON.stringify({ id: 'user-1' }) : '{}', { status: authStatus });
+  }
+  if (String(url).includes('.ingest.sentry.io/')) {
+    return new Response('{}', { status: 200 });
   }
   if (String(url).includes('/rest/v1/source_documents')) {
     return new Response(JSON.stringify(docRows), { status: 200 });
@@ -323,4 +328,33 @@ test('dates and amounts outside sensible ranges are rejected', () => {
   assert.equal(cleanMoney('AED 1,234.567'), 1234.57);
   assert.equal(cleanMoney(1e12), null);
   assert.equal(cleanMoney('n/a'), null);
+});
+
+// ---------- Error monitoring ----------
+test('server error reports leave out secrets and emails', () => {
+  const msg = scrubServer('failed for ali@example.com with eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.abcdefghijklmno and sb_secret_abc123 password=hunter2');
+  assert.ok(!/ali@example|eyJhbGci|sb_secret_abc|hunter2/.test(msg));
+});
+
+test('reports are sent only when a valid DSN is configured, and only the scrubbed error', async () => {
+  delete process.env.SENTRY_DSN;
+  await reportServerError(new Error('x'), '/api/ai');
+  assert.ok(!calls.some(c => c.url.includes('sentry')));
+  assert.equal(parseDsn('not a dsn'), null);
+  process.env.SENTRY_DSN = 'https://abc123@o1.ingest.sentry.io/42';
+  try {
+    await reportServerError(new Error('boom for ali@example.com'), '/api/ai');
+    const sent = calls.find(c => c.url.startsWith('https://o1.ingest.sentry.io/api/42/envelope/'));
+    assert.ok(sent);
+    const body = String(sent!.init!.body);
+    assert.ok(body.includes('boom for [email]') && !body.includes('ali@example.com'));
+    assert.ok(!/authorization|cookie/i.test(body));
+  } finally {
+    delete process.env.SENTRY_DSN;
+  }
+});
+
+test('browser error reports leave out emails, tokens, keys and sign-in codes', () => {
+  const out = scrubBrowser('ali@example.com https://app.test/update-password#access_token=abc.def&code=123 sb_publishable_xyz AIzaSyA1234567890123456789012345');
+  assert.ok(!/ali@example|abc\.def|code=123|sb_publishable_xyz|AIzaSy/.test(out), out);
 });

@@ -13,6 +13,8 @@ import { ImportBookings } from './components/ImportBookings';
 import { NeedsProperty } from './components/GettingStarted';
 import { hasUnsaved, loadWorkspaceData, saveChanges, TABLE_LABELS, type LoadedWorkspace } from './services/dataStore';
 import { subscribeToWorkspace } from './services/live';
+import { ErrorBoundary } from './components/ErrorBoundary';
+import { setMonitoringUser } from './lib/monitoring';
 import { setActiveWorkspace } from './services/ai';
 import { UserData } from './types';
 import { DEFAULT_USER_DATA } from './constants';
@@ -104,6 +106,8 @@ export default function App() {
     loadedDataRef.current = loaded.data;
     setUserData(loaded.data);
   };
+
+  useEffect(() => { setMonitoringUser(user?.id ?? null, workspace?.id ?? null); }, [user?.id, workspace?.id]);
 
   // Load the active workspace's records; reload when the user switches workspace.
   useEffect(() => {
@@ -399,6 +403,7 @@ export default function App() {
             exit={{ opacity: 0, y: -10 }}
             transition={{ duration: 0.2 }}
           >
+            <ErrorBoundary key={activeTab} area={activeTab}>
             {activeTab === 'dashboard' && <Dashboard data={userData} setData={setUserData} filters={filters} onTabChange={setActiveTab} onImportPdfs={() => setIsImportOpen(true)} />}
             {blockedForSetup && (
               <NeedsProperty screen={NAV_LABELS[activeTab] ?? 'This screen'} onAdd={() => setActiveTab('setup')} />
@@ -449,6 +454,7 @@ export default function App() {
             )}
             {activeTab === 'team' && <Team />}
             {activeTab === 'settings' && <Settings data={userData} setData={setUserData} workspace={workspace} />}
+            </ErrorBoundary>
           </motion.div>
         </AnimatePresence>
        </div>

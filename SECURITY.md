@@ -96,3 +96,13 @@ DATABASE_URL=postgres://... npm run test:db   # migrations + row-level security 
   job) permanently deletes customer data and needs the owner's explicit approval first.
   Stored files under the workspace folder must be removed with the Storage API at the same time.
 - Tests: `supabase/tests/deletion_test.sql`, `tests/export.test.ts`.
+
+## Error monitoring
+
+- Browser: `@sentry/browser`, loaded only when `VITE_SENTRY_DSN` is set. No IPs, cookies,
+  headers, request bodies or typed input; users identified by internal id only; emails,
+  tokens, keys and sign-in codes are replaced before sending. Each screen has an error
+  boundary, so a crash in one screen leaves the rest of the app usable.
+- Server: unexpected errors and 5xx responses are sent to `SENTRY_DSN` with the error type,
+  a scrubbed message and stack only (`api/_lib/monitor.ts`).
+- The Content-Security-Policy allows Sentry's ingest hosts in `connect-src`.
