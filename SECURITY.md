@@ -133,3 +133,18 @@ DATABASE_URL=postgres://... npm run test:db   # migrations + row-level security 
   OMR, BHD) use their fixed peg.
 - Conversion happens only on screen; converted figures are never saved. Tests:
   `multi_currency_test.sql`, `tests/money.test.ts`.
+
+## Owners, shares and representatives
+
+- `entities`, `listing_shares`, `representative_nominations` and `representative_approvals` hold
+  ownership and tax details, so only owners and managers can read them (like payouts). They are
+  not sent over live updates.
+- Owners and managers edit entities directly. Shares, nominations and approvals change only
+  through `set_listing_shares`, `nominate_representative` and `record_representative_approval`,
+  which check the caller's role, that the workspace is writable, that shares add up to 100, that
+  the nominee is an owner or manager, and that every approval carries evidence (an uploaded owner
+  letter or the email pasted in). A nomination takes effect above 50% of the shares in force.
+- Opting an owner out of reports requires the same evidence. Evidence files are stored with the
+  finance files and cannot be deleted while they back a decision.
+- Owner statement PDFs are made in the browser from data the user can already see.
+  Tests: `entities_test.sql`, `tests/ownerStatement.test.ts`.

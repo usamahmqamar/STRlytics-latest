@@ -9,6 +9,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth, type Workspace } from './auth/AuthProvider';
 import { canEdit, canManage, workspaceIsWritable } from './lib/permissions';
 import { Payouts } from './components/Payouts';
+import { Owners } from './components/Owners';
 import { ImportBookings } from './components/ImportBookings';
 import { NeedsProperty } from './components/GettingStarted';
 import { hasUnsaved, loadWorkspaceData, saveChanges, TABLE_LABELS, type LoadedWorkspace } from './services/dataStore';
@@ -53,7 +54,7 @@ import { format, startOfMonth, endOfMonth, differenceInDays, parseISO, addDays, 
 
 export const APP_TABS = [
   'dashboard', 'calendar', 'reservations', 'occupancy', 'projections', 'reports', 'setup',
-  'assets', 'documents', 'ocr', 'daily-pl', 'analytics', 'cashflow', 'payouts', 'operations', 'data', 'team', 'settings',
+  'assets', 'documents', 'ocr', 'daily-pl', 'analytics', 'cashflow', 'payouts', 'operations', 'data', 'team', 'settings', 'owners',
 ];
 
 // Screens where the property, date and currency filters change what is shown.
@@ -442,6 +443,9 @@ export default function App() {
             )}
             {!blockedForSetup && activeTab === 'calendar' && <Calendar data={viewData} filters={viewFilters} />}
             {activeTab === 'reservations' && <Reservations data={userData} setData={setUserData} filters={viewFilters} onImportPdfs={() => setIsImportOpen(true)} />}
+            {activeTab === 'owners' && (canManage(workspace)
+              ? <Owners workspace={workspace} data={userData} rates={rates} baseCurrency={workspaceCurrency} canWrite={editable} />
+              : <div className="mx-auto max-w-md rounded-2xl border border-zinc-200 bg-white p-8 text-center text-sm text-zinc-600 dark:border-zinc-800 dark:bg-zinc-900">Owners and their shares are visible to workspace owners and managers only.</div>)}
             {!blockedForSetup && activeTab === 'payouts' && <Payouts data={userData} orgId={workspace.id} canManage={canManage(workspace)} filters={viewFilters} rates={rates} baseCurrency={workspaceCurrency} />}
             {!blockedForSetup && activeTab === 'operations' && (
               <Operations 

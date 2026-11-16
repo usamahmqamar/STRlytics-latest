@@ -8,8 +8,7 @@ import {
   LayoutDashboard, Calendar, ClipboardList, TrendingUp,
   Wallet, BarChart3, Building2, Package, ShieldCheck,
   ScanLine, Table, Database, Settings, LogOut, Search,
-  PanelLeftClose, PanelLeftOpen, Users, UsersRound, FileText, Receipt, CalendarClock, Landmark,
-} from 'lucide-react';
+  PanelLeftClose, PanelLeftOpen, Users, UsersRound, FileText, Receipt, CalendarClock, Landmark, Handshake } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useNavigate } from 'react-router-dom';
 import { useAuth, trialDaysLeft } from '../auth/AuthProvider';
@@ -49,6 +48,7 @@ const NAV_GROUPS: { label: string | null; items: NavItem[] }[] = [
   ] },
   { label: 'Properties', items: [
     { id: 'setup', icon: Building2, label: 'Properties and leases' },
+    { id: 'owners', icon: Handshake, label: 'Owners' },
     { id: 'operations', icon: Users, label: 'Operations' },
     { id: 'assets', icon: Package, label: 'Inventory' },
     { id: 'documents', icon: ShieldCheck, label: 'Documents' },

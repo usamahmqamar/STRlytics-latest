@@ -16,6 +16,7 @@ import { supabase } from '../lib/supabase';
 import { rowsFor } from '../services/dataStore';
 import { listDocuments, loadFinance } from '../services/finance';
 import { listScenarios } from '../services/scenarios';
+import { loadOwners } from '../services/owners';
 import { useAuth, type Workspace } from '../auth/AuthProvider';
 import { canManage } from '../lib/permissions';
 import type { UserData } from '../types';
@@ -41,6 +42,13 @@ export async function buildExport(data: UserData, ws: Workspace): Promise<{ zip:
       add('payouts.csv', fin.payouts as any[]);
       add('payout_matches.csv', fin.allocations as any[]);
       add('payout_differences.csv', fin.adjustments as any[]);
+    }
+    const own = await loadOwners(ws.id).catch(() => null);
+    if (own) {
+      add('owners.csv', own.entities as any[]);
+      add('ownership_shares.csv', own.shares as any[]);
+      add('representative_nominations.csv', own.nominations as any[]);
+      add('representative_approvals.csv', own.approvals as any[]);
     }
   }
   const docs = await listDocuments(ws.id).catch(() => []);
@@ -105,7 +113,7 @@ export const YourData: React.FC<{ data: UserData; workspace: Workspace }> = ({ d
       <Card title="Download all your data">
         <p className="max-w-prose text-sm text-zinc-600 dark:text-zinc-400">
           One ZIP file with a spreadsheet for each part of your workspace: properties, leases and rent cheques, bookings, costs,
-          vendors, saved feasibility units{canManage(workspace) ? ', payouts and their matches' : ''}. You can take it anywhere.
+          vendors, saved feasibility units{canManage(workspace) ? ', payouts and their matches, owners and their shares' : ''}. You can take it anywhere.
         </p>
         <Button className="mt-4" onClick={download} disabled={exporting}>
           {exporting ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}

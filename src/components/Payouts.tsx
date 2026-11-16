@@ -302,7 +302,7 @@ export const Payouts: React.FC<Props> = ({ data, orgId, canManage, filters, rate
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-zinc-900 dark:text-zinc-100">{d.file_name}</p>
                     <p className="text-xs text-zinc-500">
-                      {d.kind === 'bookings' ? 'Booking PDF' : d.kind === 'bank_statement' ? 'Bank statement' : 'Payout report'}
+                      {d.kind === 'bookings' ? 'Booking PDF' : d.kind === 'bank_statement' ? 'Bank statement' : d.kind === 'owner_letter' ? 'Owner letter' : 'Payout report'}
                       {d.apartment_id ? `, ${data.apartments.find(a => a.apartment_id === d.apartment_id)?.name ?? d.apartment_id}` : ''}
                       {`, uploaded ${day(d.created_at.slice(0, 10))}`}
                       {d.status === 'saved' ? `, ${d.rows_saved ?? 0} saved` : d.status === 'read' ? `, ${d.rows_found ?? 0} found, not saved yet` : d.status === 'failed' ? ', could not be read' : ''}

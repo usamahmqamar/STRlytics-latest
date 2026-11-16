@@ -9,7 +9,7 @@ import type { Adjustment, Allocation, Payout } from '../lib/reconcile';
 
 export const BUCKET = 'workspace-files';
 export const MAX_UPLOAD_BYTES = 20 * 1024 * 1024;
-export type DocumentKind = 'bookings' | 'bank_statement' | 'payout_report';
+export type DocumentKind = 'bookings' | 'bank_statement' | 'payout_report' | 'owner_letter';
 
 export interface SourceDocument {
   id: string;
