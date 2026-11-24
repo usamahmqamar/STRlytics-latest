@@ -1,7 +1,9 @@
 import { createClient } from '@supabase/supabase-js';
 
-const url = import.meta.env.VITE_SUPABASE_URL as string | undefined;
-const key = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined;
+// import.meta.env is set by Vite; it is absent when the module is loaded in Node tests.
+const env = (import.meta.env ?? {}) as Record<string, string | undefined>;
+const url = env.VITE_SUPABASE_URL;
+const key = env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
 export const isSupabaseConfigured = Boolean(url && key);
 

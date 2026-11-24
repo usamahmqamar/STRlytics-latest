@@ -166,7 +166,7 @@ export const Team: React.FC = () => {
             {members.map(m => (
               <li key={m.membership_id} className="px-5 py-3 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-zinc-900 truncate">{m.full_name || m.email}{m.is_me && <span className="ml-2 text-[10px] font-normal text-zinc-400">You</span>}</p>
+                  <p className="text-sm font-medium text-zinc-900 truncate">{m.full_name || m.email}{m.is_me && <span className="ml-2 text-[11px] font-normal text-zinc-400">You</span>}</p>
                   {m.full_name && <p className="text-xs text-zinc-500 truncate">{m.email}</p>}
                 </div>
                 <div className="flex items-center gap-3">

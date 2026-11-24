@@ -9,7 +9,7 @@ The build plan and status live in the "STRlytics Review" doc.
 ## Stack
 
 - React 19 + Vite + Tailwind, React Router (`/app/:tab`)
-- Supabase (Postgres, Auth, row-level security) — replacing Firebase during Phase 2
+- Supabase (Postgres, Auth, row-level security); Firebase has been removed
 - Vercel for hosting; server functions in `api/` (Gemini calls run there, never in the browser)
 
 ## Local development
@@ -19,6 +19,7 @@ npm install
 cp .env.example .env.local   # fill in values
 npm run dev                  # http://localhost:3000
 npm run lint                 # type-check
+npm run test:security        # server auth, AI limits, upload, CSV and save-layer tests
 ```
 
 ## Database
@@ -36,4 +37,4 @@ It is for tests only and must never be applied to a Supabase project.
 ## Environment variables
 
 See `.env.example`. Anything prefixed `VITE_` is shipped to the browser, so secrets
-(`GEMINI_API_KEY`, `SUPABASE_SERVICE_ROLE_KEY`) must never use that prefix.
+(`GEMINI_API_KEY`) must never use that prefix. No service-role key is used. See `SECURITY.md`.

@@ -32,7 +32,7 @@ export const Tooltip: React.FC<TooltipProps> = ({ content, children }) => {
               exit={{ opacity: 0, scale: 0.9, y: 5 }}
               className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-2 bg-zinc-900 border border-zinc-800 rounded-lg shadow-xl z-[110] pointer-events-none"
             >
-              <p className="text-[10px] leading-relaxed text-zinc-300 font-medium">
+              <p className="text-[11px] leading-relaxed text-zinc-300 font-medium">
                 {content}
               </p>
               <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-zinc-900" />

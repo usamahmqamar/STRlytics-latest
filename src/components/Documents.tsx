@@ -130,7 +130,7 @@ export const Documents: React.FC<DocumentsProps> = ({ data, setData }) => {
             </div>
             <div>
               <div className="text-sm font-bold text-zinc-900">Active Permits</div>
-              <div className="text-2xl font-black text-emerald-600">
+              <div className="text-2xl font-semibold text-emerald-600">
                 {(data.documents || []).filter(d => d.status === 'active').length}
               </div>
             </div>
@@ -143,7 +143,7 @@ export const Documents: React.FC<DocumentsProps> = ({ data, setData }) => {
             </div>
             <div>
               <div className="text-sm font-bold text-zinc-900">Pending Renewal</div>
-              <div className="text-2xl font-black text-orange-600">
+              <div className="text-2xl font-semibold text-orange-600">
                 {(data.documents || []).filter(d => d.status === 'pending_renewal').length}
               </div>
             </div>
@@ -156,7 +156,7 @@ export const Documents: React.FC<DocumentsProps> = ({ data, setData }) => {
             </div>
             <div>
               <div className="text-sm font-bold text-zinc-900">Expired Documents</div>
-              <div className="text-2xl font-black text-rose-600">
+              <div className="text-2xl font-semibold text-rose-600">
                 {(data.documents || []).filter(d => d.status === 'expired').length}
               </div>
             </div>
@@ -200,12 +200,12 @@ export const Documents: React.FC<DocumentsProps> = ({ data, setData }) => {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-zinc-50 border-b border-zinc-100">
-                <th className="p-4 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Document Title</th>
-                <th className="p-4 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Property</th>
-                <th className="p-4 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Type</th>
-                <th className="p-4 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Expiry Date</th>
-                <th className="p-4 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Status</th>
-                <th className="p-4 text-[10px] font-bold text-zinc-400 uppercase tracking-widest text-center">Actions</th>
+                <th className="p-4 text-[11px] font-bold text-zinc-400">Document Title</th>
+                <th className="p-4 text-[11px] font-bold text-zinc-400">Property</th>
+                <th className="p-4 text-[11px] font-bold text-zinc-400">Type</th>
+                <th className="p-4 text-[11px] font-bold text-zinc-400">Expiry Date</th>
+                <th className="p-4 text-[11px] font-bold text-zinc-400">Status</th>
+                <th className="p-4 text-[11px] font-bold text-zinc-400 text-center">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-50">
@@ -226,11 +226,11 @@ export const Documents: React.FC<DocumentsProps> = ({ data, setData }) => {
                     <td className="p-4">
                       <div className="flex flex-col">
                         <span className="text-xs font-medium text-zinc-900">{apt?.name}</span>
-                        <span className="text-[9px] text-zinc-400 uppercase tracking-wider font-bold">{apt?.building}</span>
+                        <span className="text-[11px] text-zinc-400 font-bold">{apt?.building}</span>
                       </div>
                     </td>
                     <td className="p-4">
-                      <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">
+                      <span className="text-[11px] font-semibold text-zinc-400">
                         {doc.type.replace('_', ' ')}
                       </span>
                     </td>
@@ -248,7 +248,7 @@ export const Documents: React.FC<DocumentsProps> = ({ data, setData }) => {
                     </td>
                     <td className="p-4">
                       <span className={cn(
-                        "px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest border",
+                        "px-2 py-0.5 rounded-full text-[11px] font-semibold border",
                         getStatusStyle(doc.status)
                       )}>
                         {doc.status.replace('_', ' ')}
@@ -328,7 +328,7 @@ const UploadModal = ({
             className="bg-white rounded-[32px] shadow-2xl w-full max-w-md overflow-hidden"
           >
             <div className="p-6 border-b border-zinc-100 flex justify-between items-center bg-zinc-50/50">
-              <h3 className="text-lg font-black text-zinc-900 tracking-tight">Upload New Document</h3>
+              <h3 className="text-lg font-semibold text-zinc-900 tracking-tight">Upload New Document</h3>
               <button onClick={onClose} className="p-2 hover:bg-zinc-100 rounded-full transition-colors">
                 <X size={20} />
               </button>
@@ -336,7 +336,7 @@ const UploadModal = ({
 
             <div className="p-6 space-y-4">
               <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Document Title</label>
+                <label className="text-[11px] font-semibold text-zinc-400 ml-1">Document Title</label>
                 <input 
                   type="text" 
                   placeholder="e.g. Title Deed - MG1-2204"
@@ -348,7 +348,7 @@ const UploadModal = ({
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Property</label>
+                  <label className="text-[11px] font-semibold text-zinc-400 ml-1">Property</label>
                   <select 
                     className="w-full px-4 py-3 rounded-xl border border-zinc-200 focus:border-zinc-900 focus:ring-0 transition-all text-sm font-medium appearance-none"
                     value={newDoc.apartment_id}
@@ -360,7 +360,7 @@ const UploadModal = ({
                   </select>
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Document Type</label>
+                  <label className="text-[11px] font-semibold text-zinc-400 ml-1">Document Type</label>
                   <select 
                     className="w-full px-4 py-3 rounded-xl border border-zinc-200 focus:border-zinc-900 focus:ring-0 transition-all text-sm font-medium appearance-none"
                     value={newDoc.type}
@@ -375,7 +375,7 @@ const UploadModal = ({
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Expiry Date (Optional)</label>
+                  <label className="text-[11px] font-semibold text-zinc-400 ml-1">Expiry Date (Optional)</label>
                   <input 
                     type="date" 
                     className="w-full px-4 py-3 rounded-xl border border-zinc-200 focus:border-zinc-900 focus:ring-0 transition-all text-sm font-medium"
@@ -384,7 +384,7 @@ const UploadModal = ({
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Initial Status</label>
+                  <label className="text-[11px] font-semibold text-zinc-400 ml-1">Initial Status</label>
                   <select 
                     className="w-full px-4 py-3 rounded-xl border border-zinc-200 focus:border-zinc-900 focus:ring-0 transition-all text-sm font-medium appearance-none"
                     value={newDoc.status}
@@ -415,7 +415,7 @@ const UploadModal = ({
                 >
                   <HardDrive className="w-8 h-8 text-zinc-400" />
                   <p className="text-xs font-bold text-zinc-500">Click or drag to upload file</p>
-                  <p className="text-[9px] text-zinc-400 uppercase font-black">PDF, JPG, PNG (Max 10MB)</p>
+                  <p className="text-[11px] text-zinc-400 font-semibold">PDF, JPG, PNG (Max 10MB)</p>
                 </div>
               </div>
             </div>

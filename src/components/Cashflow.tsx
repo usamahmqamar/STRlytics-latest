@@ -52,8 +52,8 @@ export const Cashflow: React.FC<CashflowProps> = ({ data, filters }) => {
               <ArrowUpRight size={24} />
             </div>
             <div>
-              <p className="text-[10px] font-bold text-emerald-600/60 uppercase tracking-widest">Total Inflow</p>
-              <h3 className="text-2xl font-black text-emerald-700">{formatCurrency(stats.inflow, filters.displayCurrency)}</h3>
+              <p className="text-[11px] font-bold text-emerald-600/60">Total Inflow</p>
+              <h3 className="text-2xl font-semibold text-emerald-700">{formatCurrency(stats.inflow, filters.displayCurrency)}</h3>
             </div>
           </div>
         </Card>
@@ -63,8 +63,8 @@ export const Cashflow: React.FC<CashflowProps> = ({ data, filters }) => {
               <ArrowDownLeft size={24} />
             </div>
             <div>
-              <p className="text-[10px] font-bold text-rose-600/60 uppercase tracking-widest">Total Outflow</p>
-              <h3 className="text-2xl font-black text-rose-700">{formatCurrency(stats.outflow, filters.displayCurrency)}</h3>
+              <p className="text-[11px] font-bold text-rose-600/60">Total Outflow</p>
+              <h3 className="text-2xl font-semibold text-rose-700">{formatCurrency(stats.outflow, filters.displayCurrency)}</h3>
             </div>
           </div>
         </Card>
@@ -74,8 +74,8 @@ export const Cashflow: React.FC<CashflowProps> = ({ data, filters }) => {
               <DollarSign size={24} />
             </div>
             <div>
-              <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Net Cash Position</p>
-              <h3 className="text-2xl font-black">{formatCurrency(stats.balance, filters.displayCurrency)}</h3>
+              <p className="text-[11px] font-bold text-zinc-400">Net Cash Position</p>
+              <h3 className="text-2xl font-semibold">{formatCurrency(stats.balance, filters.displayCurrency)}</h3>
             </div>
           </div>
         </Card>
@@ -103,9 +103,9 @@ export const Cashflow: React.FC<CashflowProps> = ({ data, filters }) => {
                 <div className="flex-grow min-w-0">
                   <p className="text-sm font-bold text-zinc-900 truncate">{item.description}</p>
                   <div className="flex items-center gap-2 mt-0.5">
-                    <p className="text-[10px] text-zinc-400 uppercase tracking-widest font-bold">{item.category}</p>
+                    <p className="text-[11px] text-zinc-400 font-bold">{item.category}</p>
                     <span className="w-1 h-1 rounded-full bg-zinc-200" />
-                    <p className="text-[10px] text-zinc-400 font-medium">{item.apartmentName}</p>
+                    <p className="text-[11px] text-zinc-400 font-medium">{item.apartmentName}</p>
                   </div>
                 </div>
                 <div className={cn(
@@ -115,7 +115,7 @@ export const Cashflow: React.FC<CashflowProps> = ({ data, filters }) => {
                   {formatCurrency(item.amount, filters.displayCurrency)}
                 </div>
                 <div className="w-32 text-right hidden sm:block">
-                  <p className="text-[10px] text-zinc-400 uppercase tracking-widest font-bold">Balance</p>
+                  <p className="text-[11px] text-zinc-400 font-bold">Balance</p>
                   <p className={cn(
                     "text-xs font-bold",
                     item.cumulativeBalance >= 0 ? "text-zinc-900" : "text-rose-600"

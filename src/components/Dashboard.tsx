@@ -20,6 +20,7 @@ import {
   BarChart, Bar, Cell, PieChart, Pie, Legend,
   Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis
 } from 'recharts';
+import { GettingStarted } from './GettingStarted';
 import { Card } from './ui/Card';
 import { Button } from './ui/Button';
 import { Tooltip } from './ui/Tooltip';
@@ -29,7 +30,7 @@ import { cn } from '../lib/utils';
 import { 
   calculateDailyPL, 
   getMonthlyKPIs, 
-  convertCurrency,
+
   getRevenueForecast,
   getMarketBenchmarks,
   getRiskAssessment,
@@ -55,6 +56,9 @@ interface DashboardProps {
     displayCurrency: string;
   };
   onTabChange: (tab: string) => void;
+  onImportPdfs?: () => void;
+  /** Stored data (each amount in its own currency), for reminders that quote a specific amount. */
+  rawData?: UserData;
 }
 
 const StatCard: React.FC<{
@@ -74,7 +78,7 @@ const StatCard: React.FC<{
       </span>
       {trend && (
         <div className={cn(
-          "flex items-center gap-0.5 text-[10px] font-semibold px-1.5 py-0.5 rounded-md",
+          "flex items-center gap-0.5 text-[11px] font-semibold px-1.5 py-0.5 rounded-md",
           trend === 'up' ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" : "bg-rose-500/10 text-rose-600 dark:text-rose-400"
         )}>
           {trend === 'up' ? <TrendingUp size={10} /> : <TrendingDown size={10} />}
@@ -89,18 +93,20 @@ const StatCard: React.FC<{
       </span>
     )}
     {conversionInfo && (
-      <span className="text-[10px] text-zinc-400 dark:text-zinc-500 mt-1 italic font-medium opacity-70">
+      <span className="text-[11px] text-zinc-400 dark:text-zinc-500 mt-1 italic font-medium opacity-70">
         {conversionInfo}
       </span>
     )}
   </div>
 );
 
-export const Dashboard: React.FC<DashboardProps> = ({ data, setData, filters, onTabChange }) => {
+export const Dashboard: React.FC<DashboardProps> = ({ data, setData, filters, onTabChange, onImportPdfs, rawData }) => {
+  // Reminders quote a cheque or invoice as written, in its own currency, not converted.
+  const source = rawData ?? data;
   const [isCustomizing, setIsCustomizing] = React.useState(false);
 
   const formatValue = (val: number) => {
-    const converted = convertCurrency(val, 'AED', filters.displayCurrency);
+    const converted = val;
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: filters.displayCurrency,
@@ -110,7 +116,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, setData, filters, on
   };
 
   const StyledValue: React.FC<{ value: number }> = ({ value }) => (
-    <span className="font-mono tracking-tighter">{formatValue(value)}</span>
+    <span>{formatValue(value)}</span>
   );
 
   const currentKPIs = useMemo(() => {
@@ -123,12 +129,67 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, setData, filters, on
     return calculateDailyPL(data, parseISO(filters.startDate), parseISO(filters.endDate), filters.apartmentId === 'ALL' ? undefined : filters.apartmentId);
   }, [data, filters]);
 
+  // Period totals for the summary panel, from the same daily P&L the charts use.
+  const summary = useMemo(() => {
+    const revenue = dailyPL.reduce((t, d) => t + d.daily_revenue, 0);
+    const costs = dailyPL.reduce((t, d) => t + d.total_daily_cost, 0);
+    const profit = dailyPL.reduce((t, d) => t + d.daily_profit, 0);
+    const nights = dailyPL.filter((d: any) => d.operating !== false).length;
+    const booked = dailyPL.filter(d => d.occupied === 'yes').length;
+    const nightlyRate = booked ? revenue / booked : 0;
+    const days = new Set(dailyPL.map(d => d.date)).size;
+    return {
+      revenue, costs, profit, nights, booked, nightlyRate, days,
+      occupancy: nights ? booked / nights : 0,
+      breakEven: nightlyRate > 0 && nights ? costs / nightlyRate / nights : null,
+    };
+  }, [dailyPL]);
+
   const forecast = useMemo(() => getRevenueForecast(data), [data]);
+
+  // Rent cheques from the leases themselves (previously a hard-coded example).
+  const cheques = useMemo(() => {
+    const today = new Date();
+    const todayStr = format(today, 'yyyy-MM-dd');
+    const in90 = format(addDays(today, 90), 'yyyy-MM-dd');
+    const all = data.apartments.flatMap(a => a.rent_cheques || []);
+    const isPaid = (c: any) => c.status === 'paid'; // due, postponed and bounced are all still owed
+    const months = Array.from({ length: 6 }, (_, i) => {
+      const m = format(addDays(startOfMonth(today), i * 31), 'yyyy-MM');
+      return {
+        label: format(parseISO(`${m}-01`), 'MMM'),
+        rent: all.filter(c => !isPaid(c) && c.due_date?.startsWith(m)).reduce((t, c) => t + (c.amount || 0), 0),
+        revenue: data.reservations.filter(r => r.status === 'confirmed' && r.check_in?.startsWith(m)).reduce((t, r) => t + (r.net_payout || 0), 0),
+      };
+    });
+    return {
+      total: all.reduce((t, c) => t + (c.amount || 0), 0),
+      paid: all.filter(isPaid).reduce((t, c) => t + (c.amount || 0), 0),
+      overdueCount: all.filter(c => !isPaid(c) && c.due_date && c.due_date < todayStr).length,
+      upcomingCount: all.filter(c => !isPaid(c) && c.due_date && c.due_date >= todayStr && c.due_date <= in90).length,
+      months,
+    };
+  }, [data]);
   const benchmarks = useMemo(() => getMarketBenchmarks(), []);
   const risk = useMemo(() => getRiskAssessment(data), [data]);
   const exposure = useMemo(() => getCancellationExposure(data), [data]);
-  const upcomingTasks = useMemo(() => getUpcomingTasks(data), [data]);
-  const actionReminders = useMemo(() => getActionReminders(data), [data]);
+  const upcomingTasks = useMemo(() => getUpcomingTasks(source), [source]);
+  const actionReminders = useMemo(() => getActionReminders(source), [source]);
+  // One list of things that cost money if ignored; overdue first, then soonest.
+  const attention = useMemo(() => {
+    const today = new Date().toISOString().slice(0, 10);
+    const items = [
+      ...upcomingTasks.map((t: any) => ({
+        id: `task-${t.id}`, title: t.title, detail: t.description, date: t.date,
+        amount: null as number | null, overdue: t.date < today, tab: t.type === 'cheque' ? 'setup' : 'operations',
+      })),
+      ...actionReminders.filter((r: any) => r.type === 'payment').map((r: any) => ({
+        id: `pay-${r.id}`, title: r.title.replace('Vendor Payment:', 'Pay'), detail: r.description, date: r.date,
+        amount: r.amount as number | null, overdue: r.status === 'overdue', tab: 'operations',
+      })),
+    ];
+    return items.sort((a, b) => Number(b.overdue) - Number(a.overdue) || a.date.localeCompare(b.date));
+  }, [upcomingTasks, actionReminders]);
   const strategicGoals = useMemo(() => getStrategicGoals(data), [data]);
   const opportunity = useMemo(() => getOpportunityScore(data), [data]);
   const occupancyTrend = useMemo(() => getOccupancyTrend(data), [data]);
@@ -158,7 +219,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, setData, filters, on
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 text-zinc-800 dark:text-zinc-200">
             <TrendingUp size={16} className="text-emerald-500" />
-            <h3 className="text-sm font-semibold tracking-tight">Financial Health & P&L Analysis</h3>
+            <h3 className="text-base font-semibold">Profit and costs by day</h3>
           </div>
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-1.5">
@@ -167,39 +228,39 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, setData, filters, on
             </div>
             <div className="flex items-center gap-1.5">
               <div className="w-1.5 h-1.5 rounded-full bg-rose-500" />
-              <span className="text-xs text-zinc-550 dark:text-zinc-400 font-medium">Opex</span>
+              <span className="text-xs text-zinc-550 dark:text-zinc-400 font-medium">Costs</span>
             </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 gap-4">
           {/* Profit & Loss Summary */}
-          <Card className="lg:col-span-2">
+          <Card>
             <div className="h-[300px] mt-4">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={dailyPL.reduce((acc: any[], curr) => {
                   const date = curr.date;
                   const existing = acc.find(a => a.date === date);
                   if (existing) {
-                    existing.profit += curr.daily_profit_aed;
-                    existing.opex += curr.total_daily_cost_aed;
+                    existing.profit += curr.daily_profit;
+                    existing.opex += curr.total_daily_cost;
                   } else {
-                    acc.push({ date, profit: curr.daily_profit_aed, opex: curr.total_daily_cost_aed });
+                    acc.push({ date, profit: curr.daily_profit, opex: curr.total_daily_cost });
                   }
                   return acc;
                 }, []).sort((a, b) => a.date.localeCompare(b.date))}>
                   <defs>
                     <linearGradient id="profitGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.1}/>
-                      <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                      <stop offset="5%" stopColor="#0e5a4a" stopOpacity={0.1}/>
+                      <stop offset="95%" stopColor="#0e5a4a" stopOpacity={0}/>
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f4f4f5" />
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eceee9" />
                   <XAxis 
                     dataKey="date" 
                     axisLine={false} 
                     tickLine={false} 
-                    tick={{ fontSize: 9, fontWeight: 600, fill: '#a1a1aa' }}
+                    tick={{ fontSize: 9, fontWeight: 600, fill: '#949d95' }}
                     tickFormatter={(str) => format(parseISO(str), 'MMM d')}
                   />
                   <YAxis hide />
@@ -208,7 +269,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, setData, filters, on
                       if (active && payload && payload.length) {
                         return (
                           <div className="bg-white border border-zinc-200 p-3 rounded-xl shadow-xl">
-                            <p className="text-[10px] font-black text-zinc-400 uppercase mb-2">{format(parseISO(String(label)), 'MMMM d, yyyy')}</p>
+                            <p className="text-[11px] font-semibold text-zinc-400 mb-2">{format(parseISO(String(label)), 'MMMM d, yyyy')}</p>
                             <div className="space-y-1">
                               <p className="text-xs font-bold text-emerald-600 flex justify-between gap-4">
                                 Profit: <span>{formatValue(payload[0].value as number)}</span>
@@ -223,128 +284,66 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, setData, filters, on
                       return null;
                     }}
                   />
-                  <Area type="monotone" dataKey="profit" stroke="#10b981" fill="url(#profitGrad)" strokeWidth={2} />
-                  <Area type="monotone" dataKey="opex" stroke="#f43f5e" fill="transparent" strokeWidth={2} strokeDasharray="4 4" />
+                  <Area type="monotone" dataKey="profit" stroke="#0e5a4a" fill="url(#profitGrad)" strokeWidth={2} />
+                  <Area type="monotone" dataKey="opex" stroke="#b0472f" fill="transparent" strokeWidth={2} strokeDasharray="4 4" />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
             
             <div className="grid grid-cols-3 gap-4 mt-6 pt-6 border-t border-zinc-100">
               <div>
-                <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest">Avg. Daily Profit</span>
-                <p className="text-lg font-black text-zinc-900 mt-1">
-                  {formatValue(dailyPL.reduce((sum, d) => sum + d.daily_profit_aed, 0) / (dailyPL.length || 1))}
-                </p>
+                <span className="text-xs text-zinc-500">Average daily profit</span>
+                <p className="mt-1 text-lg font-semibold text-zinc-900">{formatValue(summary.days ? summary.profit / summary.days : 0)}</p>
               </div>
               <div>
-                <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest">Opex Efficiency</span>
-                <p className="text-lg font-black text-emerald-600 mt-1">
-                  {Math.round((dailyPL.reduce((sum, d) => sum + d.daily_profit_aed, 0) / (dailyPL.reduce((sum, d) => sum + d.daily_revenue_aed, 0) || 1)) * 100)}%
-                </p>
+                <span className="text-xs text-zinc-500">Profit margin</span>
+                <p className={cn("mt-1 text-lg font-semibold", summary.profit < 0 ? "text-rose-600" : "text-zinc-900")}>{summary.revenue > 0 ? `${Math.round((summary.profit / summary.revenue) * 100)}%` : '—'}</p>
               </div>
               <div>
-                <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest">Break-even Occ.</span>
-                <p className="text-lg font-black text-zinc-900 mt-1">
-                  {Math.round((dailyPL.reduce((sum, d) => sum + d.total_daily_cost_aed, 0) / (dailyPL.reduce((sum, d) => sum + d.daily_revenue_aed, 0) / (dailyPL.filter(d => d.occupied === 'yes').length || 1) || 1)) / (dailyPL.length / data.apartments.length || 1) * 100)}%
-                </p>
+                <span className="text-xs text-zinc-500">Break-even occupancy</span>
+                <p className="mt-1 text-lg font-semibold text-zinc-900">{summary.breakEven === null ? '—' : `${Math.round(summary.breakEven * 100)}%`}</p>
+                <p className="mt-0.5 text-xs text-zinc-500">{summary.breakEven === null ? 'Needs at least one booked night' : summary.breakEven > 1 ? 'Costs exceed full-occupancy revenue at this rate' : 'Nights you need booked to cover costs'}</p>
               </div>
             </div>
           </Card>
 
-          {/* Efficiency & Insights */}
-          <div className="space-y-6">
-            <Card className="bg-zinc-900 text-white border-none shadow-2xl relative overflow-hidden">
-              <div className="absolute top-0 right-0 p-4 opacity-20">
-                <Target size={40} className="text-emerald-400" />
-              </div>
-              <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-400">Profit Maximizer</h4>
-              <div className="mt-4">
-                <p className="text-xs font-medium text-zinc-400 leading-relaxed">
-                  Your portfolio efficiency is <span className="text-white font-bold">82%</span>. 
-                  Increasing weekend ADR by <span className="text-emerald-400 font-bold">12%</span> could yield an extra <span className="text-white font-bold">{formatValue(5400)}</span> this month.
-                </p>
-              </div>
-              <Button className="w-full mt-6 bg-emerald-500 hover:bg-emerald-400 text-zinc-900 font-black text-[10px] uppercase tracking-widest py-4">
-                View Optimization Plan
-              </Button>
-            </Card>
-
-            <Card title="Opex Minimization" className="border-rose-100">
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-lg bg-rose-50 flex items-center justify-center text-rose-600">
-                      <Zap size={14} />
-                    </div>
-                    <div>
-                      <p className="text-[10px] font-bold text-zinc-900">Utilities Spike</p>
-                      <p className="text-[9px] text-zinc-500">Apt 101 - DEWA</p>
-                    </div>
-                  </div>
-                  <span className="text-[10px] font-black text-rose-600">+15% vs Avg</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-600">
-                      <CheckCircle2 size={14} />
-                    </div>
-                    <div>
-                      <p className="text-[10px] font-bold text-zinc-900">Cleaning Optimized</p>
-                      <p className="text-[9px] text-zinc-500">Portfolio-wide</p>
-                    </div>
-                  </div>
-                  <span className="text-[10px] font-black text-emerald-600">-5% vs Last Mo</span>
-                </div>
-              </div>
-              <p className="text-[9px] text-zinc-400 mt-6 italic font-medium">
-                * Identifying these leaks can save you up to {formatValue(1200)} monthly.
-              </p>
-            </Card>
-          </div>
         </div>
       </div>
     ),
     'task-reminders': (
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 text-zinc-800 dark:text-zinc-200">
-            <Bell size={16} className="text-amber-500" />
-            <h3 className="text-sm font-semibold tracking-tight">Urgent Reminders</h3>
-          </div>
-          <span className="px-2 py-0.5 bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 text-[10px] font-medium rounded-full">
-            {upcomingTasks.length} Tasks
-          </span>
+      <Card>
+        <div className="mb-3 flex items-center justify-between">
+          <h3 className="text-base font-semibold text-zinc-900 dark:text-zinc-50">Needs attention</h3>
+          <span className="text-xs text-zinc-500">{attention.length === 0 ? 'Nothing due' : `${attention.length} ${attention.length === 1 ? 'item' : 'items'}`}</span>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {upcomingTasks.map(task => (
-            <Card key={task.id} className="p-4 hover:border-emerald-500/30 transition-all cursor-pointer group">
-              <div className="flex items-start gap-4">
-                <div className={cn(
-                  "w-10 h-10 rounded-xl flex items-center justify-center shrink-0",
-                  task.type === 'cheque' ? "bg-blue-50 text-blue-600" : "bg-emerald-50 text-emerald-600"
-                )}>
-                  {task.type === 'cheque' ? <CreditCard size={20} /> : <Clock size={20} />}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between gap-2">
-                    <h4 className="text-sm font-bold text-zinc-900 truncate">{task.title}</h4>
-                    {task.urgent && <AlertTriangle size={14} className="text-rose-500 shrink-0" />}
-                  </div>
-                  <p className="text-xs text-zinc-500 mt-1">{task.description}</p>
-                  <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mt-2">
-                    {format(parseISO(task.date), 'MMM d, yyyy')}
-                  </p>
-                </div>
-                <ChevronRight size={16} className="text-zinc-300 group-hover:text-emerald-500 transition-colors" />
-              </div>
-            </Card>
-          ))}
-        </div>
-      </div>
+        {attention.length === 0 ? (
+          <p className="py-6 text-sm text-zinc-500">No overdue cheques, unpaid invoices or unbilled services. You are up to date.</p>
+        ) : (
+          <ul className="divide-y divide-zinc-100 dark:divide-zinc-800">
+            {attention.map(item => (
+              <li key={item.id}>
+                <button
+                  onClick={() => onTabChange(item.tab)}
+                  className="group flex w-full items-center gap-4 py-3 text-left"
+                >
+                  <span className={cn("h-2 w-2 shrink-0 rounded-full", item.overdue ? "bg-rose-500" : "bg-amber-500")} aria-hidden />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-medium text-zinc-900 dark:text-zinc-100">{item.title}</span>
+                    <span className="block truncate text-xs text-zinc-500">{item.detail}</span>
+                  </span>
+                  <span className="hidden text-xs text-zinc-500 sm:block">{format(parseISO(item.date), 'd MMM yyyy')}</span>
+                  {item.amount !== null && <span className="w-28 text-right text-sm font-medium text-zinc-900 dark:text-zinc-100">{formatValue(item.amount)}</span>}
+                  <ChevronRight size={15} className="text-zinc-300 transition-colors group-hover:text-zinc-600" />
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Card>
     ),
     'reminders': (
       <Card title="Task Reminders" className="h-full">
-        <p className="text-[10px] font-medium text-zinc-400 mb-6">{actionReminders.length} items requiring attention</p>
+        <p className="text-[11px] font-medium text-zinc-400 mb-6">{actionReminders.length} items requiring attention</p>
         <div className="space-y-4">
           {actionReminders.map(reminder => (
             <div key={reminder.id} className="flex items-center gap-4 p-3 bg-zinc-50 rounded-2xl border border-zinc-100 group hover:border-emerald-500/30 transition-all">
@@ -360,18 +359,18 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, setData, filters, on
                 <div className="flex items-center justify-between gap-2">
                   <h4 className="text-xs font-bold text-zinc-900 truncate">{reminder.title}</h4>
                   <span className={cn(
-                    "text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded",
+                    "text-[8px] font-semibold px-1.5 py-0.5 rounded",
                     reminder.status === 'overdue' ? "bg-rose-100 text-rose-600" : "bg-amber-100 text-amber-600"
                   )}>
                     {reminder.status}
                   </span>
                 </div>
-                <p className="text-[10px] text-zinc-500 mt-0.5">{reminder.description}</p>
+                <p className="text-[11px] text-zinc-500 mt-0.5">{reminder.description}</p>
                 <div className="flex items-center justify-between mt-2">
-                  <span className="text-[10px] font-bold text-zinc-400">
+                  <span className="text-[11px] font-bold text-zinc-400">
                     {format(parseISO(reminder.date), 'MMM d, yyyy')}
                   </span>
-                  <span className="text-[10px] font-black text-zinc-900">
+                  <span className="text-[11px] font-semibold text-zinc-900">
                     {formatValue(reminder.amount)}
                   </span>
                 </div>
@@ -379,7 +378,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, setData, filters, on
             </div>
           ))}
         </div>
-        <button className="w-full mt-6 py-2 text-[10px] font-black text-emerald-600 uppercase tracking-widest hover:bg-emerald-50 rounded-xl transition-all">
+        <button className="w-full mt-6 py-2 text-[11px] font-semibold text-emerald-600 hover:bg-emerald-50 rounded-xl transition-all">
           View All Tasks
         </button>
       </Card>
@@ -389,21 +388,21 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, setData, filters, on
         <div className="space-y-4 mt-4">
           <div className="p-4 bg-rose-50 rounded-2xl border border-rose-100">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-[10px] font-black text-rose-600 uppercase tracking-widest">Financial Risk</span>
+              <span className="text-[11px] font-semibold text-rose-600">Financial Risk</span>
               <ShieldAlert size={14} className="text-rose-500" />
             </div>
-            <h4 className="text-lg font-black text-rose-700">High Exposure</h4>
-            <p className="text-[10px] font-medium text-rose-600/70 mt-1">
+            <h4 className="text-lg font-semibold text-rose-700">High Exposure</h4>
+            <p className="text-[11px] font-medium text-rose-600/70 mt-1">
               {formatValue(risk.refundableRevenue)} in refundable bookings next 14 days.
             </p>
           </div>
           <div className="p-4 bg-amber-50 rounded-2xl border border-amber-100">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-[10px] font-black text-amber-600 uppercase tracking-widest">Operational Risk</span>
+              <span className="text-[11px] font-semibold text-amber-600">Operational Risk</span>
               <Zap size={14} className="text-amber-500" />
             </div>
-            <h4 className="text-lg font-black text-amber-700">Maintenance Backlog</h4>
-            <p className="text-[10px] font-medium text-amber-600/70 mt-1">
+            <h4 className="text-lg font-semibold text-amber-700">Maintenance Backlog</h4>
+            <p className="text-[11px] font-medium text-amber-600/70 mt-1">
               3 critical AC repairs pending in Marina properties.
             </p>
           </div>
@@ -415,14 +414,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, setData, filters, on
         <Card className="col-span-1">
           <StatCard 
             label="Total Revenue" 
-            value={formatValue(currentKPIs?.revenue_aed || 0)} 
+            value={formatValue(currentKPIs?.revenue || 0)} 
             subValue="Net Payout"
           />
         </Card>
         <Card className="col-span-1">
           <StatCard 
             label="Lost Revenue" 
-            value={formatValue(currentKPIs?.lost_revenue_aed || 0)} 
+            value={formatValue(currentKPIs?.lost_revenue || 0)} 
             subValue="Cancelled Bookings"
             trend="down"
           />
@@ -438,44 +437,42 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, setData, filters, on
         <Card className="col-span-1">
           <StatCard 
             label="ADR" 
-            value={formatValue(currentKPIs?.ADR_aed || 0)} 
+            value={formatValue(currentKPIs?.ADR || 0)} 
             subValue="Average Daily Rate"
           />
         </Card>
         <Card className="col-span-1">
           <StatCard 
             label="Net Profit" 
-            value={formatValue(currentKPIs?.net_profit_aed || 0)} 
+            value={formatValue(currentKPIs?.net_profit || 0)} 
             subValue={`${Math.round((currentKPIs?.profit_margin || 0) * 100)}% Margin`}
-            trend={(currentKPIs?.net_profit_aed || 0) > 0 ? 'up' : 'down'}
+            trend={(currentKPIs?.net_profit || 0) > 0 ? 'up' : 'down'}
           />
         </Card>
       </div>
     ),
     'cancellation-policy': (
-      <Card title="Cancellation Policy Exposure">
-        <div className="grid grid-cols-1 gap-4 mt-6">
-          <div className="p-6 bg-zinc-50 rounded-[2rem] border border-zinc-100">
-            <div className="flex justify-between items-center mb-4">
-              <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Non-Refundable</span>
-              <span className="text-xs font-black text-zinc-900">{exposure.nonRefundable.count}</span>
+      <Card title="Booking revenue by cancellation policy" className="h-full">
+        <dl className="mt-2 divide-y divide-zinc-100 dark:divide-zinc-800">
+          <div className="flex items-baseline justify-between py-4">
+            <div>
+              <dt className="text-sm text-zinc-900 dark:text-zinc-100">Non-refundable</dt>
+              <dd className="text-xs text-zinc-500">{exposure.nonRefundable.count} {exposure.nonRefundable.count === 1 ? 'booking' : 'bookings'}, secured</dd>
             </div>
-            <h3 className="text-xl font-black text-zinc-900"><StyledValue value={exposure.nonRefundable.amount} /></h3>
-            <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mt-1">Confirmed Revenue</p>
+            <dd className="text-xl font-semibold text-zinc-900 dark:text-zinc-50"><StyledValue value={exposure.nonRefundable.amount} /></dd>
           </div>
-          <div className="p-6 bg-zinc-50 rounded-[2rem] border border-zinc-100">
-            <div className="flex justify-between items-center mb-4">
-              <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Refundable</span>
-              <span className="text-xs font-black text-zinc-900">{exposure.refundable.count}</span>
+          <div className="flex items-baseline justify-between py-4">
+            <div>
+              <dt className="text-sm text-zinc-900 dark:text-zinc-100">Refundable</dt>
+              <dd className="text-xs text-zinc-500">{exposure.refundable.count} {exposure.refundable.count === 1 ? 'booking' : 'bookings'}, can still be cancelled</dd>
             </div>
-            <h3 className="text-xl font-black text-zinc-900"><StyledValue value={exposure.refundable.amount} /></h3>
-            <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mt-1">At Risk (Flexible)</p>
+            <dd className={cn("text-xl font-semibold", exposure.refundable.amount > 0 ? "text-amber-700" : "text-zinc-900 dark:text-zinc-50")}><StyledValue value={exposure.refundable.amount} /></dd>
           </div>
-        </div>
+        </dl>
       </Card>
     ),
     'expense-breakdown': (
-      <Card title="Expense Breakdown">
+      <Card title="Where costs go" className="h-full">
         <div className="h-[300px] w-full mt-6">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
@@ -494,7 +491,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, setData, filters, on
                 paddingAngle={5}
                 dataKey="value"
               >
-                {['#18181b', '#10b981', '#3b82f6', '#f59e0b', '#ef4444'].map((color, index) => (
+                {['#1a2420', '#0e5a4a', '#4f7a8c', '#a9843a', '#b0472f'].map((color, index) => (
                   <Cell key={`cell-${index}`} fill={color} />
                 ))}
               </Pie>
@@ -509,57 +506,44 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, setData, filters, on
       </Card>
     ),
     'cheque-management': (
-      <Card title="Cheque Management & Coverage">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mt-6">
-          <div className="space-y-6">
-            <div className="p-6 bg-zinc-50 rounded-[2rem] border border-zinc-100">
-              <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Total Committed Rent</p>
-              <h3 className="text-xl font-black text-zinc-900">{formatValue(72000)}</h3>
-              <div className="mt-4 space-y-2">
-                <div className="h-2 w-full bg-zinc-200 rounded-full overflow-hidden">
-                  <div className="h-full bg-emerald-500" style={{ width: '50%' }} />
-                </div>
-                <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest">
-                  <span className="text-zinc-400">Paid: {formatValue(36000)}</span>
-                  <span className="text-zinc-900">50.0%</span>
-                </div>
+      <Card title="Rent cheques">
+        <div className="mt-2 grid grid-cols-1 gap-6 lg:grid-cols-3">
+          <div className="space-y-5">
+            <div>
+              <p className="text-xs text-zinc-500">Committed rent across all leases</p>
+              <p className="mt-1 text-2xl font-semibold text-zinc-900 dark:text-zinc-50">{formatValue(cheques.total)}</p>
+              <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-800">
+                <div className="h-full bg-emerald-600" style={{ width: `${cheques.total ? Math.round((cheques.paid / cheques.total) * 100) : 0}%` }} />
               </div>
+              <p className="mt-2 text-xs text-zinc-500">
+                {formatValue(cheques.paid)} cleared, {cheques.total ? Math.round((cheques.paid / cheques.total) * 100) : 0}% of the total
+              </p>
             </div>
-            <div className="p-6 bg-zinc-50 rounded-[2rem] border border-zinc-100">
-              <div className="flex justify-between items-center">
-                <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Upcoming Cheques</p>
-                <span className="text-xs font-black text-zinc-900">0</span>
-              </div>
-            </div>
-          </div>
-          <div className="lg:col-span-2">
-            <div className="h-[250px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={[
-                  { month: 'Apr', revenue: 35000, rent: 36000 },
-                  { month: 'May', revenue: 38000, rent: 0 },
-                  { month: 'Jun', revenue: 42000, rent: 0 },
-                  { month: 'Jul', revenue: 40000, rent: 0 },
-                  { month: 'Aug', revenue: 38000, rent: 0 },
-                  { month: 'Sep', revenue: 45000, rent: 0 }
-                ]}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f4f4f5" />
-                  <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#a1a1aa' }} />
-                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#a1a1aa' }} />
-                  <RechartsTooltip />
-                  <Area type="monotone" dataKey="revenue" stroke="#10b981" fill="#10b981" fillOpacity={0.1} name="Projected Revenue" />
-                  <Bar dataKey="rent" fill="#ef4444" radius={[4, 4, 0, 0]} name="Rent Due" />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-            <div className="mt-4 p-4 bg-emerald-50 rounded-2xl border border-emerald-100 flex items-center gap-3">
-              <div className="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center text-white">
-                <CheckCircle2 size={18} />
+            <dl className="grid grid-cols-2 gap-4 border-t border-zinc-100 pt-4 dark:border-zinc-800">
+              <div>
+                <dt className="text-xs text-zinc-500">Overdue</dt>
+                <dd className={cn("mt-0.5 text-lg font-semibold", cheques.overdueCount ? "text-rose-600" : "text-zinc-900 dark:text-zinc-50")}>{cheques.overdueCount}</dd>
               </div>
               <div>
-                <p className="text-xs font-bold text-emerald-900">Coverage Health: Excellent</p>
-                <p className="text-[10px] text-emerald-700">Projected revenue covers 100% of upcoming rent cheques for the next 4 months.</p>
+                <dt className="text-xs text-zinc-500">Due in 90 days</dt>
+                <dd className="mt-0.5 text-lg font-semibold text-zinc-900 dark:text-zinc-50">{cheques.upcomingCount}</dd>
               </div>
+            </dl>
+          </div>
+          <div className="lg:col-span-2">
+            <p className="mb-2 text-xs text-zinc-500">Rent due against confirmed booking revenue, next 6 months</p>
+            <div className="h-[230px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={cheques.months} barGap={4}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eceee9" />
+                  <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#6c766f' }} />
+                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#6c766f' }} width={56} />
+                  <RechartsTooltip formatter={(val: number) => formatValue(val)} />
+                  <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 12 }} />
+                  <Bar dataKey="revenue" fill="#0e5a4a" name="Confirmed revenue" radius={[3, 3, 0, 0]} />
+                  <Bar dataKey="rent" fill="#a9843a" name="Rent due" radius={[3, 3, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
             </div>
           </div>
         </div>
@@ -572,26 +556,26 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, setData, filters, on
             <AreaChart data={dailyPL}>
               <defs>
                 <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#18181b" stopOpacity={0.1}/>
-                  <stop offset="95%" stopColor="#18181b" stopOpacity={0}/>
+                  <stop offset="5%" stopColor="#1a2420" stopOpacity={0.1}/>
+                  <stop offset="95%" stopColor="#1a2420" stopOpacity={0}/>
                 </linearGradient>
                 <linearGradient id="colorProfit" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#10b981" stopOpacity={0.1}/>
-                  <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                  <stop offset="5%" stopColor="#0e5a4a" stopOpacity={0.1}/>
+                  <stop offset="95%" stopColor="#0e5a4a" stopOpacity={0}/>
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f4f4f5" />
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eceee9" />
               <XAxis 
                 dataKey="date" 
                 axisLine={false} 
                 tickLine={false} 
-                tick={{ fontSize: 10, fill: '#a1a1aa' }}
+                tick={{ fontSize: 10, fill: '#949d95' }}
                 minTickGap={30}
               />
               <YAxis 
                 axisLine={false} 
                 tickLine={false} 
-                tick={{ fontSize: 10, fill: '#a1a1aa' }}
+                tick={{ fontSize: 10, fill: '#949d95' }}
                 tickFormatter={(val) => `${filters.displayCurrency} ${val >= 1000 ? (val / 1000).toFixed(0) + 'k' : val}`}
               />
               <RechartsTooltip 
@@ -600,8 +584,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, setData, filters, on
               />
               <Area 
                 type="monotone" 
-                dataKey="daily_revenue_aed" 
-                stroke="#18181b" 
+                dataKey="daily_revenue" 
+                stroke="#1a2420" 
                 strokeWidth={2} 
                 fillOpacity={1} 
                 fill="url(#colorRev)" 
@@ -609,8 +593,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, setData, filters, on
               />
               <Area 
                 type="monotone" 
-                dataKey="daily_profit_aed" 
-                stroke="#10b981" 
+                dataKey="daily_profit" 
+                stroke="#0e5a4a" 
                 strokeWidth={2} 
                 fillOpacity={1} 
                 fill="url(#colorProfit)" 
@@ -629,15 +613,15 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, setData, filters, on
               const kpi = getMonthlyKPIs(data, format(new Date(), 'yyyy-MM')).find(k => k.entity === apt.name);
               return {
                 name: apt.nickname || apt.name,
-                revenue: kpi?.revenue_aed || 0,
-                profit: kpi?.net_profit_aed || 0
+                revenue: kpi?.revenue || 0,
+                profit: kpi?.net_profit || 0
               };
             })} layout="vertical">
-              <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f4f4f5" />
-              <XAxis type="number" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#a1a1aa' }} />
-              <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#a1a1aa' }} width={100} />
+              <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#eceee9" />
+              <XAxis type="number" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#949d95' }} />
+              <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#949d95' }} width={100} />
               <RechartsTooltip />
-              <Bar dataKey="revenue" fill="#10b981" radius={[0, 4, 4, 0]} barSize={20} />
+              <Bar dataKey="revenue" fill="#0e5a4a" radius={[0, 4, 4, 0]} barSize={20} />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -649,13 +633,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, setData, filters, on
           <table className="w-full text-left">
             <thead>
               <tr className="border-b border-zinc-100">
-                <th className="pb-4 text-[10px] font-black uppercase tracking-widest text-zinc-400">Entity</th>
-                <th className="pb-4 text-[10px] font-black uppercase tracking-widest text-zinc-400 text-right">Occupancy</th>
-                <th className="pb-4 text-[10px] font-black uppercase tracking-widest text-zinc-400 text-right">Revenue</th>
-                <th className="pb-4 text-[10px] font-black uppercase tracking-widest text-zinc-400 text-right">ADR</th>
-                <th className="pb-4 text-[10px] font-black uppercase tracking-widest text-zinc-400 text-right">RevPAR</th>
-                <th className="pb-4 text-[10px] font-black uppercase tracking-widest text-zinc-400 text-right">Rating</th>
-                <th className="pb-4 text-[10px] font-black uppercase tracking-widest text-zinc-400 text-right">Profit</th>
+                <th className="pb-4 text-[11px] font-semibold text-zinc-400">Entity</th>
+                <th className="pb-4 text-[11px] font-semibold text-zinc-400 text-right">Occupancy</th>
+                <th className="pb-4 text-[11px] font-semibold text-zinc-400 text-right">Revenue</th>
+                <th className="pb-4 text-[11px] font-semibold text-zinc-400 text-right">ADR</th>
+                <th className="pb-4 text-[11px] font-semibold text-zinc-400 text-right">RevPAR</th>
+                <th className="pb-4 text-[11px] font-semibold text-zinc-400 text-right">Rating</th>
+                <th className="pb-4 text-[11px] font-semibold text-zinc-400 text-right">Profit</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-50">
@@ -666,15 +650,15 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, setData, filters, on
                 )}>
                   <td className="py-4 text-xs font-bold text-zinc-900">{kpi.entity}</td>
                   <td className="py-4 text-xs text-zinc-600 text-right">{Math.round(kpi.occupancy_rate * 100)}%</td>
-                  <td className="py-4 text-xs text-zinc-600 text-right">{formatValue(kpi.revenue_aed)}</td>
-                  <td className="py-4 text-xs text-zinc-600 text-right">{formatValue(kpi.ADR_aed)}</td>
-                  <td className="py-4 text-xs text-zinc-600 text-right">{formatValue(kpi.RevPAR_aed)}</td>
-                  <td className="py-4 text-[10px] font-bold text-zinc-300 text-right italic">N/A</td>
+                  <td className="py-4 text-xs text-zinc-600 text-right">{formatValue(kpi.revenue)}</td>
+                  <td className="py-4 text-xs text-zinc-600 text-right">{formatValue(kpi.ADR)}</td>
+                  <td className="py-4 text-xs text-zinc-600 text-right">{formatValue(kpi.RevPAR)}</td>
+                  <td className="py-4 text-[11px] font-bold text-zinc-300 text-right italic">N/A</td>
                   <td className={cn(
                     "py-4 text-xs text-right font-bold",
-                    kpi.net_profit_aed >= 0 ? "text-emerald-600" : "text-rose-600"
+                    kpi.net_profit >= 0 ? "text-emerald-600" : "text-rose-600"
                   )}>
-                    {formatValue(kpi.net_profit_aed)}
+                    {formatValue(kpi.net_profit)}
                   </td>
                 </tr>
               ))}
@@ -689,8 +673,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, setData, filters, on
           {strategicGoals.map(goal => (
             <div key={goal.id} className="space-y-3">
               <div className="flex justify-between items-center">
-                <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400">{goal.title}</span>
-                <span className="text-xs font-black text-zinc-900">{goal.current}{goal.unit}</span>
+                <span className="text-[11px] font-semibold text-zinc-400">{goal.title}</span>
+                <span className="text-xs font-semibold text-zinc-900">{goal.current}{goal.unit}</span>
               </div>
               <div className="h-2 w-full bg-zinc-100 rounded-full overflow-hidden">
                 <div 
@@ -703,7 +687,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, setData, filters, on
                 />
               </div>
               <div className="flex justify-end">
-                <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest">Target: {goal.target}{goal.unit}</span>
+                <span className="text-[11px] font-bold text-zinc-400">Target: {goal.target}{goal.unit}</span>
               </div>
             </div>
           ))}
@@ -715,11 +699,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, setData, filters, on
         <div className="h-[250px] w-full mt-6">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={occupancyTrend}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f4f4f5" />
-              <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#a1a1aa' }} />
-              <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#a1a1aa' }} tickFormatter={(v) => `${v}%`} />
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eceee9" />
+              <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#949d95' }} />
+              <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#949d95' }} tickFormatter={(v) => `${v}%`} />
               <RechartsTooltip />
-              <Area type="monotone" dataKey="rate" stroke="#10b981" fill="#10b981" fillOpacity={0.1} />
+              <Area type="monotone" dataKey="rate" stroke="#0e5a4a" fill="#0e5a4a" fillOpacity={0.1} />
             </AreaChart>
           </ResponsiveContainer>
         </div>
@@ -740,7 +724,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, setData, filters, on
                 dataKey="value"
               >
                 {channelRevenue.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={['#18181b', '#10b981', '#3b82f6', '#f59e0b'][index % 4]} />
+                  <Cell key={`cell-${index}`} fill={['#1a2420', '#0e5a4a', '#4f7a8c', '#a9843a'][index % 4]} />
                 ))}
               </Pie>
               <RechartsTooltip formatter={(val: number) => formatValue(val)} />
@@ -751,29 +735,19 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, setData, filters, on
       </Card>
     ),
     'revenue-forecast': (
-      <Card title="Revenue Forecast (3-Month Projection)">
+      <Card title="Confirmed revenue, next 3 months">
         <div className="h-[300px] w-full mt-6">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={forecast}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f4f4f5" />
-              <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#a1a1aa' }} />
-              <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#a1a1aa' }} />
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eceee9" />
+              <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#949d95' }} />
+              <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#949d95' }} />
               <RechartsTooltip />
-              <Legend />
-              <Bar dataKey="confirmed" stackId="a" fill="#18181b" name="Current Month" />
-              <Bar dataKey="projected" stackId="a" fill="#10b981" name="Projected Revenue" />
+              <Bar dataKey="confirmed" fill="#0e5a4a" name="Confirmed revenue" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
-        <div className="mt-4 p-4 bg-emerald-50 rounded-2xl border border-emerald-100 flex items-center gap-3">
-          <div className="w-8 h-8 bg-emerald-100 rounded-lg flex items-center justify-center text-emerald-600">
-            <TrendingUp size={18} />
-          </div>
-          <div>
-            <p className="text-xs font-bold text-emerald-900">Growth Insight</p>
-            <p className="text-[10px] text-emerald-700">Based on your last 3 months, we project a <span className="font-bold text-emerald-600">~5.2% monthly growth</span>. Optimizing weekend pricing could increase this to 7.5%.</p>
-          </div>
-        </div>
+        <p className="mt-3 text-xs text-zinc-500">Payouts from confirmed bookings checking in each month.</p>
       </Card>
     ),
     'market-benchmark': (
@@ -786,21 +760,21 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, setData, filters, on
               { subject: 'RevPAR', A: 697, B: 585, fullMark: 1000 }
             ]}>
               <PolarGrid />
-              <PolarAngleAxis dataKey="subject" tick={{ fontSize: 10, fill: '#a1a1aa' }} />
-              <Radar name="Market Average" dataKey="B" stroke="#10b981" fill="#10b981" fillOpacity={0.1} />
-              <Radar name="Your Portfolio" dataKey="A" stroke="#18181b" fill="#18181b" fillOpacity={0.1} />
+              <PolarAngleAxis dataKey="subject" tick={{ fontSize: 10, fill: '#949d95' }} />
+              <Radar name="Market Average" dataKey="B" stroke="#0e5a4a" fill="#0e5a4a" fillOpacity={0.1} />
+              <Radar name="Your Portfolio" dataKey="A" stroke="#1a2420" fill="#1a2420" fillOpacity={0.1} />
               <Legend />
             </RadarChart>
           </ResponsiveContainer>
         </div>
         <div className="mt-6 space-y-3">
           <div className="flex justify-between items-center">
-            <span className="text-[10px] font-bold text-zinc-400 uppercase">ADR vs Market</span>
-            <span className="text-xs font-black text-emerald-600">+8.2%</span>
+            <span className="text-[11px] font-bold text-zinc-400">ADR vs Market</span>
+            <span className="text-xs font-semibold text-emerald-600">+8.2%</span>
           </div>
           <div className="flex justify-between items-center">
-            <span className="text-[10px] font-bold text-zinc-400 uppercase">Occ. vs Market</span>
-            <span className="text-xs font-black text-rose-600">-4.1%</span>
+            <span className="text-[11px] font-bold text-zinc-400">Occ. vs Market</span>
+            <span className="text-xs font-semibold text-rose-600">-4.1%</span>
           </div>
         </div>
       </Card>
@@ -810,18 +784,18 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, setData, filters, on
         <div className="h-[250px] w-full mt-6">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={leadTimeData.data}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f4f4f5" />
-              <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#a1a1aa' }} />
-              <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#a1a1aa' }} />
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eceee9" />
+              <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#949d95' }} />
+              <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#949d95' }} />
               <RechartsTooltip />
-              <Bar dataKey="value" fill="#18181b" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="value" fill="#1a2420" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
         <div className="mt-4 p-4 bg-zinc-50 rounded-2xl border border-zinc-100 flex items-center gap-3">
           <Info size={16} className="text-zinc-400" />
-          <p className="text-[10px] text-zinc-500 leading-relaxed">
-            Average lead time is <span className="font-bold text-zinc-900">{leadTimeData.avg} days</span>. Last minute bookings (0-3 days) account for 15% of total volume.
+          <p className="text-[11px] text-zinc-500 leading-relaxed">
+            Guests book <span className="font-semibold text-zinc-900">{leadTimeData.avg} days</span> ahead on average.
           </p>
         </div>
       </Card>
@@ -831,9 +805,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, setData, filters, on
         <div className="h-[300px] w-full mt-6">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={adrTrend}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f4f4f5" />
-              <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#a1a1aa' }} />
-              <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#a1a1aa' }} />
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eceee9" />
+              <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#949d95' }} />
+              <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#949d95' }} />
               <RechartsTooltip />
               <Legend />
               {data.apartments.map((apt, i) => (
@@ -841,8 +815,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, setData, filters, on
                   key={apt.apartment_id} 
                   type="monotone" 
                   dataKey={apt.name} 
-                  stroke={['#18181b', '#10b981', '#3b82f6', '#f59e0b'][i % 4]} 
-                  fill={['#18181b', '#10b981', '#3b82f6', '#f59e0b'][i % 4]} 
+                  stroke={['#1a2420', '#0e5a4a', '#4f7a8c', '#a9843a'][i % 4]} 
+                  fill={['#1a2420', '#0e5a4a', '#4f7a8c', '#a9843a'][i % 4]} 
                   fillOpacity={0.05} 
                 />
               ))}
@@ -872,13 +846,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, setData, filters, on
               />
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <span className="text-4xl font-black text-zinc-900">{opportunity.score}</span>
-              <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Score</span>
+              <span className="text-4xl font-semibold text-zinc-900">{opportunity.score}</span>
+              <span className="text-[11px] font-semibold text-zinc-400">Score</span>
             </div>
           </div>
           <div className="mt-8 text-center px-6">
-            <h4 className="text-sm font-black text-zinc-900 uppercase tracking-widest">{opportunity.label}</h4>
-            <p className="text-[10px] text-zinc-500 mt-2 leading-relaxed">{opportunity.insight}</p>
+            <h4 className="text-sm font-semibold text-zinc-900">{opportunity.label}</h4>
+            <p className="text-[11px] text-zinc-500 mt-2 leading-relaxed">{opportunity.insight}</p>
           </div>
         </div>
       </Card>
@@ -886,51 +860,83 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, setData, filters, on
   };
 
   const categories = [
-    { id: 'urgent_reminders', name: 'Urgent Reminders', icon: <AlertTriangle size={16} /> },
-    { id: 'financial', name: 'Financial', icon: <CreditCard size={16} /> },
-    { id: 'operations', name: 'Operations', icon: <Zap size={16} /> },
-    { id: 'portfolio', name: 'Portfolio', icon: <Layout size={16} /> },
-    { id: 'analytics', name: 'Analytics', icon: <BarIcon size={16} /> }
+    { id: 'urgent_reminders', name: 'Needs attention', icon: <AlertTriangle size={16} />, showHeading: false },
+    { id: 'financial', name: 'Money', icon: <CreditCard size={16} />, showHeading: true },
+    { id: 'operations', name: 'Rent cheques', icon: <Zap size={16} />, showHeading: false },
+    { id: 'portfolio', name: 'Properties', icon: <Layout size={16} />, showHeading: true },
+    { id: 'analytics', name: 'Bookings', icon: <BarIcon size={16} />, showHeading: true }
   ];
+  // Retired: placeholder widgets with invented figures, and blocks now covered by the summary panel.
+  const RETIRED = new Set(['strategic-goals', 'market-benchmark', 'opportunity-score', 'kpi-stats', 'reminders', 'risk-assessment', 'revenue-trend']);
+  const isShown = (w: { id: string; visible: boolean }) => w.visible && !RETIRED.has(w.id);
 
   return (
-    <div className="space-y-12 pb-20 grid-pattern min-h-screen">
-      {/* Controls - Moved to sub-header style */}
-      <div className="flex items-center justify-end gap-3 mb-8">
-        <Button 
-          variant="outline" 
-          size="sm" 
-          onClick={() => setIsCustomizing(!isCustomizing)}
-          className={cn(
-            "gap-2 px-4",
-            isCustomizing && "bg-zinc-900 text-white"
-          )}
-        >
-          {isCustomizing ? <CheckSquare size={14} /> : <Layout size={14} />}
-          {isCustomizing ? 'Done' : 'Customize'}
-        </Button>
-        <Button variant="outline" size="sm" className="gap-2 px-4">
-          <RefreshCw size={14} />
-          Refresh
-        </Button>
-      </div>
+    <div className="space-y-10 pb-20">
+      <GettingStarted data={data} onTabChange={onTabChange} onImportPdfs={onImportPdfs ?? (() => onTabChange('reservations'))} />
+      {data.apartments.length > 0 && <>
+      {/* Summary: the one bold element on the page */}
+      <section aria-label="Summary for the selected period" className="rounded-3xl bg-emerald-900 p-5 sm:p-7 text-white dark:border dark:border-emerald-800/60 dark:bg-emerald-950">
+        <div className="flex flex-wrap items-start justify-between gap-6">
+          <div>
+            <p className="text-sm text-emerald-200/80">Net profit, {format(parseISO(filters.startDate), 'd MMM')} to {format(parseISO(filters.endDate), 'd MMM yyyy')}</p>
+            <p className={cn("mt-2 text-[34px] sm:text-[44px] font-semibold leading-none tracking-[-0.03em]", summary.profit < 0 && "text-rose-200")}>
+              {formatValue(summary.profit)}
+            </p>
+            <p className="mt-3 text-sm text-emerald-100/80">
+              {summary.revenue > 0
+                ? `${Math.round((summary.profit / summary.revenue) * 100)}% of revenue kept after rent, fees and costs`
+                : 'No booking revenue in this period yet'}
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setIsCustomizing(!isCustomizing)}
+              className="text-emerald-100 hover:bg-white/10 hover:text-white"
+            >
+              {isCustomizing ? <CheckSquare size={14} /> : <Layout size={14} />}
+              {isCustomizing ? 'Done' : 'Choose sections'}
+            </Button>
+          </div>
+        </div>
+        <dl className="mt-8 grid grid-cols-2 gap-x-6 gap-y-5 border-t border-white/15 pt-6 md:grid-cols-4">
+          <div>
+            <dt className="text-xs text-emerald-200/80">Revenue</dt>
+            <dd className="mt-1 text-xl font-semibold">{formatValue(summary.revenue)}</dd>
+          </div>
+          <div>
+            <dt className="text-xs text-emerald-200/80">Costs</dt>
+            <dd className="mt-1 text-xl font-semibold">{formatValue(summary.costs)}</dd>
+          </div>
+          <div>
+            <dt className="text-xs text-emerald-200/80">Occupancy</dt>
+            <dd className="mt-1 text-xl font-semibold">{Math.round(summary.occupancy * 100)}%</dd>
+            <dd className="text-xs text-emerald-200/70">{summary.booked} of {summary.nights} nights</dd>
+          </div>
+          <div>
+            <dt className="text-xs text-emerald-200/80">Average nightly rate</dt>
+            <dd className="mt-1 text-xl font-semibold">{summary.booked ? formatValue(summary.nightlyRate) : '—'}</dd>
+          </div>
+        </dl>
+      </section>
 
       {/* Customization Panel */}
       {isCustomizing && (
-        <div className="p-8 bg-white border border-zinc-200 rounded-3xl text-zinc-900 shadow-2xl">
+        <div className="rounded-2xl border border-zinc-200 bg-white p-6 text-zinc-900 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100">
           <div className="flex items-center justify-between mb-8">
             <div>
-              <h3 className="text-xl font-black tracking-tight">Customize Your View</h3>
-              <p className="text-xs font-medium text-zinc-400 mt-1">Toggle widgets to build your perfect workspace</p>
+              <h3 className="text-base font-semibold">Choose dashboard sections</h3>
+              <p className="mt-1 text-xs text-zinc-500">Your choice is saved for your account in this workspace.</p>
             </div>
             <Button 
               variant="ghost" 
               size="sm" 
               onClick={resetWidgets}
-              className="text-[10px] font-black uppercase tracking-widest text-zinc-400 hover:text-zinc-900"
+              className="text-[11px] font-semibold text-zinc-400 hover:text-zinc-900"
             >
               <RotateCcw size={14} className="mr-2" />
-              Reset to Default
+              Show all
             </Button>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -938,10 +944,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, setData, filters, on
               <div key={cat.id} className="space-y-4">
                 <div className="flex items-center gap-2 text-zinc-500">
                   {cat.icon}
-                  <span className="text-[10px] font-black uppercase tracking-widest">{cat.name}</span>
+                  <span className="text-[11px] font-semibold">{cat.name}</span>
                 </div>
                 <div className="space-y-2">
-                  {data.dashboardWidgets.filter(w => w.category === cat.id).map(widget => (
+                  {data.dashboardWidgets.filter(w => w.category === cat.id && !RETIRED.has(w.id)).map(widget => (
                     <label 
                       key={widget.id} 
                       className="flex items-center gap-3 p-3 rounded-2xl hover:bg-zinc-50 cursor-pointer transition-colors group"
@@ -973,7 +979,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, setData, filters, on
       {/* Dashboard Grid */}
       <div className="space-y-12">
         {categories.map((category, catIndex) => {
-          const visibleWidgets = data.dashboardWidgets.filter(w => w.category === category.id && w.visible);
+          const visibleWidgets = data.dashboardWidgets.filter(w => w.category === category.id && isShown(w));
           if (visibleWidgets.length === 0) return null;
 
           return (
@@ -982,41 +988,33 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, setData, filters, on
               initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: catIndex * 0.08 }}
-              className="space-y-6"
+              className="space-y-4"
             >
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-500 dark:text-zinc-400">
-                  {category.icon}
-                </div>
-                <div>
-                  <h2 className="text-sm font-semibold text-zinc-800 dark:text-zinc-200 uppercase tracking-widest">{category.name}</h2>
-                </div>
-                <div className="h-px flex-1 bg-gradient-to-r from-zinc-200 dark:from-zinc-800 via-zinc-100 dark:via-zinc-850 to-transparent ml-4" />
-              </div>
+              {category.showHeading && (
+                <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">{category.name}</h2>
+              )}
 
-              <div className="grid grid-cols-12 gap-6">
+              <div className="grid grid-cols-12 gap-4">
                 {visibleWidgets.map((widget, widgetIndex) => (
-                  <motion.div 
+                  <div
                     key={widget.id}
-                    initial={{ opacity: 0, scale: 0.98 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: (catIndex * 0.08) + (widgetIndex * 0.04) }}
                     className={cn(
                       widget.colSpan === 12 ? "col-span-12" :
-                      widget.colSpan === 8 ? "col-span-12 lg:col-span-8" :
+                      widget.colSpan === 8 ? "col-span-12 lg:col-span-6" :
                       widget.colSpan === 6 ? "col-span-12 md:col-span-6" :
                       widget.colSpan === 4 ? "col-span-12 md:col-span-6 lg:col-span-4" :
                       "col-span-12"
                     )}
                   >
                     {(widgets as any)[widget.id] || null}
-                  </motion.div>
+                  </div>
                 ))}
               </div>
             </motion.div>
           );
         })}
       </div>
+      </>}
     </div>
   );
 };

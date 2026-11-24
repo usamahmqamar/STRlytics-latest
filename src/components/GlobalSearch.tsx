@@ -112,8 +112,8 @@ export const GlobalSearch: React.FC<GlobalSearchProps> = ({ data, onNavigate, is
                         <res.icon size={20} />
                       </div>
                       <div className="flex-1">
-                        <p className="text-sm font-black text-zinc-900 tracking-tight uppercase italic">{res.title}</p>
-                        <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest">{res.subtitle}</p>
+                        <p className="text-sm font-semibold text-zinc-900 tracking-tight italic">{res.title}</p>
+                        <p className="text-[11px] text-zinc-400 font-bold">{res.subtitle}</p>
                       </div>
                       <div className="opacity-0 group-hover:opacity-100 transition-opacity">
                         <ArrowRight size={18} className="text-zinc-400" />
@@ -127,11 +127,11 @@ export const GlobalSearch: React.FC<GlobalSearchProps> = ({ data, onNavigate, is
                     <Search size={32} className="text-zinc-200" />
                   </div>
                   <p className="text-zinc-400 font-bold">No results found for "{query}"</p>
-                  <p className="text-[10px] text-zinc-400 uppercase tracking-widest mt-1">Try searching for something else</p>
+                  <p className="text-[11px] text-zinc-400 mt-1">Try searching for something else</p>
                 </div>
               ) : (
                 <div className="p-8">
-                  <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-4 ml-2">Quick Actions</p>
+                  <p className="text-[11px] font-semibold text-zinc-400 mb-4 ml-2">Quick Actions</p>
                   <div className="grid grid-cols-2 gap-4">
                     {[
                       { label: 'Add Reservation', tab: 'reservations', icon: Calendar },
@@ -159,11 +159,11 @@ export const GlobalSearch: React.FC<GlobalSearchProps> = ({ data, onNavigate, is
             <div className="p-4 bg-zinc-50 border-t border-zinc-100 flex items-center justify-between">
               <div className="flex items-center gap-4">
                 <div className="flex items-center gap-1.5">
-                  <kbd className="px-1.5 py-0.5 bg-white border border-zinc-200 rounded text-[10px] font-bold text-zinc-400 shadow-sm">ESC</kbd>
-                  <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">to close</span>
+                  <kbd className="px-1.5 py-0.5 bg-white border border-zinc-200 rounded text-[11px] font-bold text-zinc-400 shadow-sm">ESC</kbd>
+                  <span className="text-[11px] font-bold text-zinc-400">to close</span>
                 </div>
               </div>
-              <p className="text-[9px] font-black text-zinc-300 uppercase tracking-widest italic">Mission Control Search v1.0</p>
+              <p className="text-[11px] font-semibold text-zinc-300 italic">Mission Control Search v1.0</p>
             </div>
           </motion.div>
         </div>

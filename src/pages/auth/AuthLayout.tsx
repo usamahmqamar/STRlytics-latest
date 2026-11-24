@@ -6,8 +6,8 @@ import { cn } from '../../lib/utils';
 
 export const Brand: React.FC<{ className?: string }> = ({ className }) => (
   <Link to="/" className={cn('flex items-center gap-2.5', className)}>
-    <span className="w-9 h-9 bg-zinc-950 rounded-xl flex items-center justify-center border border-zinc-800">
-      <TrendingUp size={18} className="text-emerald-400" />
+    <span className="w-9 h-9 bg-emerald-700 rounded-lg flex items-center justify-center">
+      <TrendingUp size={18} className="text-white" />
     </span>
     <span className="font-semibold text-lg tracking-tight text-zinc-900">Staylytics</span>
   </Link>
@@ -23,27 +23,27 @@ export const AuthLayout: React.FC<{ title: string; subtitle?: React.ReactNode; c
   title, subtitle, children,
 }) => (
   <div className="min-h-screen bg-zinc-50 grid lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]">
-    <aside className="hidden lg:flex flex-col justify-between bg-zinc-950 text-zinc-100 p-12">
+    <aside className="hidden lg:flex flex-col justify-between bg-emerald-900 text-white p-12">
       <div className="flex items-center gap-2.5">
-        <span className="w-9 h-9 bg-zinc-900 rounded-xl flex items-center justify-center border border-zinc-800">
-          <TrendingUp size={18} className="text-emerald-400" />
+        <span className="w-9 h-9 bg-white/10 rounded-lg flex items-center justify-center">
+          <TrendingUp size={18} className="text-white" />
         </span>
         <span className="font-semibold text-lg tracking-tight">Staylytics</span>
       </div>
       <div className="max-w-sm">
-        <p className="text-2xl font-semibold leading-snug tracking-tight">
+        <p className="text-[32px] font-semibold leading-[1.15] tracking-[-0.02em]">
           Know what each listing really earns, every day.
         </p>
         <ul className="mt-8 space-y-4">
           {points.map(({ icon: Icon, text }) => (
-            <li key={text} className="flex gap-3 text-sm text-zinc-300">
-              <Icon size={18} className="text-emerald-400 shrink-0 mt-0.5" />
+            <li key={text} className="flex gap-3 text-sm text-emerald-50/85">
+              <Icon size={18} className="text-emerald-200 shrink-0 mt-0.5" />
               <span>{text}</span>
             </li>
           ))}
         </ul>
       </div>
-      <p className="text-xs text-zinc-500">15-day free trial · no card required</p>
+      <p className="text-xs text-emerald-200/70">15-day free trial, no card required</p>
     </aside>
 
     <main className="flex items-center justify-center px-4 py-10 sm:px-8">
@@ -113,12 +113,24 @@ export const Divider: React.FC = () => (
 );
 
 /** Turns Supabase auth errors into plain sentences. */
+export const MIN_PASSWORD_LENGTH = 10;
+
+/** Client-side password rule; mirror it in Supabase → Authentication → Providers → Email. */
+export function passwordProblem(password: string): string | null {
+  if (password.length < MIN_PASSWORD_LENGTH) return `Use at least ${MIN_PASSWORD_LENGTH} characters for your password.`;
+  if (!/[a-z]/i.test(password) || !/\d/.test(password)) return 'Use both letters and numbers in your password.';
+  return null;
+}
+
 export function friendlyAuthError(message: string | undefined): string {
   const m = (message || '').toLowerCase();
   if (m.includes('invalid login credentials')) return 'Email or password is incorrect.';
   if (m.includes('email not confirmed')) return 'Please confirm your email first. Check your inbox for the link.';
-  if (m.includes('password should be') || m.includes('weak password')) return 'Choose a stronger password: at least 8 characters, mixing letters and numbers.';
+  if (m.includes('password should be') || m.includes('weak password') || m.includes('pwned') || m.includes('leaked')) return 'Choose a stronger password: at least 10 characters, mixing letters and numbers, and not one used on other sites.';
+  // Same wording as a fresh sign-up, so the form cannot be used to discover who has an account.
+  if (m.includes('already registered') || m.includes('already exists')) return 'If this email can be used, we have sent a confirmation link. Check your inbox, or log in instead.';
   if (m.includes('rate limit') || m.includes('too many')) return 'Too many attempts. Please wait a minute and try again.';
+  if (m.includes('failed to fetch') || m.includes('network')) return 'Could not reach the sign-in service. Check your connection and try again.';
   if (m.includes('provider is not enabled')) return 'Google sign-in is not switched on yet. Use email and password for now.';
   if (m.includes('same password')) return 'The new password must be different from the old one.';
   return message || 'Something went wrong. Please try again.';
