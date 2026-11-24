@@ -154,3 +154,57 @@ export async function recordApproval(orgId: string, nominationId: string, entity
   if (error) fail(error, 'Could not record the approval.');
   return data as 'approved' | 'pending';
 }
+
+/* ---------- owner logins and prepared statements ---------- */
+
+export interface OwnerInvite { id: string; entity_id: string; email: string; token: string; expires_at: string; accepted_at: string | null; created_at: string }
+export interface OwnerLogin { entity_id: string; user_id: string; created_at: string }
+export interface PreparedStatement {
+  id: string; entity_id: string; kind: 'month_to_date' | 'monthly' | 'quarterly' | 'yearly';
+  period_start: string; period_end: string; currency: string; total: number;
+  statement: import('../lib/ownerStatement').Statement; prepared_at: string;
+  email_status: 'sent' | 'failed' | 'opted_out' | 'no_email' | 'not_configured' | null; emailed_at: string | null;
+}
+
+export const ownerInviteLink = (token: string) => `${window.location.origin}/owner-invite/${token}`;
+
+export async function loadOwnerAccess(orgId: string): Promise<{ invites: OwnerInvite[]; logins: OwnerLogin[] }> {
+  const [i, l] = await Promise.all([
+    supabase.from('owner_invitations').select('id, entity_id, email, token, expires_at, accepted_at, created_at').eq('org_id', orgId).order('created_at', { ascending: false }),
+    supabase.from('owner_logins').select('entity_id, user_id, created_at').eq('org_id', orgId),
+  ]);
+  if (i.error) fail(i.error, 'Could not load owner logins.');
+  if (l.error) fail(l.error, 'Could not load owner logins.');
+  return { invites: (i.data ?? []) as OwnerInvite[], logins: (l.data ?? []) as OwnerLogin[] };
+}
+
+export async function inviteOwner(orgId: string, entityId: string, email: string, userId: string): Promise<OwnerInvite> {
+  const clean = email.trim().toLowerCase();
+  if (!/^[^@\s<>"]+@[^@\s<>"]+\.[a-z]{2,}$/i.test(clean)) throw new Error('Enter a valid email address.');
+  const { data, error } = await supabase.from('owner_invitations')
+    .insert({ org_id: orgId, entity_id: entityId, email: clean, invited_by: userId })
+    .select('id, entity_id, email, token, expires_at, accepted_at, created_at').single();
+  if (error) fail(error, 'Could not create the invitation.');
+  return data as OwnerInvite;
+}
+
+export async function cancelOwnerInvite(orgId: string, id: string) {
+  const { error } = await supabase.from('owner_invitations').delete().eq('org_id', orgId).eq('id', id);
+  if (error) fail(error, 'Could not cancel the invitation.');
+}
+
+/** Ends every login to this owner's statements. */
+export async function removeOwnerLogins(orgId: string, entityId: string) {
+  const { error } = await supabase.from('owner_logins').delete().eq('org_id', orgId).eq('entity_id', entityId);
+  if (error) fail(error, 'Could not remove the login.');
+}
+
+export async function loadPreparedStatements(orgId: string, entityId?: string): Promise<PreparedStatement[]> {
+  let q = supabase.from('owner_statements')
+    .select('id, entity_id, kind, period_start, period_end, currency, total, statement, prepared_at, email_status, emailed_at')
+    .eq('org_id', orgId).order('period_start', { ascending: false }).limit(200);
+  if (entityId) q = q.eq('entity_id', entityId);
+  const { data, error } = await q;
+  if (error) fail(error, 'Could not load statements.');
+  return (data ?? []).map((s: any) => ({ ...s, total: Number(s.total) })) as PreparedStatement[];
+}

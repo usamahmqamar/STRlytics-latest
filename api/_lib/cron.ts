@@ -24,5 +24,7 @@ export async function rpc(name: string, body: unknown) {
     signal: AbortSignal.timeout(15000),
   });
   if (!res.ok) throw new HttpError(502, 'Could not reach the database.');
-  return res.json();
+  // Functions that return nothing answer with an empty body (204).
+  const text = await res.text();
+  return text ? JSON.parse(text) : null;
 }

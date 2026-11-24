@@ -6,7 +6,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { format, parseISO } from 'date-fns';
 import { toast } from 'react-hot-toast';
-import { Building2, Download, FileText, Loader2, Pencil, Plus, ShieldCheck, Trash2, UserCheck, Users } from 'lucide-react';
+import { Building2, Copy, Download, FileText, KeyRound, Loader2, Pencil, Plus, ShieldCheck, Trash2, UserCheck, Users } from 'lucide-react';
 import { Card } from './ui/Card';
 import { Button } from './ui/Button';
 import { Sheet, fieldClass } from './ui/Sheet';
@@ -16,10 +16,11 @@ import { SUPPORTED_CURRENCIES, formatMoney, type Rates } from '../lib/money';
 import { countryOptions } from '../lib/regions';
 import { buildStatement, lastPeriod, sharesOn } from '../lib/ownerStatement';
 import {
-  deleteEntity, loadOwners, nominateRepresentative, optBackIn, optOutOfReports, recordApproval, saveEntity, setShares,
-  uploadOwnerLetter, type Entity, type EntityInput, type OwnersData, type ReportFrequency,
+  cancelOwnerInvite, deleteEntity, inviteOwner, loadOwnerAccess, loadOwners, loadPreparedStatements, nominateRepresentative,
+  optBackIn, optOutOfReports, ownerInviteLink, recordApproval, removeOwnerLogins, saveEntity, setShares, uploadOwnerLetter,
+  type Entity, type EntityInput, type OwnerInvite, type OwnerLogin, type OwnersData, type PreparedStatement, type ReportFrequency,
 } from '../services/owners';
-import type { Workspace } from '../auth/AuthProvider';
+import { useAuth, type Workspace } from '../auth/AuthProvider';
 import type { UserData } from '../types';
 
 interface Member { user_id: string; full_name: string | null; email: string; role: string }
@@ -73,7 +74,7 @@ export const Owners: React.FC<{ workspace: Workspace; data: UserData; rates: Rat
 
       {tab === 'owners' && <OwnersList orgId={workspace.id} owners={owners} data={data} baseCurrency={baseCurrency} canWrite={canWrite} onChanged={reload} />}
       {tab === 'properties' && <PropertyOwnership orgId={workspace.id} owners={owners} data={data} members={members} canWrite={canWrite} onChanged={reload} />}
-      {tab === 'statements' && <Statements owners={owners} data={data} rates={rates} baseCurrency={baseCurrency} workspaceName={workspace.name} />}
+      {tab === 'statements' && <Statements orgId={workspace.id} owners={owners} data={data} rates={rates} baseCurrency={baseCurrency} workspaceName={workspace.name} />}
     </div>
   );
 };
@@ -85,6 +86,7 @@ const OwnersList: React.FC<{ orgId: string; owners: OwnersData; data: UserData; 
 }) => {
   const [editing, setEditing] = useState<Entity | 'new' | null>(null);
   const [optingOut, setOptingOut] = useState<Entity | null>(null);
+  const [access, setAccess] = useState<Entity | null>(null);
   const propertiesOf = (id: string) => {
     const props = new Set(owners.shares.filter(s => s.entity_id === id).map(s => s.property_id));
     return data.apartments.filter(a => props.has(a.apartment_id) && (sharesOn(owners.shares, a.apartment_id, today()).get(id) ?? 0) > 0);
@@ -151,6 +153,7 @@ const OwnersList: React.FC<{ orgId: string; owners: OwnersData; data: UserData; 
                             ) : (
                               <Button size="sm" variant="ghost" onClick={() => setOptingOut(e)}>Stop reports</Button>
                             )}
+                            <Button size="sm" variant="ghost" aria-label={`Login for ${e.name}`} title="Owner login" onClick={() => setAccess(e)}><KeyRound size={14} /></Button>
                             <Button size="sm" variant="ghost" aria-label={`Edit ${e.name}`} onClick={() => setEditing(e)}><Pencil size={14} /></Button>
                           </div>
                         )}
@@ -168,6 +171,7 @@ const OwnersList: React.FC<{ orgId: string; owners: OwnersData; data: UserData; 
           holdsShares={editing !== 'new' && owners.shares.some(s => s.entity_id === editing.id)}
           onClose={() => setEditing(null)} onSaved={async () => { setEditing(null); await onChanged(); }} />
       )}
+      {access && <AccessSheet orgId={orgId} entity={access} onClose={() => setAccess(null)} />}
       {optingOut && (
         <OptOutSheet orgId={orgId} entity={optingOut} onClose={() => setOptingOut(null)}
           onSaved={async () => { setOptingOut(null); await onChanged(); }} />
@@ -324,6 +328,90 @@ const OptOutSheet: React.FC<{ orgId: string; entity: Entity; onClose: () => void
         }}>Stop reports</Button>
       </div>}>
       <Evidence orgId={orgId} onReady={setEv} />
+    </Sheet>
+  );
+};
+
+/** Lets an owner sign in to see their own statements (and nothing else in the workspace). */
+const AccessSheet: React.FC<{ orgId: string; entity: Entity; onClose: () => void }> = ({ orgId, entity, onClose }) => {
+  const { user } = useAuth();
+  const [invites, setInvites] = useState<OwnerInvite[] | null>(null);
+  const [logins, setLogins] = useState<OwnerLogin[]>([]);
+  const [email, setEmail] = useState(entity.report_email ?? '');
+  const [busy, setBusy] = useState(false);
+  const reload = useCallback(async () => {
+    try {
+      const a = await loadOwnerAccess(orgId);
+      setInvites(a.invites.filter(i => i.entity_id === entity.id));
+      setLogins(a.logins.filter(l => l.entity_id === entity.id));
+    } catch (e: any) { toast.error(e.message); setInvites([]); }
+  }, [orgId, entity.id]);
+  useEffect(() => { reload(); }, [reload]);
+  const copy = async (token: string) => {
+    try { await navigator.clipboard.writeText(ownerInviteLink(token)); toast.success('Link copied. Send it to the owner.'); }
+    catch { toast.error('Could not copy. Select the link and copy it.'); }
+  };
+  const now = Date.now();
+  return (
+    <Sheet open onClose={onClose} title={`Owner login for ${entity.name}`}
+      description="The owner sees only their own statements: this month so far and every statement prepared for them. Nothing else in your workspace."
+      footer={<div className="flex justify-end"><Button variant="outline" onClick={onClose}>Done</Button></div>}>
+      <div className="space-y-5">
+        <div className="rounded-xl border border-zinc-200 p-3 text-sm dark:border-zinc-800">
+          {logins.length ? (
+            <div className="flex items-center justify-between gap-2">
+              <span>{logins.length === 1 ? 'One person can sign in' : `${logins.length} people can sign in`} to see these statements.</span>
+              <Button size="sm" variant="ghost" disabled={busy} onClick={async () => {
+                if (!window.confirm(`Remove every login to ${entity.name}'s statements?`)) return;
+                setBusy(true);
+                try { await removeOwnerLogins(orgId, entity.id); toast.success('Access removed.'); await reload(); }
+                catch (e: any) { toast.error(e.message); }
+                finally { setBusy(false); }
+              }}>Remove access</Button>
+            </div>
+          ) : <span className="text-zinc-500">Nobody can sign in to these statements yet.</span>}
+        </div>
+
+        <div>
+          <p className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Invite the owner</p>
+          <p className="mt-1 text-xs text-zinc-500">They create an account with this email, or sign in if they already have one. The link works for 14 days.</p>
+          <div className="mt-2 flex gap-2">
+            <input type="email" aria-label="Owner's email" className={cn(fieldClass, 'flex-1')} value={email} onChange={e => setEmail(e.target.value)} maxLength={254} />
+            <Button disabled={busy || !email.trim() || !user} onClick={async () => {
+              setBusy(true);
+              try { const inv = await inviteOwner(orgId, entity.id, email, user!.id); await copy(inv.token); await reload(); }
+              catch (e: any) { toast.error(e.message); }
+              finally { setBusy(false); }
+            }}>Create link</Button>
+          </div>
+        </div>
+
+        {invites && invites.length > 0 && (
+          <ul className="divide-y divide-zinc-100 text-sm dark:divide-zinc-800">
+            {invites.map(i => {
+              const expired = !i.accepted_at && Date.parse(i.expires_at) <= now;
+              return (
+                <li key={i.id} className="flex items-center justify-between gap-2 py-2">
+                  <span className="min-w-0">
+                    <span className="block truncate">{i.email}</span>
+                    <span className={cn('text-xs', i.accepted_at ? 'text-emerald-700' : expired ? 'text-zinc-400' : 'text-amber-700')}>
+                      {i.accepted_at ? `Accepted ${day(i.accepted_at.slice(0, 10))}` : expired ? 'Expired' : `Waiting, until ${day(i.expires_at.slice(0, 10))}`}
+                    </span>
+                  </span>
+                  {!i.accepted_at && (
+                    <span className="flex shrink-0 gap-1">
+                      {!expired && <Button size="sm" variant="ghost" aria-label="Copy link" onClick={() => copy(i.token)}><Copy size={14} /></Button>}
+                      <Button size="sm" variant="ghost" aria-label="Cancel invitation" onClick={async () => {
+                        try { await cancelOwnerInvite(orgId, i.id); await reload(); } catch (e: any) { toast.error(e.message); }
+                      }}><Trash2 size={14} /></Button>
+                    </span>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
     </Sheet>
   );
 };
@@ -505,15 +593,37 @@ const ApprovalSheet: React.FC<{
 
 /* ------------------------------------------------------------------ statements */
 
-const Statements: React.FC<{ owners: OwnersData; data: UserData; rates: Rates; baseCurrency: string; workspaceName: string }> = ({
-  owners, data, rates, baseCurrency, workspaceName,
+const EMAIL_STATUS: Record<NonNullable<PreparedStatement['email_status']>, string> = {
+  sent: 'Emailed', failed: 'Email failed; retried for a week', opted_out: 'Not emailed: owner opted out',
+  no_email: 'Not emailed: no email address', not_configured: 'Not emailed yet: email sending is not set up',
+};
+
+const Statements: React.FC<{ orgId: string; owners: OwnersData; data: UserData; rates: Rates; baseCurrency: string; workspaceName: string }> = ({
+  orgId, owners, data, rates, baseCurrency, workspaceName,
 }) => {
+  const [prepared, setPrepared] = useState<PreparedStatement[] | null>(null);
   const initial = lastPeriod('monthly', new Date());
   const [entityId, setEntityId] = useState(owners.entities[0]?.id ?? '');
   const [start, setStart] = useState(initial.start);
   const [end, setEnd] = useState(initial.end);
   const [busy, setBusy] = useState(false);
   const entity = owners.entities.find(e => e.id === entityId);
+  useEffect(() => {
+    if (!entityId) return;
+    setPrepared(null);
+    loadPreparedStatements(orgId, entityId).then(setPrepared).catch(() => setPrepared([]));
+  }, [orgId, entityId]);
+  const downloadPrepared = async (p: PreparedStatement) => {
+    if (!entity) return;
+    const { statementPdf } = await import('../lib/statementPdf');
+    const bytes = await statementPdf(p.statement, { ownerName: entity.name, workspaceName });
+    const url = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `owner-statement-${entity.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${p.period_start}.pdf`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 10_000);
+  };
   const statement = useMemo(() => (entity && start <= end
     ? buildStatement({ data, rates, baseCurrency, shares: owners.shares, entityId: entity.id, reportingCurrency: entity.reporting_currency, start, end })
     : null), [entity, start, end, data, rates, baseCurrency, owners.shares]);
@@ -593,10 +703,36 @@ const Statements: React.FC<{ owners: OwnersData; data: UserData; rates: Rates; b
             <p className="mt-3 text-xs text-amber-700">No exchange rate yet for {statement.missingRates.join(', ')} on some days; those days are left out of the total.</p>
           )}
           <p className="mt-3 flex items-center gap-1.5 text-xs text-zinc-500"><Users size={12} />
-            {entity?.reports_opted_out_at ? 'This owner asked not to receive reports.' : entity?.report_email ? `${FREQUENCY[entity.report_frequency]} emails to ${entity.report_email} start once email sending is set up.` : 'Add an email to send this owner reports.'}
+            {entity?.reports_opted_out_at ? 'This owner asked not to receive reports.' : entity?.report_email ? `${FREQUENCY[entity.report_frequency]} statements are prepared automatically and emailed to ${entity.report_email}.` : 'Add an email to send this owner reports.'}
           </p>
         </div>
       )}
+
+      <div className="mt-8 border-t border-zinc-100 pt-5 dark:border-zinc-800">
+        <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Prepared statements</h3>
+        <p className="mt-1 text-xs text-zinc-500">Made automatically each day for {entity?.name}: this month so far, and each finished {entity?.report_frequency === 'quarterly' ? 'quarter' : 'month'}. The owner sees the same ones if they have a login.</p>
+        {!prepared ? (
+          <p className="mt-3 flex items-center gap-2 text-xs text-zinc-500"><Loader2 size={12} className="animate-spin" /> Loading…</p>
+        ) : prepared.length === 0 ? (
+          <p className="mt-3 text-sm text-zinc-500">None yet. The first ones appear the day after the daily job runs.</p>
+        ) : (
+          <ul className="mt-3 divide-y divide-zinc-100 text-sm dark:divide-zinc-800">
+            {prepared.map(p => (
+              <li key={p.id} className="flex items-center justify-between gap-3 py-2.5">
+                <span>
+                  <span className="font-medium text-zinc-900 dark:text-zinc-100">
+                    {p.kind === 'month_to_date' ? 'This month so far' : p.kind === 'yearly' ? p.period_start.slice(0, 4) : p.kind === 'quarterly' ? `Q${Math.floor((Number(p.period_start.slice(5, 7)) - 1) / 3) + 1} ${p.period_start.slice(0, 4)}` : format(parseISO(p.period_start), 'MMMM yyyy')}
+                  </span>
+                  <span className="block text-xs text-zinc-500">
+                    {formatMoney(p.total, p.currency)}{p.kind !== 'month_to_date' && p.email_status ? ` · ${EMAIL_STATUS[p.email_status]}` : ''}
+                  </span>
+                </span>
+                <Button size="sm" variant="outline" onClick={() => downloadPrepared(p)}><Download size={14} /> PDF</Button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
     </Card>
   );
 };

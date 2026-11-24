@@ -49,6 +49,8 @@ import {ForgotPasswordPage, UpdatePasswordPage} from './pages/auth/PasswordPages
 import {InvitePage} from './pages/auth/InvitePage';
 import {RequireWorkspace} from './auth/RequireWorkspace';
 import {OnboardingPage} from './pages/onboarding/OnboardingPage';
+import {OwnerPortalPage} from './pages/owner/OwnerPortalPage';
+import {OwnerInvitePage} from './pages/owner/OwnerInvitePage';
 import {ErrorBoundary} from './components/ErrorBoundary';
 
 createRoot(document.getElementById('root')!).render(
@@ -61,6 +63,8 @@ createRoot(document.getElementById('root')!).render(
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/update-password" element={<UpdatePasswordPage />} />
           <Route path="/invite/:token" element={<InvitePage />} />
+          <Route path="/owner-invite/:token" element={<OwnerInvitePage />} />
+          <Route path="/owner" element={<RequireAuth><ErrorBoundary area="owner"><OwnerPortalPage /></ErrorBoundary></RequireAuth>} />
           <Route path="/onboarding" element={<RequireAuth><OnboardingPage /></RequireAuth>} />
           <Route path="/app/:tab?" element={<RequireAuth><RequireWorkspace><ErrorBoundary area="app"><App /></ErrorBoundary></RequireWorkspace></RequireAuth>} />
           <Route path="*" element={<Navigate to="/app/dashboard" replace />} />

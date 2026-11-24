@@ -11,6 +11,7 @@ import { MAX_IMAGE_BYTES, validateMarketInput, validateReceiptImage } from '../a
 import { POST as aiPOST } from '../api/ai';
 import { GET as cronGET } from '../api/cron/reminders';
 import { GET as ratesGET } from '../api/cron/rates';
+import { GET as ownerReportsGET } from '../api/cron/owner-reports';
 import { buildEmail } from '../api/_lib/reminderEmail';
 import { parseDsn, reportServerError, scrubServer } from '../api/_lib/monitor';
 import { scrub as scrubBrowser } from '../src/lib/monitoring';
@@ -40,6 +41,21 @@ let ratesStatus: { latest_stored: string | null; earliest_stored: string | null;
 const ecbDay = (d: string) => `<Cube time='${d}'><Cube currency='USD' rate='1.16'/><Cube currency='GBP' rate='0.87'/></Cube>`;
 const ECB_90 = `<Cube>${['2026-11-12', '2026-11-11', '2026-08-20'].map(ecbDay).join('')}</Cube>`;
 const ECB_ALL_XML = `<Cube>${['2026-11-12', '2026-08-20', '2026-03-02', '2026-02-27', '2025-01-02'].map(ecbDay).join('')}</Cube>`;
+const ownerPayload = {
+  rates: [],
+  workspaces: [{
+    org_id: 'o1', name: 'Qamar & Co', base_currency: 'AED', timezone: 'Asia/Dubai',
+    entities: [
+      { id: 'e1', name: 'Emma', reporting_currency: 'AED', report_email: 'emma@example.test', report_frequency: 'monthly', opted_out: false },
+      { id: 'e2', name: 'Opted Out', reporting_currency: 'AED', report_email: 'stop@example.test', report_frequency: 'monthly', opted_out: true },
+      { id: 'e3', name: 'No Email', reporting_currency: 'AED', report_email: null, report_frequency: 'monthly', opted_out: false },
+    ],
+    shares: ['e1', 'e2', 'e3'].map(e => ({ property_id: 'P1', entity_id: e, effective_from: '2020-01-01', share: e === 'e1' ? 50 : 25 })),
+    properties: [{ id: 'P1', name: 'Marina 1BR', currency: 'AED', start_operation_date: '2020-01-01', annual_rent: 0, status: 'active' }],
+    reservations: [{ id: 'R1', apartment_id: 'P1', status: 'confirmed', check_in: '2020-01-01', check_out: '2030-01-01', net_payout: 365000 }],
+    daily_expenses: [], monthly_bills: [], statements: [],
+  }],
+};
 globalThis.fetch = (async (url: any, init?: RequestInit) => {
   calls.push({ url: String(url), init });
   if (String(url).endsWith('/auth/v1/user')) {
@@ -50,6 +66,16 @@ globalThis.fetch = (async (url: any, init?: RequestInit) => {
   }
   if (String(url).includes('/rest/v1/rpc/cron_mark_reminders_sent')) {
     return new Response('1', { status: 200 });
+  }
+  if (String(url).includes('/rest/v1/rpc/cron_owner_report_data')) {
+    return new Response(JSON.stringify(ownerPayload), { status: 200 });
+  }
+  if (String(url).includes('/rest/v1/rpc/cron_store_owner_statements')) {
+    const rows = JSON.parse(String(init?.body)).p_rows as any[];
+    return new Response(JSON.stringify(rows.map((r, i) => ({ id: `st-${r.entity_id}-${r.kind}-${i}`, org_id: r.org_id, entity_id: r.entity_id, kind: r.kind, period_start: r.period_start }))), { status: 200 });
+  }
+  if (String(url).includes('/rest/v1/rpc/cron_mark_statement_emailed')) {
+    return new Response(null, { status: 204 });
   }
   if (String(url).includes('/rest/v1/rpc/cron_rates_status')) {
     return new Response(JSON.stringify([ratesStatus]), { status: 200 });
@@ -471,4 +497,45 @@ test('the rates job stores only new days, and fills older history once when book
     assert.deepEqual(sent, ['2026-02-27', '2026-03-02', '2026-11-11', '2026-11-12']);
     assert.ok(calls.some(c => c.url.includes('eurofxref-hist.xml')));
   } finally { delete process.env.CRON_SECRET; ratesStatus = { latest_stored: null, earliest_stored: null, earliest_needed: null }; }
+});
+
+/* ---------- owner report job ---------- */
+
+const ownerReq = (auth?: string) => new Request('https://app.test/api/cron/owner-reports', { method: 'GET', headers: auth ? { authorization: auth } : {} });
+const marks = () => calls.filter(c => c.url.includes('cron_mark_statement_emailed')).map(c => JSON.parse(String(c.init!.body)));
+
+test('the owner report job refuses calls without the exact secret', async () => {
+  process.env.CRON_SECRET = SECRET;
+  try {
+    assert.equal((await ownerReportsGET(ownerReq())).status, 401);
+    assert.equal((await ownerReportsGET(ownerReq('Bearer wrong'))).status, 401);
+    assert.ok(!calls.some(c => c.url.includes('cron_owner_report_data')));
+  } finally { delete process.env.CRON_SECRET; }
+});
+
+test('owner reports go only to owners with an email who have not opted out, with the PDF attached', withEnv(async () => {
+  {
+    const res = await ownerReportsGET(ownerReq(`Bearer ${SECRET}`));
+    assert.equal(res.status, 200);
+    const stored = calls.filter(c => c.url.includes('cron_store_owner_statements')).flatMap(c => JSON.parse(String(c.init!.body)).p_rows);
+    assert.deepEqual([...new Set(stored.map((r: any) => r.kind))].sort(), ['month_to_date', 'monthly']);
+    const emails = calls.filter(c => c.url.startsWith('https://api.resend.com/')).map(c => JSON.parse(String(c.init!.body)));
+    assert.equal(emails.length, 1);
+    assert.deepEqual(emails[0].to, ['emma@example.test']);
+    assert.ok(emails[0].attachments[0].content.startsWith('JVBER'), 'a real PDF is attached');
+    assert.ok(!emails[0].html.includes('Qamar & Co<'), 'names are escaped');
+    const byEntity = Object.fromEntries(marks().map(m => [m.p_id.split('-')[1], m.p_status]));
+    assert.deepEqual(byEntity, { e1: 'sent', e2: 'opted_out', e3: 'no_email' });
+  }
+}));
+
+test('without email set up, statements are still prepared and marked to send later', async () => {
+  process.env.CRON_SECRET = SECRET;
+  try {
+    const res = await ownerReportsGET(ownerReq(`Bearer ${SECRET}`));
+    assert.equal(res.status, 200, await res.clone().text());
+    assert.ok(calls.some(c => c.url.includes('cron_store_owner_statements')));
+    assert.ok(!calls.some(c => c.url.startsWith('https://api.resend.com/')));
+    assert.ok(marks().some(m => m.p_status === 'not_configured'));
+  } finally { delete process.env.CRON_SECRET; }
 });
