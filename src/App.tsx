@@ -458,7 +458,7 @@ export default function App() {
                 onClearPrefill={() => setPrefilledExpense(null)}
               />
             )}
-            {activeTab === 'setup' && <Setup data={userData} setData={setUserData} baseCurrency={workspaceCurrency} baseCountry={workspace.country ?? ''} />}
+            {activeTab === 'setup' && <Setup data={userData} setData={setUserData} baseCurrency={workspaceCurrency} baseCountry={workspace.country ?? ''} rates={rates} />}
             {!blockedForSetup && activeTab === 'analytics' && <Analytics data={viewData} filters={viewFilters} />}
             {!blockedForSetup && activeTab === 'occupancy' && <OccupancyRevenue data={viewData} filters={viewFilters} />}
             {!blockedForSetup && activeTab === 'ocr' && (
@@ -477,7 +477,7 @@ export default function App() {
             {!blockedForSetup && activeTab === 'daily-pl' && <DailyPL data={viewData} filters={viewFilters} />}
             {activeTab === 'projections' && <Projections orgId={workspace.id} data={userData} setData={setUserData} canWrite={editable} canAddProperty={canManage(workspace)} onOpenProperty={() => setActiveTab('setup')} baseCurrency={workspaceCurrency} />}
             {!blockedForSetup && activeTab === 'cashflow' && <Cashflow data={viewData} filters={viewFilters} />}
-            {!blockedForSetup && activeTab === 'assets' && <Assets data={userData} setData={setUserData} />}
+            {!blockedForSetup && activeTab === 'assets' && <Assets data={userData} setData={setUserData} view={viewData} viewCurrency={viewCurrency} />}
             {activeTab === 'documents' && <Documents data={userData} setData={setUserData} />}
             {!blockedForSetup && activeTab === 'reports' && <InvestorReports data={viewData} currency={viewCurrency} />}
             {activeTab === 'data' && (

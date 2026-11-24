@@ -20,9 +20,15 @@ import { cn, formatCurrency } from '../lib/utils';
 interface AssetsProps {
   data: UserData;
   setData: React.Dispatch<React.SetStateAction<UserData>>;
+  /** The same data converted to `viewCurrency`, for totals across properties. */
+  view?: UserData;
+  viewCurrency?: string;
 }
 
-export const Assets: React.FC<AssetsProps> = ({ data, setData }) => {
+export const Assets: React.FC<AssetsProps> = ({ data, setData, view, viewCurrency = 'AED' }) => {
+  // Each asset is shown in its property's currency; totals use the converted copy.
+  const currencyOf = (a: { currency?: string; apartment_id?: string }) =>
+    a.currency || data.apartments.find(x => x.apartment_id === a.apartment_id)?.currency || viewCurrency;
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [propertyFilter, setPropertyFilter] = useState("all");
@@ -76,6 +82,7 @@ export const Assets: React.FC<AssetsProps> = ({ data, setData }) => {
   }, [assets, searchQuery, categoryFilter, propertyFilter]);
 
   const stats = useMemo(() => {
+    const assets = (view ?? data).assets;
     const totalValue = assets.reduce((sum, a) => sum + a.cost, 0);
     const expiringSoon = assets.filter(a => a.warranty_expiry && isBefore(parseISO(a.warranty_expiry), addDays(new Date(), 90))).length;
     
@@ -93,7 +100,7 @@ export const Assets: React.FC<AssetsProps> = ({ data, setData }) => {
     }, 0);
 
     return { totalValue, expiringSoon, categoryBreakdown, totalCurrentValue };
-  }, [assets]);
+  }, [view, data]);
 
   const getConditionColor = (condition: string) => {
     switch (condition) {
@@ -136,7 +143,7 @@ export const Assets: React.FC<AssetsProps> = ({ data, setData }) => {
             </div>
             <p className="text-[11px] font-semibold text-white/40">Total Acquisition Cost</p>
           </div>
-          <p className="text-xl font-semibold tracking-tight">{formatCurrency(stats.totalValue)}</p>
+          <p className="text-xl font-semibold tracking-tight">{formatCurrency(stats.totalValue, viewCurrency)}</p>
           <div className="mt-4 flex items-center gap-2 text-[11px] font-bold text-white/40">
             <Package size={12} />
             {assets.length} Total Assets
@@ -150,7 +157,7 @@ export const Assets: React.FC<AssetsProps> = ({ data, setData }) => {
             </div>
             <p className="text-[11px] font-semibold text-zinc-400">Estimated Current Value</p>
           </div>
-          <p className="text-xl font-semibold tracking-tight text-zinc-900">{formatCurrency(stats.totalCurrentValue)}</p>
+          <p className="text-xl font-semibold tracking-tight text-zinc-900">{formatCurrency(stats.totalCurrentValue, viewCurrency)}</p>
           <p className="mt-2 text-[11px] font-bold text-amber-600">
             {Math.round((stats.totalCurrentValue / stats.totalValue) * 100)}% of original value
           </p>
@@ -185,7 +192,7 @@ export const Assets: React.FC<AssetsProps> = ({ data, setData }) => {
             {Object.entries(stats.categoryBreakdown).sort((a: any, b: any) => b[1] - a[1])[0]?.[0] || 'N/A'}
           </p>
           <p className="mt-2 text-[11px] font-bold text-zinc-400">
-            {formatCurrency(Object.values(stats.categoryBreakdown).sort((a: any, b: any) => b - a)[0] as number || 0)} Value
+            {formatCurrency(Object.values(stats.categoryBreakdown).sort((a: any, b: any) => b - a)[0] as number || 0, viewCurrency)} Value
           </p>
         </Card>
       </div>
@@ -265,7 +272,7 @@ export const Assets: React.FC<AssetsProps> = ({ data, setData }) => {
                 <div className="flex justify-between items-center text-xs">
                   <span className="text-zinc-400 font-medium">Asset Value</span>
                   <div className="text-right">
-                    <span className="font-semibold text-zinc-900 block">{formatCurrency(asset.cost)}</span>
+                    <span className="font-semibold text-zinc-900 block">{formatCurrency(asset.cost, currencyOf(asset))}</span>
                     <span className="text-[11px] text-zinc-400 font-bold">Original Cost</span>
                   </div>
                 </div>
@@ -274,7 +281,7 @@ export const Assets: React.FC<AssetsProps> = ({ data, setData }) => {
                   <span className="text-zinc-400 font-medium">Current Value</span>
                   <div className="text-right">
                     <span className="font-semibold text-emerald-600 block">
-                      {formatCurrency(Math.max(0, asset.cost - (asset.cost / 60 * Math.max(0, differenceInMonths(new Date(), parseISO(asset.purchase_date))))))}
+                      {formatCurrency(Math.max(0, asset.cost - (asset.cost / 60 * Math.max(0, differenceInMonths(new Date(), parseISO(asset.purchase_date))))), currencyOf(asset))}
                     </span>
                     <span className="text-[11px] text-zinc-400 font-bold">Est. Depreciated</span>
                   </div>

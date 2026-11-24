@@ -5,7 +5,7 @@
 
 import { calculateDailyPL } from '../lib/pl';
 import React, { useState, useMemo } from 'react';
-import { formatMoney } from '../lib/money';
+import { convertUserData, formatMoney, type Rates } from '../lib/money';
 import { browserTimezone, countryOptions, currencyOptions, defaultsFor, timezoneOptions } from '../lib/regions';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -29,9 +29,11 @@ interface SetupProps {
   /** Workspace currency and country: defaults for a new listing. */
   baseCurrency?: string;
   baseCountry?: string;
+  /** Daily exchange rates, so shared costs in another currency are converted for a lease's history. */
+  rates?: Rates;
 }
 
-export const Setup: React.FC<SetupProps> = ({ data, setData, baseCurrency = 'AED', baseCountry = '' }) => {
+export const Setup: React.FC<SetupProps> = ({ data, setData, baseCurrency = 'AED', baseCountry = '', rates }) => {
   const countries = useMemo(() => countryOptions(), []);
   const currencies = useMemo(() => currencyOptions(), []);
   const zones = useMemo(() => timezoneOptions(), []);
@@ -216,7 +218,9 @@ export const Setup: React.FC<SetupProps> = ({ data, setData, baseCurrency = 'AED
     annualRentAed: number
   ) => {
     // Same figures as Daily P&L for this unit and period, so the archive matches the reports.
-    const rows = calculateDailyPL(data, parseISO(startDate), parseISO(endDate), apartmentId);
+    // Worked out in the property's own currency: shared costs in another currency are converted.
+    const local = convertUserData(data, currencyOf(apartmentId), rates ?? new Map(), baseCurrency).data;
+    const rows = calculateDailyPL(local, parseISO(startDate), parseISO(endDate), apartmentId);
     const matchedReservations = (data.reservations || []).filter(r =>
       r.apartment_id === apartmentId && r.status === 'confirmed' && r.check_in >= startDate && r.check_in <= endDate);
     const totalRevenue = matchedReservations.reduce((sum, r) => sum + (Number(r.total_booking_revenue) || 0), 0);

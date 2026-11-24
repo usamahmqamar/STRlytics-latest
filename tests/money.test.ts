@@ -125,3 +125,14 @@ test('linking a payout in another currency records the booking-currency amount',
   // No rate for the pair: nothing to link automatically.
   assert.equal(linkForTest(usdPayout, 1000, 'GBP', 720, new Map()), null);
 });
+
+test('inventory totals use converted asset costs, each at its purchase date', () => {
+  const d = data();
+  d.assets = [
+    { asset_id: 'A1', apartment_id: 'LON', name: 'Sofa', category: 'furniture', purchase_date: '2026-11-12', cost: 800, condition: 'new' } as any,
+    { asset_id: 'A2', apartment_id: 'DXB', name: 'TV', category: 'electronics', purchase_date: '2026-11-12', cost: 1000, condition: 'new' } as any,
+  ];
+  const { data: view } = convertUserData(d, 'AED', rates, 'AED');
+  assert.equal(view.assets.reduce((t, a) => t + a.cost, 0), 3672.5 + 1000);
+  assert.equal(d.assets[0].cost, 800);
+});
