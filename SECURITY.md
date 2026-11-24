@@ -167,3 +167,9 @@ DATABASE_URL=postgres://... npm run test:db   # migrations + row-level security 
   A saved monthly, quarterly or yearly statement is never changed. Failed emails are retried for
   7 days. Tests: `owner_portal_test.sql`, `tests/ownerReports.test.ts`, and the job tests in
   `tests/security.test.ts`.
+
+### Itemised costs on owner statements
+
+- Statements show each property's costs by type and list the expenses posted to that unit and the vendor work done on it, with dates, categories and notes. Owners see these for the whole property, before their share.
+- The report job now reads `service_records`, expense notes and vendor names. Vendor phone numbers and emails are never sent to it (tested). Guest names still never leave the database.
+- Whatever is written in an expense's notes is visible to the property's owners on their statements.

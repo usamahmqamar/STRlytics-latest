@@ -614,7 +614,22 @@ function calculateDailyPL(data, startDate, endDate, apartmentId) {
     expenses.set(key, (expenses.get(key) ?? 0) + (Number(e.amount) || 0));
   }
   const bills = /* @__PURE__ */ new Map();
-  for (const b of data.monthlyBills) bills.set(`${b.apartment_id}|${b.month}|${b.bill_type}`, Number(b.amount) || 0);
+  const otherBills = /* @__PURE__ */ new Map();
+  for (const b of data.monthlyBills) {
+    if (b.bill_type === "electricity" || b.bill_type === "internet") {
+      bills.set(`${b.apartment_id}|${b.month}|${b.bill_type}`, Number(b.amount) || 0);
+    } else {
+      const k = `${b.apartment_id}|${b.month}`;
+      otherBills.set(k, (otherBills.get(k) ?? 0) + (Number(b.amount) || 0));
+    }
+  }
+  const services = /* @__PURE__ */ new Map();
+  for (const sr of data.serviceRecords || []) {
+    const d = (sr.date || "").slice(0, 10);
+    if (d < from || d > to) continue;
+    const key = `${sr.apartment_id}|${d}`;
+    services.set(key, (services.get(key) ?? 0) + (Number(sr.total_cost) || 0));
+  }
   const totalUnits = data.apartments.length;
   const rows = [];
   for (let t = parseISO(from); dayStr(t) <= to; t = addDays(t, 1)) {
@@ -637,9 +652,12 @@ function calculateDailyPL(data, startDate, endDate, apartmentId) {
       const retained = night?.retained ?? 0;
       const cleaning = booked ? (Number(booked.cleaning_cost) || 0) / nightsOf(booked) : 0;
       const other = cost.get(key) ?? 0;
-      const direct = (expenses.get(key) ?? 0) + shared;
+      const unitOnly = expenses.get(key) ?? 0;
+      const direct = unitOnly + shared;
+      const otherBillsDaily = (otherBills.get(`${apt.apartment_id}|${month}`) ?? 0) / daysInMonth;
+      const service = services.get(key) ?? 0;
       const dailyRent = rent ?? 0;
-      const total = dailyRent + elecMonthly / daysInMonth + netMonthly / daysInMonth + cleaning + other + direct;
+      const total = dailyRent + elecMonthly / daysInMonth + netMonthly / daysInMonth + otherBillsDaily + cleaning + other + direct + service;
       rows.push({
         date,
         apartment: apt.name,
@@ -653,9 +671,13 @@ function calculateDailyPL(data, startDate, endDate, apartmentId) {
         daily_rent: dailyRent,
         daily_electricity: elecMonthly / daysInMonth,
         daily_internet: netMonthly / daysInMonth,
+        daily_other_bills: otherBillsDaily,
         cleaning_allocated: cleaning,
         other_costs_allocated: other,
         real_time_expenses: direct,
+        unit_expenses: unitOnly,
+        shared_expenses: shared,
+        service_costs: service,
         total_daily_cost: total,
         daily_profit: revenue + retained - total
       });
@@ -675,6 +697,7 @@ function sharesOn(shares, propertyId, date) {
   for (const s of shares) if (s.property_id === propertyId && s.effective_from === start) out.set(s.entity_id, Number(s.share));
   return out;
 }
+var MAX_STATEMENT_ITEMS = 100;
 var r2 = (n) => Math.round(n * 100) / 100;
 function buildStatement(input) {
   const { data, rates, baseCurrency, shares, entityId, reportingCurrency, start, end } = input;
@@ -687,10 +710,18 @@ function buildStatement(input) {
     const view = convertUserData(data, currency, rates, baseCurrency).data;
     const rows = calculateDailyPL(view, /* @__PURE__ */ new Date(`${start}T00:00:00`), /* @__PURE__ */ new Date(`${end}T00:00:00`), apt.apartment_id);
     let revenue = 0, costs = 0, profit = 0, nights = 0, ownerProfit = 0, ownerReporting = 0, touched = false;
+    const b = { rent: 0, utilities: 0, cleaning: 0, bookingCosts: 0, unitExpenses: 0, sharedExpenses: 0, vendorWork: 0 };
     for (const row of rows) {
       const pct2 = sharesOn(shares, apt.apartment_id, row.date).get(entityId) ?? 0;
       revenue += row.daily_revenue;
       costs += row.total_daily_cost;
+      b.rent += row.daily_rent;
+      b.utilities += row.daily_electricity + row.daily_internet + row.daily_other_bills;
+      b.cleaning += row.cleaning_allocated;
+      b.bookingCosts += row.other_costs_allocated;
+      b.unitExpenses += row.unit_expenses;
+      b.sharedExpenses += row.shared_expenses;
+      b.vendorWork += row.service_costs;
       profit += row.daily_profit;
       nights += row.occupied_nights_count;
       if (!pct2) continue;
@@ -702,6 +733,24 @@ function buildStatement(input) {
       else ownerReporting += conv;
     }
     if (!touched) continue;
+    const inPeriod = (d) => !!d && d.slice(0, 10) >= start && d.slice(0, 10) <= end;
+    const vendorName = (id) => view.vendors?.find((v) => v.vendor_id === id)?.name ?? "";
+    const items = [
+      ...view.dailyExpenses.filter((e) => e.apartment_id === apt.apartment_id && inPeriod(e.date)).map((e) => ({
+        date: e.date.slice(0, 10),
+        type: "expense",
+        category: e.category || "Expense",
+        description: (e.notes || "").slice(0, 200),
+        amount: r2(Number(e.amount) || 0)
+      })),
+      ...(view.serviceRecords || []).filter((x) => x.apartment_id === apt.apartment_id && inPeriod(x.date)).map((x) => ({
+        date: x.date.slice(0, 10),
+        type: "vendor_work",
+        category: x.service_type || "Vendor work",
+        description: [vendorName(x.vendor_id), x.description].filter(Boolean).join(": ").slice(0, 200),
+        amount: r2(Number(x.total_cost) || 0)
+      }))
+    ].sort((a, c) => a.date.localeCompare(c.date));
     lines.push({
       propertyId: apt.apartment_id,
       propertyName: apt.name || apt.apartment_id,
@@ -713,7 +762,21 @@ function buildStatement(input) {
       shareStart: sharesOn(shares, apt.apartment_id, start).get(entityId) ?? 0,
       shareEnd: sharesOn(shares, apt.apartment_id, end).get(entityId) ?? 0,
       ownerProfit: r2(ownerProfit),
-      ownerProfitReporting: r2(ownerReporting)
+      ownerProfitReporting: r2(ownerReporting),
+      costBreakdown: {
+        rent: r2(b.rent),
+        utilities: r2(b.utilities),
+        cleaning: r2(b.cleaning),
+        bookingCosts: r2(b.bookingCosts),
+        unitExpenses: r2(b.unitExpenses),
+        sharedExpenses: r2(b.sharedExpenses),
+        vendorWork: r2(b.vendorWork)
+      },
+      items: items.slice(0, MAX_STATEMENT_ITEMS),
+      ...items.length > MAX_STATEMENT_ITEMS ? { itemsMore: {
+        count: items.length - MAX_STATEMENT_ITEMS,
+        amount: r2(items.slice(MAX_STATEMENT_ITEMS).reduce((t, it) => t + it.amount, 0))
+      } } : {}
     });
   }
   lines.sort((a, b) => a.propertyName.localeCompare(b.propertyName));
@@ -739,6 +802,21 @@ var money = (v, currency) => {
 };
 var day = (iso2) => (/* @__PURE__ */ new Date(`${iso2}T00:00:00`)).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
 var pct = (a, b) => a === b ? `${a}%` : `${a}% to ${b}%`;
+var MAX_ITEMS = 40;
+function costParts(l) {
+  const b = l.costBreakdown;
+  if (!b) return [];
+  const parts = [
+    ["Rent", b.rent],
+    ["Utilities and bills", b.utilities],
+    ["Cleaning", b.cleaning],
+    ["Other booking costs", b.bookingCosts],
+    ["Expenses for this property", b.unitExpenses],
+    ["Share of shared expenses", b.sharedExpenses],
+    ["Vendor work", b.vendorWork]
+  ];
+  return parts.filter(([, v]) => Math.abs(v) >= 5e-3);
+}
 async function statementPdf(s, meta) {
   const { PDFDocument, StandardFonts, rgb } = await import("pdf-lib");
   const doc = await PDFDocument.create();
@@ -795,7 +873,40 @@ async function statementPdf(s, meta) {
     y -= 13;
     text(`${l.nightsBooked} nights booked`, cols.name, 8, font, quiet);
     if (l.currency !== s.reportingCurrency) textRight(`= ${money(l.ownerProfitReporting, s.reportingCurrency)}`, cols.mine, 8, font, quiet);
-    y -= 10;
+    y -= 12;
+    const parts = costParts(l);
+    if (parts.length) {
+      for (const [label, v] of parts) {
+        newPageIfNeeded(12);
+        text(label, cols.name + 10, 8, font, quiet);
+        textRight(money(v, l.currency), cols.cost, 8, font, quiet);
+        y -= 11;
+      }
+    }
+    const items = l.items ?? [];
+    if (items.length) {
+      newPageIfNeeded(24);
+      y -= 2;
+      text("Expenses and work on this property", cols.name + 10, 8, bold, quiet);
+      y -= 11;
+      const shown = items.slice(0, MAX_ITEMS);
+      for (const it of shown) {
+        newPageIfNeeded(12);
+        const what = [it.category, it.description].filter(Boolean).join(" - ");
+        text(day(it.date), cols.name + 10, 8, font, quiet);
+        text(what.slice(0, 62), cols.name + 72, 8, font, ink);
+        textRight(money(it.amount, l.currency), cols.cost, 8, font, ink);
+        y -= 11;
+      }
+      const moreCount = items.length - shown.length + (l.itemsMore?.count ?? 0);
+      if (moreCount > 0) {
+        const rest = items.slice(MAX_ITEMS).reduce((t, it) => t + it.amount, 0) + (l.itemsMore?.amount ?? 0);
+        text(`and ${moreCount} more`, cols.name + 72, 8, font, quiet);
+        textRight(money(rest, l.currency), cols.cost, 8, font, quiet);
+        y -= 11;
+      }
+    }
+    y -= 2;
     line();
     y -= 14;
   }
@@ -810,6 +921,7 @@ async function statementPdf(s, meta) {
   y -= 30;
   const notes = [
     "Each property is worked out in its own currency. Your part follows the shares in force on each day.",
+    "Cost lines and listed expenses are for the whole property, before your share is applied.",
     s.lines.some((l) => l.currency !== s.reportingCurrency) ? `Amounts in other currencies are converted to ${s.reportingCurrency} at the daily reference rate for each day.` : "",
     s.missingRates.length ? `No exchange rate was available for ${s.missingRates.join(", ")} on some days; those days are left out of the ${s.reportingCurrency} total.` : "",
     "This statement summarises the records kept in Staylytics. It is not tax advice."
@@ -853,7 +965,13 @@ function planWorkspace(ws, rates, now) {
     properties: ws.properties,
     property_rent_cheques: [],
     property_setup_costs: [],
-    tables: { reservations: ws.reservations, daily_expenses: ws.daily_expenses, monthly_bills: ws.monthly_bills }
+    tables: {
+      reservations: ws.reservations,
+      daily_expenses: ws.daily_expenses,
+      monthly_bills: ws.monthly_bills,
+      service_records: ws.service_records ?? [],
+      vendors: ws.vendors ?? []
+    }
   });
   const done = new Set(ws.statements.map((s) => `${s.entity_id}|${s.kind}|${String(s.period_start).slice(0, 10)}`));
   const shares = ws.shares.map((s) => ({ ...s, effective_from: String(s.effective_from).slice(0, 10), share: Number(s.share) }));

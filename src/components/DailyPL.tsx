@@ -124,9 +124,9 @@ export const DailyPL: React.FC<DailyPLProps> = ({ data, filters }) => {
       grouped[d.date].total.revenue += d.daily_revenue;
       grouped[d.date].total.lost += d.lost_revenue;
       grouped[d.date].total.rent += d.daily_rent;
-      grouped[d.date].total.utilities += (d.daily_electricity + d.daily_internet);
+      grouped[d.date].total.utilities += (d.daily_electricity + d.daily_internet + d.daily_other_bills);
       grouped[d.date].total.cleaning += d.cleaning_allocated;
-      grouped[d.date].total.expenses += (d.other_costs_allocated + d.real_time_expenses);
+      grouped[d.date].total.expenses += (d.other_costs_allocated + d.real_time_expenses + d.service_costs);
       grouped[d.date].total.totalCost += d.total_daily_cost;
       grouped[d.date].total.profit += d.daily_profit;
       
@@ -349,9 +349,9 @@ export const DailyPL: React.FC<DailyPLProps> = ({ data, filters }) => {
                       <td className="py-2 text-right font-mono text-[11px] text-zinc-500">{formatCurrency(prop.daily_revenue)}</td>
                       <td className="py-2 text-right font-mono text-[11px] text-rose-400">{formatCurrency(prop.lost_revenue)}</td>
                       <td className="py-2 text-right font-mono text-[11px] text-zinc-500">{formatCurrency(prop.daily_rent)}</td>
-                      <td className="py-2 text-right font-mono text-[11px] text-zinc-500">{formatCurrency(prop.daily_electricity + prop.daily_internet)}</td>
+                      <td className="py-2 text-right font-mono text-[11px] text-zinc-500">{formatCurrency(prop.daily_electricity + prop.daily_internet + prop.daily_other_bills)}</td>
                       <td className="py-2 text-right font-mono text-[11px] text-zinc-500">{formatCurrency(prop.cleaning_allocated)}</td>
-                      <td className="py-2 text-right font-mono text-[11px] text-zinc-500">{formatCurrency(prop.other_costs_allocated + prop.real_time_expenses)}</td>
+                      <td className="py-2 text-right font-mono text-[11px] text-zinc-500">{formatCurrency(prop.other_costs_allocated + prop.real_time_expenses + prop.service_costs)}</td>
                       <td className="py-2 text-right font-mono text-[11px] text-zinc-500">{formatCurrency(prop.total_daily_cost)}</td>
                       <td className={cn(
                         "py-2 text-right font-mono text-[11px] font-bold",

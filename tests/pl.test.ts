@@ -127,3 +127,25 @@ test('profit adds up across a month', () => {
   // 10,000 revenue - rent 28 x 300 - utilities 620 + 310 - cleaning 200
   close(profit, 10_000 - 8_400 - 930 - 200, 0.05);
 });
+
+test('vendor work on a unit is a cost on its date; water, gas and other bills spread over the month', () => {
+  const rows = calculateDailyPL(data({
+    serviceRecords: [{ record_id: 's', apartment_id: 'a1', date: '2026-02-10', total_cost: 90 } as any,
+                     { record_id: 't', apartment_id: 'a2', date: '2026-02-10', total_cost: 500 } as any],
+    monthlyBills: [{ bill_id: 'w', apartment_id: 'a1', month: '2026-02', bill_type: 'water', amount: 56 } as any,
+                   { bill_id: 'g', apartment_id: 'a1', month: '2026-02', bill_type: 'gas', amount: 28 } as any],
+  }), d('2026-02-09'), d('2026-02-10'));
+  close(rows[0].service_costs, 0);
+  close(rows[1].service_costs, 90);
+  close(rows[1].daily_other_bills, 3); // (56 + 28) / 28
+  close(rows[1].total_daily_cost - rows[0].total_daily_cost, 90);
+});
+
+test('unit and shared expenses are reported separately', () => {
+  const two = [apt(), apt({ apartment_id: 'a2', name: 'Downtown 2BR' })];
+  const exp = [{ expense_id: 'e', apartment_id: 'PORTFOLIO', date: '2026-01-05', amount: 200 } as any,
+               { expense_id: 'f', apartment_id: 'a2', date: '2026-01-05', amount: 75 } as any];
+  const [r] = calculateDailyPL(data({ apartments: two, dailyExpenses: exp }), d('2026-01-05'), d('2026-01-05'), 'a2');
+  close(r.unit_expenses, 75);
+  close(r.shared_expenses, 100);
+});

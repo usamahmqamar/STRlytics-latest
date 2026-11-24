@@ -41,6 +41,7 @@ let ratesStatus: { latest_stored: string | null; earliest_stored: string | null;
 const ecbDay = (d: string) => `<Cube time='${d}'><Cube currency='USD' rate='1.16'/><Cube currency='GBP' rate='0.87'/></Cube>`;
 const ECB_90 = `<Cube>${['2026-11-12', '2026-11-11', '2026-08-20'].map(ecbDay).join('')}</Cube>`;
 const ECB_ALL_XML = `<Cube>${['2026-11-12', '2026-08-20', '2026-03-02', '2026-02-27', '2025-01-02'].map(ecbDay).join('')}</Cube>`;
+const lastMonthDay = (() => { const d = new Date(); return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() - 1, 15)).toISOString().slice(0, 10); })();
 const ownerPayload = {
   rates: [],
   workspaces: [{
@@ -54,6 +55,9 @@ const ownerPayload = {
     properties: [{ id: 'P1', name: 'Marina 1BR', currency: 'AED', start_operation_date: '2020-01-01', annual_rent: 0, status: 'active' }],
     reservations: [{ id: 'R1', apartment_id: 'P1', status: 'confirmed', check_in: '2020-01-01', check_out: '2030-01-01', net_payout: 365000 }],
     daily_expenses: [], monthly_bills: [], statements: [],
+    // Vendor work in the last calendar month, so it lands on the monthly statement.
+    service_records: [{ id: 'S1', apartment_id: 'P1', date: lastMonthDay, vendor_id: 'V1', service_type: 'HVAC', description: 'Filter change', total_cost: 80 }],
+    vendors: [{ id: 'V1', name: 'Cool Air LLC' }],
   }],
 };
 globalThis.fetch = (async (url: any, init?: RequestInit) => {
@@ -519,6 +523,10 @@ test('owner reports go only to owners with an email who have not opted out, with
     assert.equal(res.status, 200);
     const stored = calls.filter(c => c.url.includes('cron_store_owner_statements')).flatMap(c => JSON.parse(String(c.init!.body)).p_rows);
     assert.deepEqual([...new Set(stored.map((r: any) => r.kind))].sort(), ['month_to_date', 'monthly']);
+    const monthly = stored.find((r: any) => r.kind === 'monthly' && r.entity_id === 'e1');
+    const line = monthly.statement.lines[0];
+    assert.equal(line.costBreakdown.vendorWork, 80, 'vendor work is a cost on the statement');
+    assert.deepEqual(line.items.map((i: any) => i.description), ['Cool Air LLC: Filter change']);
     const emails = calls.filter(c => c.url.startsWith('https://api.resend.com/')).map(c => JSON.parse(String(c.init!.body)));
     assert.equal(emails.length, 1);
     assert.deepEqual(emails[0].to, ['emma@example.test']);

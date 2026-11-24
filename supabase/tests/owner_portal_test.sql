@@ -1,4 +1,4 @@
--- Tests for 20261124212913_owner_reports_and_portal.sql. One transaction, rolled back.
+-- Tests for 20261124212913_owner_reports_and_portal.sql and 20261124214402_owner_report_itemised_costs.sql. One transaction, rolled back.
 begin;
 
 create schema tests;
@@ -33,6 +33,11 @@ set local role authenticated;
 insert into public.properties (org_id, id, name, currency) select org_a, 'MIA', 'Miami condo', 'USD' from ids;
 insert into public.reservations (org_id, id, apartment_id, guest_name, check_in, check_out, net_payout)
   select org_a, 'R1', 'MIA', 'Secret Guest', '2026-10-01', '2026-10-05', 400 from ids;
+insert into public.vendors (org_id, id, name, phone, email) select org_a, 'V1', 'Cool Air LLC', '+1 555 0100', 'vendor-secret@example.test' from ids;
+insert into public.service_records (org_id, id, apartment_id, date, vendor_id, service_type, description, total_cost)
+  select org_a, 'S1', 'MIA', '2026-10-03', 'V1', 'HVAC', 'Filter change', 80 from ids;
+insert into public.daily_expenses (org_id, id, apartment_id, date, category, amount, notes)
+  select org_a, 'E1', 'MIA', '2026-10-04', 'Repairs', 120, 'Door handle' from ids;
 insert into public.entities (org_id, id, name, kind, report_email)
   select org_a, 'f6000000-0000-0000-0000-000000000001', 'Emma Clarke', 'individual', 'emma@example.test' from ids;
 insert into public.entities (org_id, id, name, kind)
@@ -63,6 +68,12 @@ set local role anon;
 select tests.denied($$select public.cron_owner_report_data('wrong-token-wrong-token-wrong-token-xx')$$, 'job data with a wrong token');
 select tests.ok(jsonb_array_length(public.cron_owner_report_data('a-long-random-test-token-0123456789abcdef') -> 'workspaces') >= 1, 'job sees workspaces with ownership');
 select tests.ok(public.cron_owner_report_data('a-long-random-test-token-0123456789abcdef')::text not like '%Secret Guest%', 'guest names never leave the database');
+create temp table jobws as select w from jsonb_array_elements(public.cron_owner_report_data('a-long-random-test-token-0123456789abcdef') -> 'workspaces') w
+  where w ->> 'org_id' = (select org_a::text from ids);
+select tests.ok((select jsonb_array_length(w -> 'service_records') from jobws) = 1, 'job sees vendor work on units');
+select tests.ok((select w -> 'vendors' -> 0 ->> 'name' from jobws) = 'Cool Air LLC', 'job sees vendor names');
+select tests.ok((select (w -> 'vendors')::text from jobws) not like '%vendor-secret%' and (select (w -> 'vendors')::text from jobws) not like '%555%', 'vendor phone and email stay in the database');
+select tests.ok((select w -> 'daily_expenses' -> 0 ->> 'notes' from jobws) = 'Door handle', 'expense notes reach the statement');
 
 create temp table stored as
 select * from public.cron_store_owner_statements('a-long-random-test-token-0123456789abcdef', jsonb_build_array(

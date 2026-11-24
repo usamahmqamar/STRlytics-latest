@@ -32,6 +32,8 @@ export interface WorkspacePayload {
   reservations: Record<string, unknown>[];
   daily_expenses: Record<string, unknown>[];
   monthly_bills: Record<string, unknown>[];
+  service_records?: Record<string, unknown>[];
+  vendors?: Record<string, unknown>[]; // id and name only
   statements: { entity_id: string; kind: string; period_start: string; emailed_at: string | null }[];
   /** Recent statements whose email failed or could not be sent yet. */
   retry?: { id: string; entity_id: string; kind: Kind; period_start: string; currency: string; total: number | string; statement: Statement }[];
@@ -78,7 +80,8 @@ export function planWorkspace(ws: WorkspacePayload, rates: Rates, now: Date): Pl
   const today = localToday(ws.timezone, now);
   const data = assembleUserData({
     properties: ws.properties, property_rent_cheques: [], property_setup_costs: [],
-    tables: { reservations: ws.reservations, daily_expenses: ws.daily_expenses, monthly_bills: ws.monthly_bills },
+    tables: { reservations: ws.reservations, daily_expenses: ws.daily_expenses, monthly_bills: ws.monthly_bills,
+      service_records: ws.service_records ?? [], vendors: ws.vendors ?? [] },
   });
   const done = new Set(ws.statements.map(s => `${s.entity_id}|${s.kind}|${String(s.period_start).slice(0, 10)}`));
   const shares = ws.shares.map(s => ({ ...s, effective_from: String(s.effective_from).slice(0, 10), share: Number(s.share) }));

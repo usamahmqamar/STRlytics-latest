@@ -90,3 +90,42 @@ test('the PDF is produced, and names outside the built-in fonts do not break it'
   assert.equal(Buffer.from(bytes.slice(0, 5)).toString(), '%PDF-');
   assert.ok(bytes.length > 1500);
 });
+
+test('expenses posted to a unit and vendor work show on the statement, itemised', () => {
+  const d = data();
+  d.dailyExpenses = [
+    { expense_id: 'E1', apartment_id: 'MIA', date: '2026-11-05', category: 'Repairs', amount: 120, notes: 'AC filter' },
+    { expense_id: 'E2', apartment_id: 'DXB', date: '2026-11-05', category: 'Repairs', amount: 999 },          // other unit
+    { expense_id: 'E3', apartment_id: 'MIA', date: '2026-10-30', category: 'Supplies', amount: 50 },          // before the period
+    { expense_id: 'E4', apartment_id: 'PORTFOLIO', date: '2026-11-10', category: 'Software', amount: 60 },    // shared by 2 units
+  ] as any;
+  d.vendors = [{ vendor_id: 'V1', name: 'Cool Air LLC', service_type: 'HVAC', status: 'active' } as any];
+  d.serviceRecords = [
+    { record_id: 'S1', apartment_id: 'MIA', date: '2026-11-20', service_type: 'HVAC', vendor_id: 'V1', description: 'Deep clean', quantity: 1, unit_cost: 80, total_cost: 80, status: 'unbilled' },
+  ] as any;
+  d.monthlyBills = [{ bill_id: 'B1', apartment_id: 'MIA', month: '2026-11', bill_type: 'water', amount: 30, status: 'paid' } as any];
+  const s = buildStatement({ data: d, rates, baseCurrency: 'AED', shares, entityId: A, reportingCurrency: 'USD', start: '2026-11-01', end: '2026-11-30' });
+  const l = s.lines[0];
+  assert.equal(l.costBreakdown!.unitExpenses, 120);
+  assert.equal(l.costBreakdown!.vendorWork, 80);
+  assert.equal(l.costBreakdown!.utilities, 30);
+  assert.ok(l.costBreakdown!.sharedExpenses > 0, 'a share of shared expenses is counted');
+  assert.equal(l.costs, Object.values(l.costBreakdown!).reduce((a, b) => a + b, 0));
+  assert.equal(l.profit, 3000 - l.costs);
+  assert.deepEqual(l.items!.map(i => [i.date, i.type, i.category, i.description, i.amount]), [
+    ['2026-11-05', 'expense', 'Repairs', 'AC filter', 120],
+    ['2026-11-20', 'vendor_work', 'HVAC', 'Cool Air LLC: Deep clean', 80],
+  ]);
+});
+
+test('very long expense lists are capped, the rest summed', async () => {
+  const d = data();
+  d.dailyExpenses = Array.from({ length: 130 }, (_, i) => ({ expense_id: `E${i}`, apartment_id: 'MIA', date: '2026-11-10', category: 'Supplies', amount: 1 })) as any;
+  const s = buildStatement({ data: d, rates, baseCurrency: 'AED', shares, entityId: A, reportingCurrency: 'USD', start: '2026-11-01', end: '2026-11-30' });
+  const l = s.lines[0];
+  assert.equal(l.items!.length, 100);
+  assert.deepEqual(l.itemsMore, { count: 30, amount: 30 });
+  assert.equal(l.costBreakdown!.unitExpenses, 130);
+  const pdf = await statementPdf(s, { ownerName: 'A', workspaceName: 'W' });
+  assert.ok(pdf.length > 1000);
+});

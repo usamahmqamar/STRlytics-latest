@@ -12,6 +12,7 @@ import { FullPageSpinner } from '../../auth/RequireAuth';
 import { Brand } from '../auth/AuthLayout';
 import { Button } from '../../components/ui/Button';
 import { formatMoney } from '../../lib/money';
+import { StatementDetails } from '../../components/StatementDetails';
 import type { Statement } from '../../lib/ownerStatement';
 
 interface Portal { org_id: string; org_name: string; entity_id: string; entity_name: string; reporting_currency: string }
@@ -143,6 +144,7 @@ export const OwnerPortalPage: React.FC = () => {
                           </tbody>
                         </table>
                       </div>
+                      <StatementDetails statement={current.statement} />
                     </>
                   ) : (
                     <p className="mt-2 text-sm text-zinc-500">Figures for this month appear from the 2nd.</p>

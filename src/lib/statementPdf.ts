@@ -2,7 +2,7 @@
  * Owner statement as a PDF (pdf-lib, loaded only when a statement is made). The same code can
  * run on the server when monthly emails are switched on.
  */
-import type { Statement } from './ownerStatement';
+import type { Statement, StatementLine } from './ownerStatement';
 
 // The built-in PDF fonts cover Western characters only; anything else is shown as "?".
 const safe = (s: string) => s.normalize('NFKD').replace(/[̀-ͯ]/g, '').replace(/[^\x20-\x7E]/g, '?');
@@ -15,6 +15,24 @@ const money = (v: number, currency: string) => {
 };
 const day = (iso: string) => new Date(`${iso}T00:00:00`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 const pct = (a: number, b: number) => (a === b ? `${a}%` : `${a}% to ${b}%`);
+
+const MAX_ITEMS = 40;
+
+/** Cost lines worth showing, largest first; empty for older statements without a breakdown. */
+export function costParts(l: StatementLine): [string, number][] {
+  const b = l.costBreakdown;
+  if (!b) return [];
+  const parts: [string, number][] = [
+    ['Rent', b.rent],
+    ['Utilities and bills', b.utilities],
+    ['Cleaning', b.cleaning],
+    ['Other booking costs', b.bookingCosts],
+    ['Expenses for this property', b.unitExpenses],
+    ['Share of shared expenses', b.sharedExpenses],
+    ['Vendor work', b.vendorWork],
+  ];
+  return parts.filter(([, v]) => Math.abs(v) >= 0.005);
+}
 
 export async function statementPdf(s: Statement, meta: { ownerName: string; workspaceName: string }): Promise<Uint8Array> {
   const { PDFDocument, StandardFonts, rgb } = await import('pdf-lib');
@@ -66,7 +84,41 @@ export async function statementPdf(s: Statement, meta: { ownerName: string; work
     y -= 13;
     text(`${l.nightsBooked} nights booked`, cols.name, 8, font, quiet);
     if (l.currency !== s.reportingCurrency) textRight(`= ${money(l.ownerProfitReporting, s.reportingCurrency)}`, cols.mine, 8, font, quiet);
-    y -= 10; line(); y -= 14;
+    y -= 12;
+    // What the costs were made of (whole property)
+    const parts = costParts(l);
+    if (parts.length) {
+      for (const [label, v] of parts) {
+        newPageIfNeeded(12);
+        text(label, cols.name + 10, 8, font, quiet);
+        textRight(money(v, l.currency), cols.cost, 8, font, quiet);
+        y -= 11;
+      }
+    }
+    // Expenses posted to this unit and vendor work done on it
+    const items = l.items ?? [];
+    if (items.length) {
+      newPageIfNeeded(24);
+      y -= 2;
+      text('Expenses and work on this property', cols.name + 10, 8, bold, quiet); y -= 11;
+      const shown = items.slice(0, MAX_ITEMS);
+      for (const it of shown) {
+        newPageIfNeeded(12);
+        const what = [it.category, it.description].filter(Boolean).join(' - ');
+        text(day(it.date), cols.name + 10, 8, font, quiet);
+        text(what.slice(0, 62), cols.name + 72, 8, font, ink);
+        textRight(money(it.amount, l.currency), cols.cost, 8, font, ink);
+        y -= 11;
+      }
+      const moreCount = items.length - shown.length + (l.itemsMore?.count ?? 0);
+      if (moreCount > 0) {
+        const rest = items.slice(MAX_ITEMS).reduce((t, it) => t + it.amount, 0) + (l.itemsMore?.amount ?? 0);
+        text(`and ${moreCount} more`, cols.name + 72, 8, font, quiet);
+        textRight(money(rest, l.currency), cols.cost, 8, font, quiet);
+        y -= 11;
+      }
+    }
+    y -= 2; line(); y -= 14;
   }
   if (!s.lines.length) { text('No property income or costs in this period.', left, 10, font, quiet); y -= 20; }
 
@@ -78,6 +130,7 @@ export async function statementPdf(s: Statement, meta: { ownerName: string; work
 
   const notes = [
     'Each property is worked out in its own currency. Your part follows the shares in force on each day.',
+    'Cost lines and listed expenses are for the whole property, before your share is applied.',
     s.lines.some(l => l.currency !== s.reportingCurrency)
       ? `Amounts in other currencies are converted to ${s.reportingCurrency} at the daily reference rate for each day.`
       : '',

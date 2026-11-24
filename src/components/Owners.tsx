@@ -13,6 +13,7 @@ import { Sheet, fieldClass } from './ui/Sheet';
 import { cn } from '../lib/utils';
 import { supabase } from '../lib/supabase';
 import { SUPPORTED_CURRENCIES, formatMoney, type Rates } from '../lib/money';
+import { StatementDetails } from './StatementDetails';
 import { countryOptions } from '../lib/regions';
 import { buildStatement, lastPeriod, sharesOn } from '../lib/ownerStatement';
 import {
@@ -699,6 +700,7 @@ const Statements: React.FC<{ orgId: string; owners: OwnersData; data: UserData; 
               </table>
             </div>
           )}
+          {statement.lines.length > 0 && <StatementDetails statement={statement} />}
           {statement.missingRates.length > 0 && (
             <p className="mt-3 text-xs text-amber-700">No exchange rate yet for {statement.missingRates.join(', ')} on some days; those days are left out of the total.</p>
           )}

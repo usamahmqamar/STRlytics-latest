@@ -30,9 +30,17 @@ export interface DailyPLRow {
   daily_rent: number;
   daily_electricity: number;
   daily_internet: number;
+  /** Water, gas and other monthly bills, spread over the month. */
+  daily_other_bills: number;
   cleaning_allocated: number;
   other_costs_allocated: number;
+  /** Expenses posted to this unit plus its share of shared expenses. */
   real_time_expenses: number;
+  /** The two parts of real_time_expenses. */
+  unit_expenses: number;
+  shared_expenses: number;
+  /** Vendor work done on this unit (Operations > Work Done), on the day it was done. */
+  service_costs: number;
   total_daily_cost: number;
   daily_profit: number;
 }
@@ -120,7 +128,22 @@ export function calculateDailyPL(data: UserData, startDate: Date, endDate: Date,
     expenses.set(key, (expenses.get(key) ?? 0) + (Number(e.amount) || 0));
   }
   const bills = new Map<string, number>();
-  for (const b of data.monthlyBills) bills.set(`${b.apartment_id}|${b.month}|${b.bill_type}`, Number(b.amount) || 0);
+  const otherBills = new Map<string, number>(); // water, gas, other: apt|month
+  for (const b of data.monthlyBills) {
+    if (b.bill_type === 'electricity' || b.bill_type === 'internet') {
+      bills.set(`${b.apartment_id}|${b.month}|${b.bill_type}`, Number(b.amount) || 0);
+    } else {
+      const k = `${b.apartment_id}|${b.month}`;
+      otherBills.set(k, (otherBills.get(k) ?? 0) + (Number(b.amount) || 0));
+    }
+  }
+  const services = new Map<string, number>();
+  for (const sr of data.serviceRecords || []) {
+    const d = (sr.date || '').slice(0, 10);
+    if (d < from || d > to) continue;
+    const key = `${sr.apartment_id}|${d}`;
+    services.set(key, (services.get(key) ?? 0) + (Number(sr.total_cost) || 0));
+  }
 
   const totalUnits = data.apartments.length;
   const rows: DailyPLRow[] = [];
@@ -147,9 +170,12 @@ export function calculateDailyPL(data: UserData, startDate: Date, endDate: Date,
       const retained = night?.retained ?? 0;
       const cleaning = booked ? (Number(booked.cleaning_cost) || 0) / nightsOf(booked) : 0;
       const other = cost.get(key) ?? 0;
-      const direct = (expenses.get(key) ?? 0) + shared;
+      const unitOnly = expenses.get(key) ?? 0;
+      const direct = unitOnly + shared;
+      const otherBillsDaily = (otherBills.get(`${apt.apartment_id}|${month}`) ?? 0) / daysInMonth;
+      const service = services.get(key) ?? 0;
       const dailyRent = rent ?? 0;
-      const total = dailyRent + elecMonthly / daysInMonth + netMonthly / daysInMonth + cleaning + other + direct;
+      const total = dailyRent + elecMonthly / daysInMonth + netMonthly / daysInMonth + otherBillsDaily + cleaning + other + direct + service;
 
       rows.push({
         date,
@@ -164,9 +190,13 @@ export function calculateDailyPL(data: UserData, startDate: Date, endDate: Date,
         daily_rent: dailyRent,
         daily_electricity: elecMonthly / daysInMonth,
         daily_internet: netMonthly / daysInMonth,
+        daily_other_bills: otherBillsDaily,
         cleaning_allocated: cleaning,
         other_costs_allocated: other,
         real_time_expenses: direct,
+        unit_expenses: unitOnly,
+        shared_expenses: shared,
+        service_costs: service,
         total_daily_cost: total,
         daily_profit: revenue + retained - total,
       });

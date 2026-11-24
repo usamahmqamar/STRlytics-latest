@@ -23,6 +23,26 @@ export function sharesOn(shares: ListingShare[], propertyId: string, date: strin
   return out;
 }
 
+/** What a property's costs were made of, for the whole property, in its currency. */
+export interface CostBreakdown {
+  rent: number;
+  utilities: number;       // electricity, internet, water, gas and other bills
+  cleaning: number;        // from bookings
+  bookingCosts: number;    // other costs entered on bookings
+  unitExpenses: number;    // expenses posted to this unit
+  sharedExpenses: number;  // this unit's part of shared expenses
+  vendorWork: number;      // vendor jobs on this unit
+}
+
+/** An expense posted to the unit, or vendor work done on it, during the period. */
+export interface StatementItem {
+  date: string;
+  type: 'expense' | 'vendor_work';
+  category: string;
+  description: string;
+  amount: number;          // whole property, its currency
+}
+
 export interface StatementLine {
   propertyId: string;
   propertyName: string;
@@ -35,7 +55,14 @@ export interface StatementLine {
   shareEnd: number;      // and on the last day
   ownerProfit: number;   // the owner's part, property currency
   ownerProfitReporting: number; // the owner's part, reporting currency
+  /** Older saved statements may not have these. */
+  costBreakdown?: CostBreakdown;
+  items?: StatementItem[];
+  /** Items beyond the first MAX_STATEMENT_ITEMS, summed. */
+  itemsMore?: { count: number; amount: number };
 }
+
+export const MAX_STATEMENT_ITEMS = 100;
 
 export interface Statement {
   entityId: string;
@@ -72,10 +99,18 @@ export function buildStatement(input: {
     const rows = calculateDailyPL(view, new Date(`${start}T00:00:00`), new Date(`${end}T00:00:00`), apt.apartment_id);
 
     let revenue = 0, costs = 0, profit = 0, nights = 0, ownerProfit = 0, ownerReporting = 0, touched = false;
+    const b: CostBreakdown = { rent: 0, utilities: 0, cleaning: 0, bookingCosts: 0, unitExpenses: 0, sharedExpenses: 0, vendorWork: 0 };
     for (const row of rows) {
       const pct = sharesOn(shares, apt.apartment_id, row.date).get(entityId) ?? 0;
       revenue += row.daily_revenue;
       costs += row.total_daily_cost;
+      b.rent += row.daily_rent;
+      b.utilities += row.daily_electricity + row.daily_internet + row.daily_other_bills;
+      b.cleaning += row.cleaning_allocated;
+      b.bookingCosts += row.other_costs_allocated;
+      b.unitExpenses += row.unit_expenses;
+      b.sharedExpenses += row.shared_expenses;
+      b.vendorWork += row.service_costs;
       profit += row.daily_profit;
       nights += row.occupied_nights_count;
       if (!pct) continue;
@@ -86,6 +121,18 @@ export function buildStatement(input: {
       if (conv === null) missing.add(currency); else ownerReporting += conv;
     }
     if (!touched) continue;
+    const inPeriod = (d?: string) => !!d && d.slice(0, 10) >= start && d.slice(0, 10) <= end;
+    const vendorName = (id: string) => view.vendors?.find(v => v.vendor_id === id)?.name ?? '';
+    const items: StatementItem[] = [
+      ...view.dailyExpenses.filter(e => e.apartment_id === apt.apartment_id && inPeriod(e.date)).map(e => ({
+        date: e.date.slice(0, 10), type: 'expense' as const, category: e.category || 'Expense',
+        description: (e.notes || '').slice(0, 200), amount: r2(Number(e.amount) || 0),
+      })),
+      ...(view.serviceRecords || []).filter(x => x.apartment_id === apt.apartment_id && inPeriod(x.date)).map(x => ({
+        date: x.date.slice(0, 10), type: 'vendor_work' as const, category: x.service_type || 'Vendor work',
+        description: [vendorName(x.vendor_id), x.description].filter(Boolean).join(': ').slice(0, 200), amount: r2(Number(x.total_cost) || 0),
+      })),
+    ].sort((a, c) => a.date.localeCompare(c.date));
     lines.push({
       propertyId: apt.apartment_id,
       propertyName: apt.name || apt.apartment_id,
@@ -98,6 +145,15 @@ export function buildStatement(input: {
       shareEnd: sharesOn(shares, apt.apartment_id, end).get(entityId) ?? 0,
       ownerProfit: r2(ownerProfit),
       ownerProfitReporting: r2(ownerReporting),
+      costBreakdown: {
+        rent: r2(b.rent), utilities: r2(b.utilities), cleaning: r2(b.cleaning), bookingCosts: r2(b.bookingCosts),
+        unitExpenses: r2(b.unitExpenses), sharedExpenses: r2(b.sharedExpenses), vendorWork: r2(b.vendorWork),
+      },
+      items: items.slice(0, MAX_STATEMENT_ITEMS),
+      ...(items.length > MAX_STATEMENT_ITEMS ? { itemsMore: {
+        count: items.length - MAX_STATEMENT_ITEMS,
+        amount: r2(items.slice(MAX_STATEMENT_ITEMS).reduce((t, it) => t + it.amount, 0)),
+      } } : {}),
     });
   }
   lines.sort((a, b) => a.propertyName.localeCompare(b.propertyName));
