@@ -148,3 +148,22 @@ DATABASE_URL=postgres://... npm run test:db   # migrations + row-level security 
   finance files and cannot be deleted while they back a decision.
 - Owner statement PDFs are made in the browser from data the user can already see.
   Tests: `entities_test.sql`, `tests/ownerStatement.test.ts`.
+
+## Owner reports and the owner portal
+
+- A property owner can be given a login to see their own statements. They are not workspace
+  members: no team role, and every existing table stays closed to them. They can read only
+  `owner_statements` rows for the owner (entity) their login is linked to, through
+  `my_owner_portals` and row-level security. Guest names, bookings, costs and other owners'
+  figures are never visible to them.
+- Logins come from `owner_invitations` created by owners or managers (valid for at most 30 days,
+  14 by default). Accepting requires signing in with the invited email address; signing up from
+  an owner invitation does not create a workspace. Owners and managers can remove access.
+- The daily job `/api/cron/owner-reports` (same `CRON_SECRET`) reads what statements need through
+  `cron_owner_report_data` (without guest names or notes), prepares month-to-date and due periodic
+  statements with the app's own calculation code (bundled into `api/_lib/ownerReportsCore.js`;
+  CI fails if that file is out of date), saves them with `cron_store_owner_statements`, and emails
+  new periodic statements as a PDF through Resend to owners with an email who have not opted out.
+  A saved monthly, quarterly or yearly statement is never changed. Failed emails are retried for
+  7 days. Tests: `owner_portal_test.sql`, `tests/ownerReports.test.ts`, and the job tests in
+  `tests/security.test.ts`.

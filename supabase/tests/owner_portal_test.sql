@@ -1,4 +1,4 @@
--- Tests for 20261125090000_owner_reports_and_portal.sql. One transaction, rolled back.
+-- Tests for 20261124212913_owner_reports_and_portal.sql. One transaction, rolled back.
 begin;
 
 create schema tests;
